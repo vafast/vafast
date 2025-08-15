@@ -1,6 +1,6 @@
 {
   "name": "vafast",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "description": "专为Bun构建的极简结构化Web框架。Go风格，函数优先。",
   "type": "module",
   "repository": {
@@ -30,7 +30,8 @@
     "example:schema": "bun run example/advanced/schema.ts",
     "test": "bun test",
     "benchmark": "bun run benchmarks/performance.ts",
-    "postbuild": "rimraf src/**/*.d.ts"
+    "postbuild": "rimraf src/**/*.d.ts",
+    "release": "bumpp && npm publish"
   },
   "keywords": [
     "bun",
@@ -44,12 +45,15 @@
     "fast"
   ],
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "author": "Vafast Team",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.15.30",
+    "bumpp": "^10.2.3",
     "bun-types": "^1.2.20",
     "rimraf": "^6.0.1"
   },
