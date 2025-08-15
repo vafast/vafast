@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "ESNext"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+
+    "outDir": "dist", // 🍭 输出目录
+    "declaration": true, // 生成类型定义
+    "emitDeclarationOnly": false // 是否只输出类型定义，false 表示也输出实现代码
+  },
+  "include": ["src/**/*", "test/**/*", "example/**/*", "benchmarks/**/*"], // 🎯 编译目标
+  "exclude": ["node_modules"], // 🧹 忽略的目录
+  "types": ["bun-types"]
+}

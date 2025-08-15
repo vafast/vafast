@@ -1,0 +1,58 @@
+{
+  "name": "vafast",
+  "version": "0.1.16",
+  "description": "专为Bun构建的极简结构化Web框架。Go风格，函数优先。",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vafast/vafast.git"
+  },
+  "homepage": "https://github.com/vafast/vafast#readme",
+  "bugs": {
+    "url": "https://github.com/vafast/vafast/issues"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./mod": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "bun build src/index.ts --outdir dist --target bun",
+    "dev": "bun --watch index.ts",
+    "example": "bun run example/basic/hello-world.ts",
+    "test": "bun test",
+    "benchmark": "bun run benchmarks/performance.ts",
+    "postbuild": "rimraf src/**/*.d.ts"
+  },
+  "keywords": [
+    "bun",
+    "framework",
+    "minimal",
+    "router",
+    "go",
+    "web",
+    "edge",
+    "typescript",
+    "fast"
+  ],
+  "files": [
+    "dist"
+  ],
+  "author": "Vafast Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "bun-types": "^1.2.20",
+    "rimraf": "^6.0.1"
+  },
+  "dependencies": {
+    "bun": "^1.2.15"
+  }
+}
