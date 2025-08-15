@@ -41,9 +41,9 @@ describe("高级示例", () => {
               const file = formData.get("file") as File;
 
               if (!file) {
-                return new Response("没有上传文件", { 
+                return new Response("没有上传文件", {
                   status: 400,
-                  headers: { "Content-Type": "text/plain; charset=utf-8" }
+                  headers: { "Content-Type": "text/plain; charset=utf-8" },
                 });
               }
 
@@ -64,9 +64,9 @@ describe("高级示例", () => {
                 }
               );
             } catch (error) {
-              return new Response("上传失败", { 
+              return new Response("上传失败", {
                 status: 500,
-                headers: { "Content-Type": "text/plain; charset=utf-8" }
+                headers: { "Content-Type": "text/plain; charset=utf-8" },
               });
             }
           },
