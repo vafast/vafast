@@ -35,6 +35,8 @@ export class Server {
 
     const handler: Handler = async (req) => {
       if (matched) {
+        // 将路径参数设置到 req 对象上，以便 TypedRoute 处理器能够访问
+        (req as any).params = params;
         return await matched.handler(req, params);
       } else {
         return new Response("Not Found", { status: 404 });

@@ -95,7 +95,8 @@ export function createRouteHandler<TConfig extends TypedConfig>(
       }
 
       if (hasParamsSchema) {
-        params = (req as any).pathParams || {};
+        // 从 req 的第二个参数获取路径参数，或者从 req.pathParams 获取
+        params = (req as any).pathParams || (req as any).params || {};
       }
 
       // 只在有验证器时执行验证

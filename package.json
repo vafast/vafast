@@ -27,6 +27,7 @@
     "build": "bun build src/index.ts --outdir dist --target bun",
     "dev": "bun --watch index.ts",
     "example": "bun run example/basic/hello-world.ts",
+    "example:schema": "bun run example/advanced/schema.ts",
     "test": "bun test",
     "benchmark": "bun run benchmarks/performance.ts",
     "postbuild": "rimraf src/**/*.d.ts"
