@@ -25,7 +25,7 @@ export class VafastError extends Error {
     this.status = options.status ?? 500;
     this.type = options.type ?? "internal_error";
     this.expose = options.expose ?? false;
-    if (options.cause) this.cause = options.cause;
+    if (options.cause) (this as any).cause = options.cause;
   }
 }
 

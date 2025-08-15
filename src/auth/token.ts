@@ -16,7 +16,7 @@ async function sign(data: string, secret: string): Promise<string> {
   );
 
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
-  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(signature))));
 }
 
 /** 生成令牌 */

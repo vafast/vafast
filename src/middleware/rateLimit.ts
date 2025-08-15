@@ -1,6 +1,6 @@
 // src/middleware/rateLimit.ts
 
-import type { Middleware } from "../middleware";
+import type { Middleware } from "../types";
 import { VafastError } from "../middleware";
 
 interface RateLimitOptions {
