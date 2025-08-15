@@ -8,7 +8,7 @@ const routes: Route[] = [
     path: "/",
     handler: () =>
       new Response("来自 Vafast 的 Hello World！", {
-        headers: { "Content-Type": "text/plain" },
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
   },
 ];

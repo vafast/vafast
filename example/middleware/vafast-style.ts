@@ -16,7 +16,7 @@ const requireAuth: Middleware = async (req, next) => {
   if (!token || token !== "valid-token") {
     return new Response("Unauthorized", {
       status: 401,
-      headers: { "Content-Type": "text/plain" },
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
 
@@ -30,7 +30,7 @@ const requireAdmin: Middleware = async (req, next) => {
   if (role !== "admin") {
     return new Response("Forbidden", {
       status: 403,
-      headers: { "Content-Type": "text/plain" },
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
 
@@ -54,7 +54,7 @@ const routes: Route[] = [
     path: "/",
     handler: () =>
       new Response("Public endpoint", {
-        headers: { "Content-Type": "text/plain" },
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
     middleware: [logger, securityHeaders], // 全局中间件 + 安全头
   },
@@ -63,7 +63,7 @@ const routes: Route[] = [
     path: "/api/data",
     handler: () =>
       new Response(JSON.stringify({ message: "Protected data" }), {
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json; charset=utf-8" },
       }),
     middleware: [logger, requireAuth, securityHeaders], // 需要认证
   },
@@ -72,7 +72,7 @@ const routes: Route[] = [
     path: "/admin",
     handler: () =>
       new Response("Welcome, admin", {
-        headers: { "Content-Type": "text/plain" },
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
     middleware: [logger, requireAuth, requireAdmin, securityHeaders], // 需要管理员权限
   },

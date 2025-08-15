@@ -11,23 +11,27 @@ const routes: Route[] = [
   {
     method: "GET",
     path: "/users",
-    handler: () => new Response(JSON.stringify(users), {
-      headers: { "Content-Type": "application/json" }
-    }),
+    handler: () =>
+      new Response(JSON.stringify(users), {
+        headers: { "Content-Type": "application/json" },
+      }),
   },
   {
     method: "GET",
     path: "/users/:id",
     handler: (req, params) => {
       const id = parseInt(params?.id || "0");
-      const user = users.find(u => u.id === id);
-      
+      const user = users.find((u) => u.id === id);
+
       if (!user) {
-        return new Response("用户未找到", { status: 404 });
+        return new Response("用户未找到", {
+          status: 404,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
       }
-      
+
       return new Response(JSON.stringify(user), {
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
     },
   },
@@ -38,14 +42,17 @@ const routes: Route[] = [
       const body = await req.json();
       const newUser = { id: users.length + 1, ...body };
       users.push(newUser);
-      
-      return new Response(JSON.stringify({
-        message: "用户创建成功",
-        user: newUser
-      }), {
-        status: 201,
-        headers: { "Content-Type": "application/json" }
-      });
+
+      return new Response(
+        JSON.stringify({
+          message: "用户创建成功",
+          user: newUser,
+        }),
+        {
+          status: 201,
+          headers: { "Content-Type": "application/json; charset=utf-8" },
+        }
+      );
     },
   },
 ];

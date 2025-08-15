@@ -28,7 +28,7 @@ describe("高级示例", () => {
             </html>
           `,
               {
-                headers: { "Content-Type": "text/html" },
+                headers: { "Content-Type": "text/html; charset=utf-8" },
               }
             ),
         },
