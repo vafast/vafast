@@ -1,4 +1,4 @@
-import type { Middleware } from "../middleware";
+import type { Middleware } from "../types";
 
 export interface CORSOptions {
   origin?: string[] | "*";
@@ -21,8 +21,7 @@ export function createCORS(options: CORSOptions = {}): Middleware {
     const reqOrigin = req.headers.get("Origin") || "";
 
     // 判断：是否为允许的 Origin？
-    const isAllowedOrigin =
-      origin === "*" || origin.includes(reqOrigin);
+    const isAllowedOrigin = origin === "*" || origin.includes(reqOrigin);
 
     // 预检 (OPTIONS) 请求处理
     if (req.method === "OPTIONS") {
