@@ -53,7 +53,7 @@ describe("中间件示例", () => {
           path: "/",
           handler: () =>
             new Response("Hello with middleware!", {
-              headers: { "Content-Type": "text/plain" },
+              headers: { "Content-Type": "text/plain; charset=utf-8" },
             }),
           middleware: [logger, timer, requestId],
         },
@@ -62,7 +62,7 @@ describe("中间件示例", () => {
           path: "/api/data",
           handler: () =>
             new Response(JSON.stringify({ message: "Protected data" }), {
-              headers: { "Content-Type": "application/json" },
+              headers: { "Content-Type": "application/json; charset=utf-8" },
             }),
           middleware: [logger, requestId],
         },

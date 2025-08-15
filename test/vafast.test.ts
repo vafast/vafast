@@ -13,7 +13,7 @@ describe("Vafast Server", () => {
         path: "/test",
         handler: (req) =>
           new Response("test", {
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
           }),
       },
       {
@@ -21,7 +21,7 @@ describe("Vafast Server", () => {
         path: "/test",
         handler: (req) =>
           new Response("post test", {
-            headers: { "Content-Type": "text/plain" },
+            headers: { "Content-Type": "text/plain; charset=utf-8" },
           }),
       },
     ];

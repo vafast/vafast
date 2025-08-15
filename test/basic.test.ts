@@ -13,7 +13,7 @@ describe("基础示例", () => {
           method: "GET",
           path: "/",
           handler: () => new Response("来自 Vafast 的 Hello World！", {
-            headers: { "Content-Type": "text/plain" }
+            headers: { "Content-Type": "text/plain; charset=utf-8" }
           }),
         },
       ];
@@ -26,7 +26,7 @@ describe("基础示例", () => {
       
       expect(response.status).toBe(200);
       expect(await response.text()).toBe("来自 Vafast 的 Hello World！");
-      expect(response.headers.get("Content-Type")).toBe("text/plain");
+      expect(response.headers.get("Content-Type")).toBe("text/plain; charset=utf-8");
     });
   });
 
@@ -57,7 +57,10 @@ describe("基础示例", () => {
             const user = users.find(u => u.id === id);
             
             if (!user) {
-              return new Response("用户未找到", { status: 404 });
+              return new Response("用户未找到", { 
+                status: 404,
+                headers: { "Content-Type": "text/plain; charset=utf-8" }
+              });
             }
             
             return new Response(JSON.stringify(user), {

@@ -41,7 +41,10 @@ describe("高级示例", () => {
               const file = formData.get("file") as File;
 
               if (!file) {
-                return new Response("没有上传文件", { status: 400 });
+                return new Response("没有上传文件", { 
+                  status: 400,
+                  headers: { "Content-Type": "text/plain; charset=utf-8" }
+                });
               }
 
               const fileInfo = {
@@ -57,11 +60,14 @@ describe("高级示例", () => {
                   file: fileInfo,
                 }),
                 {
-                  headers: { "Content-Type": "application/json" },
+                  headers: { "Content-Type": "application/json; charset=utf-8" },
                 }
               );
             } catch (error) {
-              return new Response("上传失败", { status: 500 });
+              return new Response("上传失败", { 
+                status: 500,
+                headers: { "Content-Type": "text/plain; charset=utf-8" }
+              });
             }
           },
         },
@@ -74,7 +80,7 @@ describe("高级示例", () => {
       const response = await server.fetch(request);
 
       expect(response.status).toBe(200);
-      expect(response.headers.get("Content-Type")).toBe("text/html");
+      expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
       const html = await response.text();
       expect(html).toContain("文件上传示例");
       expect(html).toContain('input type="file"');
