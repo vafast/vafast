@@ -15,7 +15,7 @@ import {
   validateAllSchemasUltra,
   precompileSchemasUltra,
   type SchemaConfig,
-} from "./validators-ultra";
+} from "./validators/validators-ultra";
 import { Middleware } from "../types";
 
 // 类型推导的配置接口

@@ -81,7 +81,7 @@
 import { Type, Static } from "@sinclair/typebox";
 import type { TSchema } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { validateSchema } from "../src/utils/validators";
+import { validateSchema } from "../src/utils/validators/validators";
 
 // 定义测试用的 Schema
 const SimpleSchema = Type.String();

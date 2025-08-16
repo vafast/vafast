@@ -1,6 +1,6 @@
 // example/advanced/schema-validation.ts
 import { Type } from "@sinclair/typebox";
-import { validateSchema } from "../../src/utils/validators";
+import { validateSchema } from "../../src/utils/validators/validators";
 
 // 定义用户Schema
 const UserSchema = Type.Object({

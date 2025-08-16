@@ -1,6 +1,6 @@
 /**
  * Schema验证器测试文件
- * 
+ *
  * 测试validateSchemaConfig和相关函数的功能
  */
 
@@ -12,7 +12,7 @@ import {
   createSchemaValidator,
   type SchemaConfig,
   type RequestData,
-} from "../src/utils/schema-validator";
+} from "../src/utils/validators/schema-validator";
 
 // 测试用的Schema定义
 const testUserSchema = Type.Object({

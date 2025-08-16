@@ -1,11 +1,15 @@
 /**
  * Schema验证器使用示例
- * 
+ *
  * 展示如何使用validateSchemaConfig函数验证SchemaConfig结构的数据
  */
 
 import { Type } from "@sinclair/typebox";
-import { validateSchemaConfig, validateSchemaConfigAsync, createSchemaValidator } from "../src/utils/schema-validator";
+import {
+  validateSchemaConfig,
+  validateSchemaConfigAsync,
+  createSchemaValidator,
+} from "../src/utils/validators/schema-validator";
 
 // 定义各种Schema
 const userSchema = Type.Object({
@@ -26,7 +30,7 @@ const paramsSchema = Type.Object({
 });
 
 const headersSchema = Type.Object({
-  "authorization": Type.String({ pattern: "^Bearer .*" }),
+  authorization: Type.String({ pattern: "^Bearer .*" }),
   "content-type": Type.Optional(Type.String()),
 });
 
@@ -47,7 +51,7 @@ const schemaConfig = {
 // 示例1: 同步验证
 function exampleSyncValidation() {
   console.log("=== 同步验证示例 ===");
-  
+
   const requestData = {
     body: {
       id: 1,
@@ -64,7 +68,7 @@ function exampleSyncValidation() {
       userId: "507f1f77bcf86cd799439011",
     },
     headers: {
-      "authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
       "content-type": "application/json",
     },
     cookies: {
@@ -74,7 +78,7 @@ function exampleSyncValidation() {
   };
 
   const result = validateSchemaConfig(schemaConfig, requestData);
-  
+
   if (result.success) {
     console.log("✅ 验证成功:", result.data);
   } else {
@@ -88,7 +92,7 @@ function exampleSyncValidation() {
 // 示例2: 异步验证
 async function exampleAsyncValidation() {
   console.log("\n=== 异步验证示例 ===");
-  
+
   const requestData = {
     body: {
       id: "invalid_id", // 应该是数字
@@ -103,7 +107,7 @@ async function exampleAsyncValidation() {
       userId: "invalid-user-id", // 违反pattern
     },
     headers: {
-      "authorization": "Invalid Token", // 违反pattern
+      authorization: "Invalid Token", // 违反pattern
     },
     cookies: {
       sessionId: "sess_123456789",
@@ -112,14 +116,14 @@ async function exampleAsyncValidation() {
   };
 
   const result = await validateSchemaConfigAsync(schemaConfig, requestData);
-  
+
   if (result.success) {
     console.log("✅ 验证成功:", result.data);
   } else {
     console.log("❌ 验证失败:");
     result.errors?.forEach(({ field, error }) => {
       console.log(`  ${field}:`);
-      error.errors?.forEach(err => {
+      error.errors?.forEach((err) => {
         console.log(`    - ${err.path}: ${err.message}`);
       });
     });
@@ -129,15 +133,15 @@ async function exampleAsyncValidation() {
 // 示例3: 使用工厂函数创建验证器
 function exampleFactoryFunction() {
   console.log("\n=== 工厂函数示例 ===");
-  
+
   // 只验证body和query
   const partialConfig = {
     body: userSchema,
     query: querySchema,
   };
-  
+
   const validator = createSchemaValidator(partialConfig);
-  
+
   const requestData = {
     body: {
       id: 2,
@@ -152,9 +156,9 @@ function exampleFactoryFunction() {
     params: { userId: "507f1f77bcf86cd799439012" },
     headers: { "x-custom": "value" },
   };
-  
+
   const result = validator(requestData);
-  
+
   if (result.success) {
     console.log("✅ 部分验证成功:", result.data);
   } else {
@@ -165,7 +169,7 @@ function exampleFactoryFunction() {
 // 示例4: 错误处理
 function exampleErrorHandling() {
   console.log("\n=== 错误处理示例 ===");
-  
+
   const invalidData = {
     body: {
       id: "not_a_number",
@@ -174,14 +178,14 @@ function exampleErrorHandling() {
       age: -5, // 负数
     },
   };
-  
+
   const result = validateSchemaConfig({ body: userSchema }, invalidData);
-  
+
   if (!result.success) {
     console.log("❌ 验证失败，详细错误信息:");
     result.errors?.forEach(({ field, error }) => {
       console.log(`\n${field} 字段错误:`);
-      error.errors?.forEach(err => {
+      error.errors?.forEach((err) => {
         console.log(`  - 路径: ${err.path || "root"}`);
         console.log(`  - 消息: ${err.message}`);
         console.log(`  - 值: ${JSON.stringify(err.value)}`);

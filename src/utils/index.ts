@@ -9,7 +9,7 @@
  */
 
 // 导出超优化验证器
-export * from "./validators-ultra";
+export * from "./validators/validators-ultra";
 
 // 导出路由处理器工厂
 export * from "./route-handler-factory";
