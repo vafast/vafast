@@ -49,32 +49,12 @@ function getErrorFromPool(message: string): Error {
   return error;
 }
 
-// 位运算优化的配置检查
-const CONFIG_FLAGS = {
-  BODY: 1 << 0, // 00001
-  QUERY: 1 << 1, // 00010
-  PARAMS: 1 << 2, // 00100
-  HEADERS: 1 << 3, // 01000
-  COOKIES: 1 << 4, // 10000
-};
-
-// 计算配置标志位
-function getConfigFlags(config: SchemaConfig): number {
-  let flags = 0;
-  if (config.body) flags |= CONFIG_FLAGS.BODY;
-  if (config.query) flags |= CONFIG_FLAGS.QUERY;
-  if (config.params) flags |= CONFIG_FLAGS.PARAMS;
-  if (config.headers) flags |= CONFIG_FLAGS.HEADERS;
-  if (config.cookies) flags |= CONFIG_FLAGS.COOKIES;
-  return flags;
-}
-
 // 获取或编译Schema - 超内联优化版本
 function getUltraSchemaCompiler(schema: TSchema): any {
   // 直接检查缓存，避免WeakMap的has()调用
   let compiler = ultraSchemaCache.get(schema);
   if (compiler) {
-    // 缓存命中统计 - 使用位运算优化
+    // 缓存命中统计
     schemaCacheHits.set(schema, (schemaCacheHits.get(schema) || 0) + 1);
     return compiler;
   }
@@ -123,47 +103,8 @@ export function validateSchemaUltra(schema: TSchema | undefined, data: any, cont
   }
 }
 
-// 超优化的批量验证 - 标准版本
-export function validateAllSchemasUltra(
-  config: SchemaConfig,
-  data: {
-    body: any;
-    query: any;
-    params: any;
-    headers: any;
-    cookies: any;
-  }
-): any {
-  // 使用位运算快速检查配置
-  const flags = getConfigFlags(config);
-  if (flags === 0) return data; // 跳过所有验证
-
-  // 标准验证逻辑
-  if (flags & CONFIG_FLAGS.BODY) {
-    validateSchemaUltra(config.body, data.body, "请求体");
-  }
-
-  if (flags & CONFIG_FLAGS.QUERY) {
-    validateSchemaUltra(config.query, data.query, "Query参数");
-  }
-
-  if (flags & CONFIG_FLAGS.PARAMS) {
-    validateSchemaUltra(config.params, data.params, "路径参数");
-  }
-
-  if (flags & CONFIG_FLAGS.HEADERS) {
-    validateSchemaUltra(config.headers, data.headers, "请求头");
-  }
-
-  if (flags & CONFIG_FLAGS.COOKIES) {
-    validateSchemaUltra(config.cookies, data.cookies, "Cookie");
-  }
-
-  return data;
-}
-
 // 超优化的批量验证 - 循环展开版本（极致性能）
-export function validateAllSchemasUltraExpanded(
+export function validateAllSchemasUltra(
   config: SchemaConfig,
   data: {
     body: any;
@@ -194,27 +135,24 @@ export function validateAllSchemasUltraExpanded(
 
 // 超优化的预编译
 export function precompileSchemasUltra(config: SchemaConfig): void {
-  const flags = getConfigFlags(config);
-  if (flags === 0) return;
-
   // 预编译所有Schema
-  if (flags & CONFIG_FLAGS.BODY && config.body) {
+  if (config.body) {
     getUltraSchemaCompiler(config.body);
   }
 
-  if (flags & CONFIG_FLAGS.QUERY && config.query) {
+  if (config.query) {
     getUltraSchemaCompiler(config.query);
   }
 
-  if (flags & CONFIG_FLAGS.PARAMS && config.params) {
+  if (config.params) {
     getUltraSchemaCompiler(config.params);
   }
 
-  if (flags & CONFIG_FLAGS.HEADERS && config.headers) {
+  if (config.headers) {
     getUltraSchemaCompiler(config.headers);
   }
 
-  if (flags & CONFIG_FLAGS.COOKIES && config.cookies) {
+  if (config.cookies) {
     getUltraSchemaCompiler(config.cookies);
   }
 }
@@ -315,7 +253,6 @@ export function withPerformanceMonitoring<T extends (...args: any[]) => any>(
 // 导出主要函数（使用标准命名）
 export {
   validateAllSchemasUltra as validateAllSchemas,
-  validateAllSchemasUltraExpanded as validateAllSchemasExpanded,
   createTypedValidatorUltra as createTypedValidator,
   validateBatchUltra as validateBatch,
   clearUltraCache as clearCache,
