@@ -17,6 +17,7 @@ import {
   type SchemaConfig,
 } from "./validators/validators-ultra";
 import { Middleware } from "../types";
+import type { Static } from "@sinclair/typebox";
 
 // 类型推导的配置接口
 export interface TypedConfig extends SchemaConfig {
@@ -44,10 +45,14 @@ export type TypedHandler<
 ) => Response | Promise<Response>;
 
 // 创建路由处理器的通用函数
-export function createRouteHandler<TConfig extends TypedConfig>(
-  config: TConfig,
-  handler: TypedHandler<any, any, any, any, any>
-) {
+export function createRouteHandler<
+  TConfig extends TypedConfig,
+  TBody = TConfig extends { body: any } ? Static<TConfig["body"]> : any,
+  TQuery = TConfig extends { query: any } ? Static<TConfig["query"]> : any,
+  TParams = TConfig extends { params: any } ? Static<TConfig["params"]> : any,
+  THeaders = TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
+  TCookies = TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any
+>(config: TConfig, handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies>) {
   // 检查哪些验证器是必需的
   const hasBodySchema = config.body !== undefined;
   const hasQuerySchema = config.query !== undefined;
@@ -62,33 +67,33 @@ export function createRouteHandler<TConfig extends TypedConfig>(
 
   return async (req: Request) => {
     try {
-      let queryObj: any = {};
-      let headers: any = {};
-      let cookies: any = {};
-      let body: any = undefined;
-      let params: any = {};
+      let queryObj: TQuery = {} as TQuery;
+      let headers: THeaders = {} as THeaders;
+      let cookies: TCookies = {} as TCookies;
+      let body: TBody = undefined as TBody;
+      let params: TParams = {} as TParams;
 
       // 按需解析和验证数据
       if (hasQuerySchema) {
-        const queryObj = parseQuery(req);
+        queryObj = parseQuery(req) as TQuery;
       }
 
       if (hasHeadersSchema) {
-        headers = parseHeaders(req);
+        headers = parseHeaders(req) as THeaders;
       }
 
       if (hasCookiesSchema) {
-        cookies = parseCookies(req);
+        cookies = parseCookies(req) as TCookies;
       }
 
       if (hasBodySchema) {
         const [, parsedBody] = await goAwait(parseBody(req));
-        body = parsedBody;
+        body = parsedBody as TBody;
       }
 
       if (hasParamsSchema) {
         // 从 req 的第二个参数获取路径参数，或者从 req.pathParams 获取
-        params = (req as any).pathParams || (req as any).params || {};
+        params = ((req as any).pathParams || (req as any).params || {}) as TParams;
       }
 
       // 只在有验证器时执行验证

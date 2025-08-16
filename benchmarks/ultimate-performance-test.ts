@@ -26,37 +26,35 @@ const tirneRoutesDirect = [
   },
 ];
 
-// 2. 工厂路由 - 使用 GET 工厂函数
-import { GET } from "../src/utils";
+// 2. 工厂路由 - 使用直接路由对象
 const tirneRoutesFactory = [
-  GET(
-    "/",
-    () => {
+  {
+    method: "GET",
+    path: "/",
+    handler: (req: Request) => {
       return new Response(simpleMessage, {
         headers: { "Content-Type": "text/plain" },
       });
     },
-    {}
-  ),
+  },
 ];
 
 // 3. 完整路由 - 包含验证器配置
 const tirneRoutesFull = [
-  GET(
-    "/",
-    () => {
+  {
+    method: "GET",
+    path: "/",
+    handler: (req: Request) => {
       return new Response(simpleMessage, {
         headers: { "Content-Type": "text/plain" },
       });
     },
-    {
-      body: undefined,
-      query: undefined,
-      params: undefined,
-      headers: undefined,
-      cookies: undefined,
-    }
-  ),
+    body: undefined,
+    query: undefined,
+    params: undefined,
+    headers: undefined,
+    cookies: undefined,
+  },
 ];
 
 // 4. 原生 Response - 作为性能基准

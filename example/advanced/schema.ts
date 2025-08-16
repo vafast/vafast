@@ -8,11 +8,11 @@
  * @license MIT
  */
 
-import { GET, POST, PUT, DELETE, PATCH } from "../../src/utils";
 import { Type } from "@sinclair/typebox";
 import type { TypedRoute } from "../../src/types/route";
-import { json } from "../../src/utils/request-parser";
+import { json } from "../../src/util";
 import { Server } from "../../src/server";
+import { createRouteHandler } from "../../src/utils/route-handler-factory";
 
 // 简化的测试用Logger中间件
 const logger = async (req: Request, next: Function) => {
@@ -72,182 +72,205 @@ const schemaTestRoutes: TypedRoute[] = [
    * POST /test/body - 测试Body Schema验证
    * 验证请求体数据格式
    */
-  POST(
-    "/test/body",
-    (req, body) => {
-      return json(
-        {
-          success: true,
-          message: "Body Schema验证通过",
-          data: {
-            receivedBody: body,
-            timestamp: new Date().toISOString(),
+  {
+    method: "POST",
+    path: "/test/body",
+    handler: createRouteHandler(
+      {
+        body: TestBodySchema,
+        middleware: [logger],
+      },
+      (req, body) => {
+        return json(
+          {
+            success: true,
+            message: "Body Schema验证通过",
+            data: {
+              receivedBody: body,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      body: TestBodySchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+  },
 
   /**
    * GET /test/query - 测试Query Schema验证
    * 验证查询参数格式
    */
-  GET(
-    "/test/query",
-    (req, body, query) => {
-      return json(
-        {
-          success: true,
-          message: "Query Schema验证通过",
-          data: {
-            receivedQuery: query,
-            timestamp: new Date().toISOString(),
+  {
+    method: "GET",
+    path: "/test/query",
+    handler: createRouteHandler(
+      {
+        query: TestQuerySchema,
+        middleware: [logger],
+      },
+      (req, body, query) => {
+        return json(
+          {
+            success: true,
+            message: "Query Schema验证通过",
+            data: {
+              receivedQuery: query,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      query: TestQuerySchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+  },
 
   /**
    * GET /test/params/:id/:action - 测试Params Schema验证
    * 验证路径参数格式
    */
-  GET(
-    "/test/params/:id/:action",
-    (req, body, query, params) => {
-      return json(
-        {
-          success: true,
-          message: "Params Schema验证通过",
-          data: {
-            receivedParams: params,
-            timestamp: new Date().toISOString(),
+  {
+    method: "GET",
+    path: "/test/params/:id/:action",
+    handler: createRouteHandler(
+      {
+        params: TestParamsSchema,
+        middleware: [logger],
+      },
+      (req, body, query, params) => {
+        return json(
+          {
+            success: true,
+            message: "Params Schema验证通过",
+            data: {
+              receivedParams: params,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      params: TestParamsSchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+  },
 
   /**
    * GET /test/headers - 测试Headers Schema验证
    * 验证请求头格式
    */
-  GET(
-    "/test/headers",
-    (req, body, query, params, headers, cookies) => {
-      return json(
-        {
-          success: true,
-          message: "Headers Schema验证通过",
-          data: {
-            receivedHeaders: headers,
-            timestamp: new Date().toISOString(),
+  {
+    method: "GET",
+    path: "/test/headers",
+    handler: createRouteHandler(
+      {
+        headers: TestHeadersSchema,
+        middleware: [logger],
+      },
+      (req, body, query, params, headers, cookies) => {
+        return json(
+          {
+            success: true,
+            message: "Headers Schema验证通过",
+            data: {
+              receivedHeaders: headers,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      headers: TestHeadersSchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+  },
 
   /**
    * GET /test/cookies - 测试Cookies Schema验证
    * 验证Cookie格式
    */
-  GET(
-    "/test/cookies",
-    (req, body, query, params, headers, cookies) => {
-      return json(
-        {
-          success: true,
-          message: "Cookies Schema验证通过",
-          data: {
-            receivedCookies: cookies,
-            timestamp: new Date().toISOString(),
+  {
+    method: "GET",
+    path: "/test/cookies",
+    handler: createRouteHandler(
+      {
+        cookies: TestCookiesSchema,
+        middleware: [logger],
+      },
+      (req, body, query, params, headers, cookies) => {
+        return json(
+          {
+            success: true,
+            message: "Cookies Schema验证通过",
+            data: {
+              receivedCookies: cookies,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      cookies: TestCookiesSchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+  },
 
   /**
    * POST /test/all/:id/:action - 测试所有Schema验证
    * 同时验证body、query、params、headers、cookies
    */
-  POST(
-    "/test/all/:id/:action",
-    (req, body, query, params, headers, cookies) => {
-      return json(
-        {
-          success: true,
-          message: "所有Schema验证通过",
-          data: {
-            receivedBody: body,
-            receivedQuery: query,
-            receivedParams: params,
-            receivedHeaders: headers,
-            receivedCookies: cookies,
-            timestamp: new Date().toISOString(),
+  {
+    method: "POST",
+    path: "/test/all/:id/:action",
+    handler: createRouteHandler(
+      {
+        body: TestBodySchema,
+        query: TestQuerySchema,
+        params: TestParamsSchema,
+        headers: TestHeadersSchema,
+        cookies: TestCookiesSchema,
+        middleware: [logger],
+      },
+      (req, body, query, params, headers, cookies) => {
+        return json(
+          {
+            success: true,
+            message: "所有Schema验证通过",
+            data: {
+              receivedBody: body,
+              receivedQuery: query,
+              receivedParams: params,
+              receivedHeaders: headers,
+              receivedCookies: cookies,
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      body: TestBodySchema,
-      query: TestQuerySchema,
-      params: TestParamsSchema,
-      headers: TestHeadersSchema,
-      cookies: TestCookiesSchema,
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+    middleware: [logger],
+  },
 
   /**
    * GET /test/middleware-order - 测试中间件执行顺序
    * 验证中间件的执行顺序
    */
-  GET(
-    "/test/middleware-order",
-    (req) => {
-      return json(
-        {
-          success: true,
-          message: "中间件执行顺序测试",
-          data: {
-            timestamp: new Date().toISOString(),
+  {
+    method: "GET",
+    path: "/test/middleware-order",
+    handler: createRouteHandler(
+      {
+        middleware: [logger],
+      },
+      (req) => {
+        return json(
+          {
+            success: true,
+            message: "中间件执行顺序测试",
+            data: {
+              timestamp: new Date().toISOString(),
+            },
           },
-        },
-        200
-      );
-    },
-    {
-      middleware: [logger],
-    }
-  ),
+          200
+        );
+      }
+    ),
+    middleware: [logger],
+  },
 ];
 
 // 创建 tirne 服务器实例
