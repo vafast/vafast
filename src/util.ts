@@ -1,10 +1,8 @@
 // src/util.ts
+import qs from "qs";
+import cookie from "cookie";
 
-export function json(
-  data: unknown,
-  status = 200,
-  headers: HeadersInit = {}
-): Response {
+export function json(data: unknown, status = 200, headers: HeadersInit = {}): Response {
   const h = new Headers({
     "Content-Type": "application/json",
     ...headers,
@@ -17,10 +15,7 @@ export function json(
 }
 
 /** 生成重定向响应 */
-export function redirect(
-  location: string,
-  status: 301 | 302 = 302
-): Response {
+export function redirect(location: string, status: 301 | 302 = 302): Response {
   return new Response(null, {
     status,
     headers: {
@@ -29,15 +24,8 @@ export function redirect(
   });
 }
 
-/** 获取查询字符串 */
-export function parseQuery(req: Request): URLSearchParams {
-  return new URL(req.url).searchParams;
-}
-
 /** 解析请求体（JSON / URL编码） */
-export async function parseBody(
-  req: Request
-): Promise<unknown> {
+export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";
 
   if (contentType.includes("application/json")) {
@@ -50,4 +38,41 @@ export async function parseBody(
   }
 
   return await req.text(); // 默认返回
+}
+
+/** 获取查询字符串，直接返回对象 */
+export function parseQuery(req: Request): Record<string, any> {
+  const url = new URL(req.url);
+  return qs.parse(url.search.slice(1)); // 去掉开头的 ?
+}
+/** 解析请求头，返回对象 */
+export function parseHeaders(req: Request): Record<string, string> {
+  const headers: Record<string, string> = {};
+  req.headers.forEach((value, key) => {
+    if (value !== undefined) {
+      headers[key] = value;
+    }
+  });
+  return headers;
+}
+
+/** 使用cookie库解析Cookie，保证可靠性 */
+export function parseCookies(req: Request): Record<string, string> {
+  const cookieHeader = req.headers.get("cookie");
+  if (!cookieHeader) return {};
+
+  try {
+    const parsed = cookie.parse(cookieHeader);
+    // 过滤掉undefined和null值
+    const result: Record<string, string> = {};
+    for (const [key, value] of Object.entries(parsed)) {
+      if (value !== undefined && value !== null) {
+        result[key] = value;
+      }
+    }
+    return result;
+  } catch (error) {
+    console.error("Cookie解析失败:", error);
+    return {};
+  }
 }
