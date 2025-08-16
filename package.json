@@ -30,6 +30,8 @@
     "example:schema": "bun run example/advanced/schema.ts",
     "test": "bun test",
     "benchmark": "bun run benchmarks/performance.ts",
+    "benchmark:validators": "bun run benchmarks/validators-benchmark.ts",
+    "benchmark:quick": "bun run benchmarks/quick-benchmark.ts",
     "postbuild": "rimraf src/**/*.d.ts",
     "release": "bumpp && npm publish"
   },
