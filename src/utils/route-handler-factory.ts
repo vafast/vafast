@@ -9,14 +9,7 @@
  * @license MIT
  */
 
-import {
-  parseQuery,
-  parseQueryToObject,
-  parseHeaders,
-  parseCookies,
-  parseBody,
-  json,
-} from "./request-parser";
+import { parseQuery, parseHeaders, parseCookies, parseBody, json } from "../util";
 import { goAwait } from "./go-await";
 import {
   validateAllSchemasUltra,
@@ -77,8 +70,7 @@ export function createRouteHandler<TConfig extends TypedConfig>(
 
       // 按需解析和验证数据
       if (hasQuerySchema) {
-        const query = parseQuery(req);
-        queryObj = parseQueryToObject(query);
+        const queryObj = parseQuery(req);
       }
 
       if (hasHeadersSchema) {

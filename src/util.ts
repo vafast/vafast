@@ -49,7 +49,7 @@ export function parseQuery(req: Request): Record<string, any> {
 export function parseHeaders(req: Request): Record<string, string> {
   const headers: Record<string, string> = {};
   req.headers.forEach((value, key) => {
-    if (value !== undefined) {
+    if (value !== undefined && value !== null) {
       headers[key] = value;
     }
   });
@@ -73,6 +73,7 @@ export function parseCookies(req: Request): Record<string, string> {
     return result;
   } catch (error) {
     console.error("Cookie解析失败:", error);
+    console.error("原始Cookie字符串:", cookieHeader);
     return {};
   }
 }
