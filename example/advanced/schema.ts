@@ -12,7 +12,11 @@ import { Type } from "@sinclair/typebox";
 import type { TypedRoute } from "../../src/types/route";
 import { json } from "../../src/util";
 import { Server } from "../../src/server";
-import { createRouteHandler } from "../../src/utils/route-handler-factory";
+import {
+  createRouteHandler,
+  createHandler,
+  setLocals,
+} from "../../src/utils/route-handler-factory";
 
 // 简化的测试用Logger中间件
 const logger = async (req: Request, next: Function) => {
@@ -32,6 +36,60 @@ const logger = async (req: Request, next: Function) => {
   console.log(`📤 [${new Date().toISOString()}] ${method} ${url} → ${status} (${duration}ms)`);
 
   return response;
+};
+
+// 演示中间件注入类型化数据的中间件
+
+// 定义中间件注入的数据类型
+type ApiKeyInfo = {
+  sub: string;
+  scopes: string[];
+  issuedAt: number;
+};
+
+type UserContext = {
+  userId: string;
+  role: "admin" | "user";
+  permissions: string[];
+};
+
+// 认证中间件 - 注入 apiKeyInfo
+const requireAuth = async (req: Request, next: Function) => {
+  // 模拟从请求头获取 API Key 并验证
+  const apiKey = req.headers.get("x-api-key");
+
+  if (!apiKey) {
+    return new Response("Unauthorized: Missing API Key", { status: 401 });
+  }
+
+  // 模拟验证逻辑
+  const apiKeyInfo: ApiKeyInfo = {
+    sub: "user_" + Math.random().toString(36).substr(2, 9),
+    scopes: ["read", "write"],
+    issuedAt: Date.now(),
+  };
+
+  // 注入类型化的数据到请求上下文
+  setLocals(req, { apiKeyInfo });
+
+  console.log(`🔐 认证成功: ${apiKeyInfo.sub}`);
+  return next();
+};
+
+// 用户上下文中间件 - 注入 userContext
+const enrichUserContext = async (req: Request, next: Function) => {
+  // 模拟从数据库获取用户信息
+  const userContext: UserContext = {
+    userId: "user_123",
+    role: "admin",
+    permissions: ["users:read", "users:write", "admin:all"],
+  };
+
+  // 注入用户上下文
+  setLocals(req, { userContext });
+
+  console.log(`👤 用户上下文注入: ${userContext.role}`);
+  return next();
 };
 
 // 简化的测试用Schema定义
@@ -64,6 +122,13 @@ const TestHeadersSchema = Type.Object({
 const TestCookiesSchema = Type.Object({
   sessionId: Type.String(),
   theme: Type.Optional(Type.String()),
+});
+
+// Admin Profile Update Body Schema - 演示 body 的类型推导
+const UpdateProfileSchema = Type.Object({
+  displayName: Type.String(),
+  email: Type.Optional(Type.String()),
+  bio: Type.Optional(Type.String()),
 });
 
 // Schema验证测试路由配置
@@ -264,7 +329,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/login",
     middleware: [logger],
-    handler: createRouteHandler({}, ({ req }) => {
+    handler: createHandler()({}, ({ req }) => {
       // 模拟生成 token
       const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -284,6 +349,73 @@ const schemaTestRoutes: TypedRoute[] = [
         headers,
       };
     }),
+  },
+
+  /**
+   * GET /admin/profile - 演示中间件注入类型化数据
+   * 展示如何在处理器中获得中间件注入的完整类型提示
+   */
+  {
+    method: "GET",
+    path: "/admin/profile",
+    middleware: [logger, requireAuth, enrichUserContext],
+    handler: createHandler<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>()(
+      {},
+      ({ req, apiKeyInfo, userContext }) => {
+        // 现在 apiKeyInfo 和 userContext 都有完整的类型提示！
+        // TypeScript 会知道：
+        // - apiKeyInfo.sub 是 string
+        // - apiKeyInfo.scopes 是 string[]
+        // - userContext.role 是 "admin" | "user"
+        // - userContext.permissions 是 string[]
+
+        return {
+          success: true,
+          message: "管理员资料获取成功",
+          data: {
+            profile: {
+              userId: userContext.userId,
+              role: userContext.role,
+              permissions: userContext.permissions,
+              apiKey: {
+                sub: apiKeyInfo.sub,
+                scopes: apiKeyInfo.scopes,
+                issuedAt: new Date(apiKeyInfo.issuedAt).toISOString(),
+              },
+            },
+            timestamp: new Date().toISOString(),
+          },
+        };
+      }
+    ),
+  },
+
+  /**
+   * POST /admin/profile/update - 带 body Schema 与中间件额外类型
+   */
+  {
+    method: "POST",
+    path: "/admin/profile/update",
+    middleware: [logger, requireAuth, enrichUserContext],
+    handler: createHandler<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>()(
+      {
+        body: UpdateProfileSchema,
+      },
+      ({ body, apiKeyInfo, userContext }) => {
+        // body 类型由 UpdateProfileSchema 自动推导
+        // apiKeyInfo / userContext 来自中间件注入，具备完整类型
+        return {
+          data: {
+            success: true,
+            updated: body,
+            operator: apiKeyInfo.sub,
+            role: userContext.role,
+            timestamp: new Date().toISOString(),
+          },
+          status: 200,
+        };
+      }
+    ),
   },
 ];
 

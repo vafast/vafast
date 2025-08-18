@@ -16,7 +16,6 @@ import {
   precompileSchemasUltra,
   type SchemaConfig,
 } from "./validators/validators-ultra";
-import { Middleware } from "../types";
 import type { Static } from "@sinclair/typebox";
 
 // 类型推导的配置接口
@@ -33,15 +32,24 @@ export type TypedHandler<
   TQuery = any,
   TParams = any,
   THeaders = any,
-  TCookies = any
-> = (ctx: {
-  req: Request;
-  body: TBody;
-  query: TQuery;
-  params: TParams;
-  headers: THeaders;
-  cookies: TCookies;
-}) => Response | Promise<Response> | any | Promise<any>;
+  TCookies = any,
+  TExtra extends object = {}
+> = (
+  ctx: {
+    req: Request;
+    body: TBody;
+    query: TQuery;
+    params: TParams;
+    headers: THeaders;
+    cookies: TCookies;
+  } & TExtra
+) => Response | Promise<Response> | any | Promise<any>;
+
+// 提供给中间件写入“局部上下文”的工具函数
+export function setLocals<T extends object>(req: Request, extras: T) {
+  const target = req as any;
+  target.__locals = { ...(target.__locals ?? {}), ...extras };
+}
 
 // 自动转换返回值为 Response 的辅助函数
 function autoResponse(result: any): Response {
@@ -103,8 +111,9 @@ export function createRouteHandler<
   TQuery = TConfig extends { query: any } ? Static<TConfig["query"]> : any,
   TParams = TConfig extends { params: any } ? Static<TConfig["params"]> : any,
   THeaders = TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
-  TCookies = TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any
->(config: TConfig, handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies>) {
+  TCookies = TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any,
+  TExtra extends object = {}
+>(config: TConfig, handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies, TExtra>) {
   // 检查哪些验证器是必需的
   const hasBodySchema = config.body !== undefined;
   const hasQuerySchema = config.query !== undefined;
@@ -160,8 +169,26 @@ export function createRouteHandler<
         validateAllSchemasUltra(config, data);
       }
 
+      // 合并中间件注入的本地上下文
+      const extras = ((req as any).__locals ?? {}) as TExtra;
+
       // 调用处理器，传递上下文
-      const result = await handler({ req, body, query: queryObj, params, headers, cookies });
+      const result = await handler({
+        req,
+        body,
+        query: queryObj,
+        params,
+        headers,
+        cookies,
+        ...(extras as object),
+      } as unknown as {
+        req: Request;
+        body: TBody;
+        query: TQuery;
+        params: TParams;
+        headers: THeaders;
+        cookies: TCookies;
+      } & TExtra);
       return autoResponse(result);
     } catch (error) {
       // 返回验证错误响应
@@ -174,5 +201,29 @@ export function createRouteHandler<
         400
       );
     }
+  };
+}
+
+export function createHandler<TExtra extends object = {}>() {
+  return function withExtraHandler<TConfig extends TypedConfig>(
+    config: TConfig,
+    handler: TypedHandler<
+      TConfig extends { body: any } ? Static<TConfig["body"]> : any,
+      TConfig extends { query: any } ? Static<TConfig["query"]> : any,
+      TConfig extends { params: any } ? Static<TConfig["params"]> : any,
+      TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
+      TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any,
+      TExtra
+    >
+  ) {
+    return createRouteHandler<
+      TConfig,
+      TConfig extends { body: any } ? Static<TConfig["body"]> : any,
+      TConfig extends { query: any } ? Static<TConfig["query"]> : any,
+      TConfig extends { params: any } ? Static<TConfig["params"]> : any,
+      TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
+      TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any,
+      TExtra
+    >(config, handler);
   };
 }
