@@ -75,10 +75,10 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "POST",
     path: "/test/body",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         body: TestBodySchema,
-        middleware: [logger],
       },
       ({ req, body }) => {
         // 现在可以直接使用 req，也可以解构需要的参数
@@ -104,10 +104,10 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "GET",
     path: "/test/query",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         query: TestQuerySchema,
-        middleware: [logger],
       },
       ({ req, query }) => {
         // 可以解构需要的参数
@@ -130,10 +130,10 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "GET",
     path: "/test/params/:id/:action",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         params: TestParamsSchema,
-        middleware: [logger],
       },
       ({ req, params }) => {
         // 可以解构需要的参数
@@ -156,10 +156,10 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "GET",
     path: "/test/headers",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         headers: TestHeadersSchema,
-        middleware: [logger],
       },
       ({ req, headers, cookies }) => {
         // 可以解构需要的参数
@@ -183,10 +183,10 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "GET",
     path: "/test/cookies",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         cookies: TestCookiesSchema,
-        middleware: [logger],
       },
       ({ req, cookies }) => {
         // 可以解构需要的参数
@@ -209,6 +209,7 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "POST",
     path: "/test/all/:id/:action",
+    middleware: [logger],
     handler: createRouteHandler(
       {
         body: TestBodySchema,
@@ -216,7 +217,6 @@ const schemaTestRoutes: TypedRoute[] = [
         params: TestParamsSchema,
         headers: TestHeadersSchema,
         cookies: TestCookiesSchema,
-        middleware: [logger],
       },
       ({ req, body, query, params, headers, cookies }) => {
         // 可以解构所有需要的参数
@@ -243,21 +243,17 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "GET",
     path: "/test/middleware-order",
-    handler: createRouteHandler(
-      {
-        middleware: [logger],
-      },
-      ({ req }) => {
-        // 不需要任何解析数据时，可以只使用 req
-        return {
-          success: true,
-          message: "中间件执行顺序测试",
-          data: {
-            timestamp: new Date().toISOString(),
-          },
-        };
-      }
-    ),
+    middleware: [logger],
+    handler: createRouteHandler({}, ({ req }) => {
+      // 不需要任何解析数据时，可以只使用 req
+      return {
+        success: true,
+        message: "中间件执行顺序测试",
+        data: {
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }),
   },
 
   /**
@@ -267,31 +263,27 @@ const schemaTestRoutes: TypedRoute[] = [
   {
     method: "POST",
     path: "/login",
-    handler: createRouteHandler(
-      {
-        middleware: [logger],
-      },
-      ({ req }) => {
-        // 模拟生成 token
-        const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    middleware: [logger],
+    handler: createRouteHandler({}, ({ req }) => {
+      // 模拟生成 token
+      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-        // 设置 cookie
-        const headers = new Headers();
-        headers.set("Set-Cookie", `auth=${token}; HttpOnly; Path=/; Max-Age=3600`);
+      // 设置 cookie
+      const headers = new Headers();
+      headers.set("Set-Cookie", `auth=${token}; HttpOnly; Path=/; Max-Age=3600`);
 
-        // 使用新的返回值格式：{ data, status, headers }
-        return {
-          data: {
-            success: true,
-            message: "登录成功",
-            token,
-            timestamp: new Date().toISOString(),
-          },
-          status: 200,
-          headers,
-        };
-      }
-    ),
+      // 使用新的返回值格式：{ data, status, headers }
+      return {
+        data: {
+          success: true,
+          message: "登录成功",
+          token,
+          timestamp: new Date().toISOString(),
+        },
+        status: 200,
+        headers,
+      };
+    }),
   },
 ];
 

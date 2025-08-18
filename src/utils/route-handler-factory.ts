@@ -21,7 +21,6 @@ import type { Static } from "@sinclair/typebox";
 
 // 类型推导的配置接口
 export interface TypedConfig extends SchemaConfig {
-  middleware?: Middleware[];
   docs?: any;
   timeout?: number;
   maxBodySize?: string;
