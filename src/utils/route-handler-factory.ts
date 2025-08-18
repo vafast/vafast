@@ -204,7 +204,7 @@ export function createRouteHandler<
   };
 }
 
-export function createHandler<TExtra extends object = {}>() {
+export function withExtra<TExtra extends object = {}>() {
   return function withExtraHandler<TConfig extends TypedConfig>(
     config: TConfig,
     handler: TypedHandler<

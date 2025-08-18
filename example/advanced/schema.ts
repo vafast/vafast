@@ -12,11 +12,10 @@ import { Type } from "@sinclair/typebox";
 import type { TypedRoute } from "../../src/types/route";
 import { json } from "../../src/util";
 import { Server } from "../../src/server";
-import {
-  createRouteHandler,
-  createHandler,
-  setLocals,
-} from "../../src/utils/route-handler-factory";
+import { createRouteHandler, withExtra, setLocals } from "../../src/utils/route-handler-factory";
+
+// 创建类型化的处理器工厂
+const createTypedHandler = withExtra<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>();
 
 // 简化的测试用Logger中间件
 const logger = async (req: Request, next: Function) => {
@@ -329,7 +328,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/login",
     middleware: [logger],
-    handler: createHandler()({}, ({ req }) => {
+    handler: withExtra()({}, ({ req }) => {
       // 模拟生成 token
       const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -359,35 +358,32 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/admin/profile",
     middleware: [logger, requireAuth, enrichUserContext],
-    handler: createHandler<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>()(
-      {},
-      ({ req, apiKeyInfo, userContext }) => {
-        // 现在 apiKeyInfo 和 userContext 都有完整的类型提示！
-        // TypeScript 会知道：
-        // - apiKeyInfo.sub 是 string
-        // - apiKeyInfo.scopes 是 string[]
-        // - userContext.role 是 "admin" | "user"
-        // - userContext.permissions 是 string[]
+    handler: createTypedHandler({}, ({ req, apiKeyInfo, userContext }) => {
+      // 现在 apiKeyInfo 和 userContext 都有完整的类型提示！
+      // TypeScript 会知道：
+      // - apiKeyInfo.sub 是 string
+      // - apiKeyInfo.scopes 是 string[]
+      // - userContext.role 是 "admin" | "user"
+      // - userContext.permissions 是 string[]
 
-        return {
-          success: true,
-          message: "管理员资料获取成功",
-          data: {
-            profile: {
-              userId: userContext.userId,
-              role: userContext.role,
-              permissions: userContext.permissions,
-              apiKey: {
-                sub: apiKeyInfo.sub,
-                scopes: apiKeyInfo.scopes,
-                issuedAt: new Date(apiKeyInfo.issuedAt).toISOString(),
-              },
+      return {
+        success: true,
+        message: "管理员资料获取成功",
+        data: {
+          profile: {
+            userId: userContext.userId,
+            role: userContext.role,
+            permissions: userContext.permissions,
+            apiKey: {
+              sub: apiKeyInfo.sub,
+              scopes: apiKeyInfo.scopes,
+              issuedAt: new Date(apiKeyInfo.issuedAt).toISOString(),
             },
-            timestamp: new Date().toISOString(),
           },
-        };
-      }
-    ),
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }),
   },
 
   /**
@@ -397,7 +393,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/admin/profile/update",
     middleware: [logger, requireAuth, enrichUserContext],
-    handler: createHandler<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>()(
+    handler: createTypedHandler(
       {
         body: UpdateProfileSchema,
       },
