@@ -11,3 +11,4 @@ export * from "./middleware/auth";
 export * from "./utils/base64url";
 export * from "./defineRoute";
 export * from "./types";
+export * from "./utils/route-handler-factory";

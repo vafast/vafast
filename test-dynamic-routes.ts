@@ -3,6 +3,19 @@ import type { Route } from "./src/types";
 
 // 测试所有常见的动态路由模式
 const routes: Route[] = [
+  // 优先级测试：静态 vs 动态 vs 通配符（顺序被构造函数重排）
+  { method: "GET", path: "/priority/static", handler: () => json({ hit: "static" }) },
+  {
+    method: "GET",
+    path: "/priority/:type",
+    handler: (req, p) => json({ hit: "param", type: p?.type }),
+  },
+  {
+    method: "GET",
+    path: "/priority/*",
+    handler: (req, p) => json({ hit: "wild", rest: p?.["*"] }),
+  },
+
   // 1. 基础动态参数
   {
     method: "GET",
@@ -166,6 +179,11 @@ async function testDynamicRoutes() {
   console.log("🧪 开始测试所有常见动态路由模式...\n");
 
   const testCases = [
+    // 优先级：静态 > 动态 > 通配符
+    { method: "GET", path: "/priority/static", expectKey: "hit", expectVal: "static" },
+    { method: "GET", path: "/priority/any", expectKey: "hit", expectVal: "param" },
+    { method: "GET", path: "/priority/any/extra", expectKey: "hit", expectVal: "wild" },
+
     // 基础动态参数
     { method: "GET", path: "/user/123", expected: "用户详情" },
     { method: "GET", path: "/user/abc-def", expected: "用户详情" },
@@ -233,8 +251,18 @@ async function testDynamicRoutes() {
         console.log(`   ❌ 404 Not Found (预期): ${text}`);
       } else {
         const data = await response.json();
-        console.log(`   ✅ 状态: ${response.status}, 响应:`, data);
-        successCount++;
+        if (testCase.expectKey) {
+          const ok = data?.[testCase.expectKey] === testCase.expectVal;
+          console.log(
+            `   ✅ 状态: ${response.status}, 响应:`,
+            data,
+            ok ? "(优先级正确)" : "(优先级错误)"
+          );
+          if (ok) successCount++;
+        } else {
+          console.log(`   ✅ 状态: ${response.status}, 响应:`, data);
+          successCount++;
+        }
       }
     } catch (error) {
       console.log(`   ❌ 错误:`, error);

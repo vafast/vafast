@@ -24,6 +24,53 @@ export function redirect(location: string, status: 301 | 302 = 302): Response {
   });
 }
 
+/** 生成纯文本响应 */
+export function text(content: string, status = 200, headers: HeadersInit = {}): Response {
+  const h = new Headers({
+    "Content-Type": "text/plain; charset=utf-8",
+    ...headers,
+  });
+
+  return new Response(content, {
+    status,
+    headers: h,
+  });
+}
+
+/** 生成HTML响应 */
+export function html(content: string, status = 200, headers: HeadersInit = {}): Response {
+  const h = new Headers({
+    "Content-Type": "text/html; charset=utf-8",
+    ...headers,
+  });
+
+  return new Response(content, {
+    status,
+    headers: h,
+  });
+}
+
+/** 生成空响应（204 No Content） */
+export function empty(status = 204, headers: HeadersInit = {}): Response {
+  return new Response(null, {
+    status,
+    headers,
+  });
+}
+
+/** 生成流式响应 */
+export function stream(stream: ReadableStream, status = 200, headers: HeadersInit = {}): Response {
+  const h = new Headers({
+    "Content-Type": "application/octet-stream",
+    ...headers,
+  });
+
+  return new Response(stream, {
+    status,
+    headers: h,
+  });
+}
+
 /** 解析请求体（JSON / URL编码） */
 export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";

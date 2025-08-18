@@ -4,11 +4,34 @@ export interface MatchResult {
 }
 
 /**
- * 匹配函数：支持动态路由
+ * 标准化路径：去重斜杠、解码URL、处理结尾斜杠
+ */
+export function normalizePath(path: string): string {
+  // 解码 URL 编码的字符
+  let normalized = decodeURIComponent(path);
+  
+  // 去重连续的斜杠
+  normalized = normalized.replace(/\/+/g, "/");
+  
+  // 处理根路径
+  if (normalized === "") normalized = "/";
+  
+  // 去掉结尾斜杠（除非是根路径）
+  if (normalized !== "/" && normalized.endsWith("/")) {
+    normalized = normalized.slice(0, -1);
+  }
+  
+  return normalized;
+}
+
+/**
+ * 匹配函数：支持动态路由和路径标准化
  */
 export function matchPath(pattern: string, path: string): MatchResult {
+  // 标准化输入路径
+  const normalizedPath = normalizePath(path);
   const patternParts = pattern.split("/").filter(Boolean);
-  const pathParts = path.split("/").filter(Boolean);
+  const pathParts = normalizedPath.split("/").filter(Boolean);
 
   const params: Record<string, string> = {};
 
