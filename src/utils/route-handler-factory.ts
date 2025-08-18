@@ -23,8 +23,33 @@ export interface TypedConfig extends SchemaConfig {
   docs?: any;
   timeout?: number;
   maxBodySize?: string;
+  // 验证错误处理配置
+  validationErrorHandler?: ValidationErrorHandler;
   [key: string]: any;
 }
+
+// 验证错误处理器类型
+export type ValidationErrorHandler = (
+  error: Error,
+  field: string,
+  value: any,
+  schema: any
+) => Response | Promise<Response>;
+
+// 默认验证错误处理器
+const defaultValidationErrorHandler: ValidationErrorHandler = (error, field, value, schema) => {
+  return json(
+    {
+      success: false,
+      error: "Validation Error",
+      message: error instanceof Error ? error.message : "验证失败",
+      field,
+      receivedValue: value,
+      timestamp: new Date().toISOString(),
+    },
+    400
+  );
+};
 
 // 类型推导的处理器类型 - 现在使用单参数上下文对象
 export type TypedHandler<
@@ -45,7 +70,7 @@ export type TypedHandler<
   } & TExtra
 ) => Response | Promise<Response> | any | Promise<any>;
 
-// 提供给中间件写入“局部上下文”的工具函数
+// 提供给中间件写入"局部上下文"的工具函数
 export function setLocals<T extends object>(req: Request, extras: T) {
   const target = req as any;
   target.__locals = { ...(target.__locals ?? {}), ...extras };
@@ -126,6 +151,9 @@ export function createRouteHandler<
     precompileSchemasUltra(config);
   }
 
+  // 获取验证错误处理器
+  const errorHandler = config.validationErrorHandler || defaultValidationErrorHandler;
+
   return async (req: Request) => {
     try {
       let queryObj: TQuery = {} as TQuery;
@@ -191,17 +219,46 @@ export function createRouteHandler<
       } & TExtra);
       return autoResponse(result);
     } catch (error) {
-      // 返回验证错误响应
+      // 使用用户自定义的验证错误处理器
+      if (error instanceof Error && error.message.includes("验证失败")) {
+        // 尝试提取字段信息
+        const field = extractFieldFromError(error);
+        const value = extractValueFromError(error);
+        const schema = extractSchemaFromError(error);
+        
+        return await errorHandler(error, field, value, schema);
+      }
+      
+      // 其他错误使用默认处理
       return json(
         {
           success: false,
-          error: "Validation Error",
-          message: error instanceof Error ? error.message : "验证失败",
+          error: "Internal Error",
+          message: error instanceof Error ? error.message : "未知错误",
         },
-        400
+        500
       );
     }
   };
+}
+
+// 从错误中提取字段信息的辅助函数
+function extractFieldFromError(error: Error): string {
+  // 尝试从错误消息中提取字段名
+  const fieldMatch = error.message.match(/字段\s*(\w+)/);
+  return fieldMatch ? fieldMatch[1] : "unknown";
+}
+
+// 从错误中提取值的辅助函数
+function extractValueFromError(error: Error): any {
+  // 这里可以根据实际错误类型提取值
+  return undefined;
+}
+
+// 从错误中提取Schema的辅助函数
+function extractSchemaFromError(error: Error): any {
+  // 这里可以根据实际错误类型提取Schema
+  return undefined;
 }
 
 export function withExtra<TExtra extends object = {}>() {
