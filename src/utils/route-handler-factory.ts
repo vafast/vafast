@@ -28,21 +28,21 @@ export interface TypedConfig extends SchemaConfig {
   [key: string]: any;
 }
 
-// 类型推导的处理器类型 - 现在可以返回任何类型，会自动转换
+// 类型推导的处理器类型 - 现在使用单参数上下文对象
 export type TypedHandler<
   TBody = any,
   TQuery = any,
   TParams = any,
   THeaders = any,
   TCookies = any
-> = (
-  req: Request,
-  body: TBody,
-  query: TQuery,
-  params: TParams,
-  headers: THeaders,
-  cookies: TCookies
-) => Response | Promise<Response> | any | Promise<any>;
+> = (ctx: {
+  req: Request;
+  body: TBody;
+  query: TQuery;
+  params: TParams;
+  headers: THeaders;
+  cookies: TCookies;
+}) => Response | Promise<Response> | any | Promise<any>;
 
 // 自动转换返回值为 Response 的辅助函数
 function autoResponse(result: any): Response {
@@ -143,8 +143,8 @@ export function createRouteHandler<
         validateAllSchemasUltra(config, data);
       }
 
-      // 调用处理器，传递必要的数据
-      const result = await handler(req, body, queryObj, params, headers, cookies);
+      // 调用处理器，传递上下文
+      const result = await handler({ req, body, query: queryObj, params, headers, cookies });
       return autoResponse(result);
     } catch (error) {
       // 返回验证错误响应

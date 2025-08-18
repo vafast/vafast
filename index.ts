@@ -12,7 +12,7 @@ const routes = defineRoutes([
   {
     method: "POST",
     path: "/echo",
-    handler: createRouteHandler({}, async (req) => await req.text()),
+    handler: createRouteHandler({}, async ({ req }) => await req.text()),
   },
 ] as const satisfies Route[]);
 

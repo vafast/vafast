@@ -80,13 +80,16 @@ const schemaTestRoutes: TypedRoute[] = [
         body: TestBodySchema,
         middleware: [logger],
       },
-      (req, body) => {
-        // 现在可以直接返回对象，不需要 return json()
+      ({ req, body }) => {
+        // 现在可以直接使用 req，也可以解构需要的参数
+        const userAgent = req.headers.get("user-agent");
+
         return {
           success: true,
           message: "Body Schema验证通过",
           data: {
             receivedBody: body,
+            userAgent,
             timestamp: new Date().toISOString(),
           },
         };
@@ -106,8 +109,8 @@ const schemaTestRoutes: TypedRoute[] = [
         query: TestQuerySchema,
         middleware: [logger],
       },
-      (req, body, query) => {
-        // 直接返回对象
+      ({ req, query }) => {
+        // 可以解构需要的参数
         return {
           success: true,
           message: "Query Schema验证通过",
@@ -132,8 +135,8 @@ const schemaTestRoutes: TypedRoute[] = [
         params: TestParamsSchema,
         middleware: [logger],
       },
-      (req, body, query, params) => {
-        // 直接返回对象
+      ({ req, params }) => {
+        // 可以解构需要的参数
         return {
           success: true,
           message: "Params Schema验证通过",
@@ -158,13 +161,14 @@ const schemaTestRoutes: TypedRoute[] = [
         headers: TestHeadersSchema,
         middleware: [logger],
       },
-      (req, body, query, params, headers, cookies) => {
-        // 直接返回对象
+      ({ req, headers, cookies }) => {
+        // 可以解构需要的参数
         return {
           success: true,
           message: "Headers Schema验证通过",
           data: {
             receivedHeaders: headers,
+            receivedCookies: cookies,
             timestamp: new Date().toISOString(),
           },
         };
@@ -184,8 +188,8 @@ const schemaTestRoutes: TypedRoute[] = [
         cookies: TestCookiesSchema,
         middleware: [logger],
       },
-      (req, body, query, params, headers, cookies) => {
-        // 直接返回对象
+      ({ req, cookies }) => {
+        // 可以解构需要的参数
         return {
           success: true,
           message: "Cookies Schema验证通过",
@@ -214,8 +218,8 @@ const schemaTestRoutes: TypedRoute[] = [
         cookies: TestCookiesSchema,
         middleware: [logger],
       },
-      (req, body, query, params, headers, cookies) => {
-        // 直接返回对象
+      ({ req, body, query, params, headers, cookies }) => {
+        // 可以解构所有需要的参数
         return {
           success: true,
           message: "所有Schema验证通过",
@@ -243,8 +247,8 @@ const schemaTestRoutes: TypedRoute[] = [
       {
         middleware: [logger],
       },
-      (req) => {
-        // 直接返回对象
+      ({ req }) => {
+        // 不需要任何解析数据时，可以只使用 req
         return {
           success: true,
           message: "中间件执行顺序测试",
