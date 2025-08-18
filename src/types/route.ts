@@ -38,8 +38,21 @@ export interface ExtendedRouteConfig extends BaseRouteConfig {
   [key: string]: any;
 }
 
+// 嵌套路由配置
+export interface NestedRouteConfig {
+  path: string;
+  middleware?: Middleware[];
+  children?: (NestedRouteConfig | ExtendedRouteConfig)[];
+}
+
 // 类型安全的路由
 export type TypedRoute = ExtendedRouteConfig;
 
 // 兼容类型：可以接受Route或TypedRoute
 export type CompatibleRoute = Route | TypedRoute;
+
+// 扁平化后的路由，包含完整的中间件链
+export interface FlattenedRoute extends ExtendedRouteConfig {
+  fullPath: string;
+  middlewareChain: Middleware[];
+}

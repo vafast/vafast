@@ -14,3 +14,16 @@ export interface Route {
   handler: Handler;
   middleware?: Middleware[];
 }
+
+// 嵌套路由配置
+export interface NestedRoute {
+  path: string;
+  middleware?: Middleware[];
+  children?: (NestedRoute | Route)[];
+}
+
+// 扁平化后的路由，包含完整的中间件链
+export interface FlattenedRoute extends Route {
+  fullPath: string;
+  middlewareChain: Middleware[];
+}

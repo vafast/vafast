@@ -1,14 +1,16 @@
-import type { Handler, Middleware } from "./types";
-import { matchPath } from "./router";
-import type { Route } from "./types";
+import type { Handler, Middleware, Route, NestedRoute, FlattenedRoute } from "./types";
+import { matchPath, flattenNestedRoutes } from "./router";
 import { composeMiddleware } from "./middleware";
 import { json } from "./util";
 
 export class Server {
-  private routes: Route[];
+  private routes: FlattenedRoute[];
   private globalMiddleware: Middleware[] = [];
 
-  constructor(routes: Route[]) {
+  constructor(routes: (Route | NestedRoute)[]) {
+    // 扁平化嵌套路由，计算完整的中间件链
+    this.routes = flattenNestedRoutes(routes);
+    
     // 在构造时按路由"特异性"排序：静态 > 动态(:param) > 通配符(*)
     const score = (path: string): number => {
       const parts = path.split("/").filter(Boolean);
@@ -22,10 +24,13 @@ export class Server {
       return s * 10 + parts.length;
     };
 
-    this.routes = [...routes].sort((a, b) => score(b.path) - score(a.path));
+    this.routes = this.routes.sort((a, b) => score(b.fullPath) - score(a.fullPath));
 
     // 检测路由冲突
     this.detectRouteConflicts();
+    
+    // 打印扁平化后的路由信息
+    this.logFlattenedRoutes();
   }
 
   use(mw: Middleware) {
@@ -33,15 +38,29 @@ export class Server {
   }
 
   /**
+   * 打印扁平化后的路由信息，用于调试
+   */
+  private logFlattenedRoutes(): void {
+    console.log("🚀 扁平化后的路由:");
+    for (const route of this.routes) {
+      console.log(`  ${route.method} ${route.fullPath}`);
+      if (route.middlewareChain.length > 0) {
+        console.log(`    中间件链: ${route.middlewareChain.length} 个`);
+      }
+    }
+    console.log("");
+  }
+
+  /**
    * 检测路由冲突
    * 检查是否有路径相同但方法不同的路由，以及潜在的路径冲突
    */
   private detectRouteConflicts(): void {
-    const pathGroups = new Map<string, Route[]>();
+    const pathGroups = new Map<string, FlattenedRoute[]>();
 
     // 按路径分组
     for (const route of this.routes) {
-      const path = route.path;
+      const path = route.fullPath;
       if (!pathGroups.has(path)) {
         pathGroups.set(path, []);
       }
@@ -58,7 +77,7 @@ export class Server {
           // 相同路径、相同方法 - 这是冲突！
           console.warn(`⚠️  路由冲突: ${uniqueMethods[0]} ${path} 定义了 ${routes.length} 次`);
           routes.forEach((route, index) => {
-            console.warn(`   ${index + 1}. ${route.method} ${route.path}`);
+            console.warn(`   ${index + 1}. ${route.method} ${route.fullPath}`);
           });
         } else {
           // 相同路径、不同方法 - 这是正常的
@@ -75,7 +94,7 @@ export class Server {
    * 检测动态路由的潜在冲突
    */
   private detectDynamicRouteConflicts(): void {
-    const dynamicRoutes = this.routes.filter((r) => r.path.includes(":") || r.path.includes("*"));
+    const dynamicRoutes = this.routes.filter((r) => r.fullPath.includes(":") || r.fullPath.includes("*"));
 
     for (let i = 0; i < dynamicRoutes.length; i++) {
       for (let j = i + 1; j < dynamicRoutes.length; j++) {
@@ -84,9 +103,9 @@ export class Server {
 
         if (route1.method === route2.method) {
           // 检查路径是否可能冲突
-          if (this.pathsMayConflict(route1.path, route2.path)) {
+          if (this.pathsMayConflict(route1.fullPath, route2.fullPath)) {
             console.warn(
-              `⚠️  潜在路由冲突: ${route1.method} ${route1.path} 可能与 ${route2.path} 冲突`
+              `⚠️  潜在路由冲突: ${route1.method} ${route1.fullPath} 可能与 ${route2.fullPath} 冲突`
             );
           }
         }
@@ -136,12 +155,12 @@ export class Server {
       return this.handleOptions(pathname);
     }
 
-    let matched: Route | undefined;
+    let matched: FlattenedRoute | undefined;
     let params: Record<string, string> = {};
     let availableMethods: string[] = [];
 
     for (const route of this.routes) {
-      const result = matchPath(route.path, pathname);
+      const result = matchPath(route.fullPath, pathname);
       if (result.matched) {
         if (route.method === method) {
           matched = route;
@@ -179,8 +198,8 @@ export class Server {
       }
     };
 
-    const middlewareChain = matched?.middleware
-      ? [...this.globalMiddleware, ...matched.middleware]
+    const middlewareChain = matched?.middlewareChain
+      ? [...this.globalMiddleware, ...matched.middlewareChain]
       : this.globalMiddleware;
 
     // 使用 composeMiddleware 来确保错误处理中间件被应用
@@ -193,7 +212,7 @@ export class Server {
     const availableMethods: string[] = [];
 
     for (const route of this.routes) {
-      const result = matchPath(route.path, pathname);
+      const result = matchPath(route.fullPath, pathname);
       if (result.matched) {
         availableMethods.push(route.method);
       }

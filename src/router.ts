@@ -1,6 +1,44 @@
+import type { Route, NestedRoute, FlattenedRoute } from "./types";
+
 export interface MatchResult {
   matched: boolean;
   params: Record<string, string>;
+}
+
+/**
+ * 扁平化嵌套路由，计算完整路径和中间件链
+ */
+export function flattenNestedRoutes(routes: (Route | NestedRoute)[]): FlattenedRoute[] {
+  const flattened: FlattenedRoute[] = [];
+  
+  function processRoute(
+    route: Route | NestedRoute, 
+    parentPath: string = "", 
+    parentMiddleware: any[] = []
+  ) {
+    const currentPath = parentPath + route.path;
+    const currentMiddleware = [...parentMiddleware, ...(route.middleware || [])];
+    
+    if ('method' in route && 'handler' in route) {
+      // 这是一个叶子路由（有处理函数）
+      flattened.push({
+        ...route,
+        fullPath: currentPath,
+        middlewareChain: currentMiddleware
+      });
+    } else if ('children' in route && route.children) {
+      // 这是一个分组路由，处理子路由
+      for (const child of route.children) {
+        processRoute(child, currentPath, currentMiddleware);
+      }
+    }
+  }
+  
+  for (const route of routes) {
+    processRoute(route);
+  }
+  
+  return flattened;
 }
 
 /**
