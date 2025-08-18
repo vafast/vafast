@@ -259,6 +259,40 @@ const schemaTestRoutes: TypedRoute[] = [
       }
     ),
   },
+
+  /**
+   * POST /login - 测试高级返回值格式
+   * 展示 { data, status, headers } 的用法
+   */
+  {
+    method: "POST",
+    path: "/login",
+    handler: createRouteHandler(
+      {
+        middleware: [logger],
+      },
+      ({ req }) => {
+        // 模拟生成 token
+        const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // 设置 cookie
+        const headers = new Headers();
+        headers.set("Set-Cookie", `auth=${token}; HttpOnly; Path=/; Max-Age=3600`);
+
+        // 使用新的返回值格式：{ data, status, headers }
+        return {
+          data: {
+            success: true,
+            message: "登录成功",
+            token,
+            timestamp: new Date().toISOString(),
+          },
+          status: 200,
+          headers,
+        };
+      }
+    ),
+  },
 ];
 
 // 创建 tirne 服务器实例

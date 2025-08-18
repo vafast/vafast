@@ -50,20 +50,40 @@ function autoResponse(result: any): Response {
     return result;
   }
 
-  if (typeof result === "string") {
-    return new Response(result, {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
+  // 支持 { data, status, headers } 格式
+  if (result && typeof result === "object" && "data" in result) {
+    const {
+      data,
+      status = 200,
+      headers = {},
+    } = result as {
+      data: any;
+      status?: number;
+      headers?: HeadersInit;
+    };
+
+    const h = new Headers(headers);
+
+    // 无内容
+    if (data === null || data === undefined) {
+      return new Response("", { status: status ?? 204, headers: h });
+    }
+
+    // 纯文本类型
+    if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
+      if (!h.has("Content-Type")) {
+        h.set("Content-Type", "text/plain; charset=utf-8");
+      }
+      return new Response(String(data), { status, headers: h });
+    }
+
+    // JSON 类型
+    return json(data, status, h);
   }
 
-  if (typeof result === "number") {
-    return new Response(result.toString(), {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
-  }
-
-  if (typeof result === "boolean") {
-    return new Response(result.toString(), {
+  // 原有的自动序列化逻辑（向后兼容）
+  if (typeof result === "string" || typeof result === "number" || typeof result === "boolean") {
+    return new Response(String(result), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
   }
@@ -74,9 +94,7 @@ function autoResponse(result: any): Response {
   }
 
   // 对象、数组等 JSON 类型
-  return new Response(JSON.stringify(result), {
-    headers: { "Content-Type": "application/json; charset=utf-8" },
-  });
+  return json(result);
 }
 
 // 创建路由处理器的通用函数
