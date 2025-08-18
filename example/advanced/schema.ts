@@ -81,17 +81,15 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body) => {
-        return json(
-          {
-            success: true,
-            message: "Body Schema验证通过",
-            data: {
-              receivedBody: body,
-              timestamp: new Date().toISOString(),
-            },
+        // 现在可以直接返回对象，不需要 return json()
+        return {
+          success: true,
+          message: "Body Schema验证通过",
+          data: {
+            receivedBody: body,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
   },
@@ -109,17 +107,15 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body, query) => {
-        return json(
-          {
-            success: true,
-            message: "Query Schema验证通过",
-            data: {
-              receivedQuery: query,
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "Query Schema验证通过",
+          data: {
+            receivedQuery: query,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
   },
@@ -137,17 +133,15 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body, query, params) => {
-        return json(
-          {
-            success: true,
-            message: "Params Schema验证通过",
-            data: {
-              receivedParams: params,
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "Params Schema验证通过",
+          data: {
+            receivedParams: params,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
   },
@@ -165,17 +159,15 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body, query, params, headers, cookies) => {
-        return json(
-          {
-            success: true,
-            message: "Headers Schema验证通过",
-            data: {
-              receivedHeaders: headers,
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "Headers Schema验证通过",
+          data: {
+            receivedHeaders: headers,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
   },
@@ -193,17 +185,15 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body, query, params, headers, cookies) => {
-        return json(
-          {
-            success: true,
-            message: "Cookies Schema验证通过",
-            data: {
-              receivedCookies: cookies,
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "Cookies Schema验证通过",
+          data: {
+            receivedCookies: cookies,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
   },
@@ -225,24 +215,21 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req, body, query, params, headers, cookies) => {
-        return json(
-          {
-            success: true,
-            message: "所有Schema验证通过",
-            data: {
-              receivedBody: body,
-              receivedQuery: query,
-              receivedParams: params,
-              receivedHeaders: headers,
-              receivedCookies: cookies,
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "所有Schema验证通过",
+          data: {
+            receivedBody: body,
+            receivedQuery: query,
+            receivedParams: params,
+            receivedHeaders: headers,
+            receivedCookies: cookies,
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
-    middleware: [logger],
   },
 
   /**
@@ -257,19 +244,16 @@ const schemaTestRoutes: TypedRoute[] = [
         middleware: [logger],
       },
       (req) => {
-        return json(
-          {
-            success: true,
-            message: "中间件执行顺序测试",
-            data: {
-              timestamp: new Date().toISOString(),
-            },
+        // 直接返回对象
+        return {
+          success: true,
+          message: "中间件执行顺序测试",
+          data: {
+            timestamp: new Date().toISOString(),
           },
-          200
-        );
+        };
       }
     ),
-    middleware: [logger],
   },
 ];
 

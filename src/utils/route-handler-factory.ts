@@ -28,7 +28,7 @@ export interface TypedConfig extends SchemaConfig {
   [key: string]: any;
 }
 
-// 类型推导的处理器类型
+// 类型推导的处理器类型 - 现在可以返回任何类型，会自动转换
 export type TypedHandler<
   TBody = any,
   TQuery = any,
@@ -42,7 +42,42 @@ export type TypedHandler<
   params: TParams,
   headers: THeaders,
   cookies: TCookies
-) => Response | Promise<Response>;
+) => Response | Promise<Response> | any | Promise<any>;
+
+// 自动转换返回值为 Response 的辅助函数
+function autoResponse(result: any): Response {
+  if (result instanceof Response) {
+    return result;
+  }
+
+  if (typeof result === "string") {
+    return new Response(result, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  if (typeof result === "number") {
+    return new Response(result.toString(), {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  if (typeof result === "boolean") {
+    return new Response(result.toString(), {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  // null/undefined → 204，无内容
+  if (result === null || result === undefined) {
+    return new Response("", { status: 204 });
+  }
+
+  // 对象、数组等 JSON 类型
+  return new Response(JSON.stringify(result), {
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+}
 
 // 创建路由处理器的通用函数
 export function createRouteHandler<
@@ -109,7 +144,8 @@ export function createRouteHandler<
       }
 
       // 调用处理器，传递必要的数据
-      return handler(req, body, queryObj, params, headers, cookies);
+      const result = await handler(req, body, queryObj, params, headers, cookies);
+      return autoResponse(result);
     } catch (error) {
       // 返回验证错误响应
       return json(
