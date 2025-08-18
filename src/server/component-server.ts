@@ -13,13 +13,64 @@ export class ComponentServer {
   private routes: FlattenedComponentRoute[];
   private globalMiddleware: any[] = [];
 
+  // 按需加载的依赖缓存
+  private dependencyCache = new Map<string, any>();
+
   constructor(routes: (ComponentRoute | NestedComponentRoute)[]) {
     this.routes = flattenComponentRoutes(routes);
     this.logFlattenedRoutes();
+    console.log("🚀 依赖按需加载，服务器启动完成");
   }
 
   use(mw: any) {
     this.globalMiddleware.push(mw);
+  }
+
+  /**
+   * 按需获取框架依赖
+   */
+  private async getFrameworkDeps(framework: "vue" | "react") {
+    if (this.dependencyCache.has(framework)) {
+      return this.dependencyCache.get(framework);
+    }
+
+    console.log(`📦 按需加载 ${framework} 依赖...`);
+
+    try {
+      let deps;
+      switch (framework) {
+        case "vue":
+          deps = await Promise.all([import("vue"), import("@vue/server-renderer")]);
+          break;
+        case "react":
+          deps = await Promise.all([import("react"), import("react-dom/server")]);
+          break;
+        default:
+          throw new Error(`不支持的框架: ${framework}`);
+      }
+
+      this.dependencyCache.set(framework, deps);
+      console.log(`✅ ${framework} 依赖加载完成`);
+      return deps;
+    } catch (error) {
+      console.error(`❌ ${framework} 依赖加载失败:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * 检测组件类型
+   */
+  private detectComponentType(component: any): "vue" | "react" {
+    // 简单的组件类型检测
+    if (component.render && typeof component.render === "function") {
+      return "vue";
+    }
+    if (component.$$typeof) {
+      return "react";
+    }
+    // 默认使用 Vue
+    return "vue";
   }
 
   /**
@@ -96,14 +147,19 @@ export class ComponentServer {
       const componentModule = await componentImport();
       const component = componentModule.default || componentModule;
 
-      // 中间件已经配置了渲染器，直接调用
-      // 这里需要中间件提供渲染能力
-      if ((context.req as any).renderVue) {
-        return await (context.req as any).renderVue(() => Promise.resolve(component));
-      } else if ((context.req as any).renderReact) {
-        return await (context.req as any).renderReact(() => Promise.resolve(component));
+      // 自动检测组件类型
+      const componentType = this.detectComponentType(component);
+
+      // 按需加载依赖
+      const deps = await this.getFrameworkDeps(componentType);
+
+      // 根据组件类型渲染
+      if (componentType === "vue") {
+        return await this.renderVueComponent(component, context, deps);
+      } else if (componentType === "react") {
+        return await this.renderReactComponent(component, context, deps);
       } else {
-        throw new Error("没有配置渲染器中间件");
+        throw new Error(`不支持的组件类型: ${componentType}`);
       }
     };
 
@@ -119,6 +175,99 @@ export class ComponentServer {
     };
 
     return await next();
+  }
+
+  /**
+   * 渲染 Vue 组件
+   */
+  private async renderVueComponent(component: any, context: any, deps: any): Promise<Response> {
+    try {
+      const [vue, renderer] = deps;
+      const app = vue.createSSRApp(component);
+
+      // 提供路由信息
+      app.provide("routeInfo", {
+        params: context.params || {},
+        query: context.query || {},
+        pathname: context.pathname,
+      });
+
+      const html = await renderer.renderToString(app);
+
+      return new Response(
+        `
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Vafast SSR App</title>
+          </head>
+          <body>
+            <div id="app">${html}</div>
+            <script>
+              window.__ROUTE_INFO__ = {
+                params: ${JSON.stringify(context.params || {})},
+                query: ${JSON.stringify(context.query || {})},
+                pathname: '${context.pathname}'
+              };
+            </script>
+            <script type="module" src="/client.js"></script>
+          </body>
+        </html>
+      `,
+        {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        }
+      );
+    } catch (error) {
+      console.error("Vue 组件渲染失败:", error);
+      return new Response("Vue Component Render Error", { status: 500 });
+    }
+  }
+
+  /**
+   * 渲染 React 组件
+   */
+  private async renderReactComponent(component: any, context: any, deps: any): Promise<Response> {
+    try {
+      const [react, renderer] = deps;
+      const content = react.createElement(component, {
+        req: context.req,
+        params: context.params || {},
+        query: context.query || {},
+      });
+
+      const html = renderer.renderToString(content);
+
+      return new Response(
+        `
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Vafast SSR App</title>
+          </head>
+          <body>
+            <div id="root">${html}</div>
+            <script>
+              window.__ROUTE_INFO__ = {
+                params: ${JSON.stringify(context.params || {})},
+                query: ${JSON.stringify(context.query || {})},
+                pathname: '${context.pathname}'
+              };
+            </script>
+            <script type="module" src="/client.js"></script>
+          </body>
+        </html>
+      `,
+        {
+          headers: { "Content-Type": "text/html; charset=utf-8" },
+        }
+      );
+    } catch (error) {
+      console.error("React 组件渲染失败:", error);
+      return new Response("React Component Render Error", { status: 500 });
+    }
   }
 
   /**

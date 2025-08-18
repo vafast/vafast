@@ -1,12 +1,11 @@
 import { ComponentServer } from "../../src/server/component-server";
 import type { ComponentRoute, NestedComponentRoute } from "../../src/types/component-route";
-import { vueRenderer, reactRenderer } from "../../src/middleware/component-renderer";
 
 // 组件路由配置 - 直接使用中间件
 const routes: NestedComponentRoute[] = [
   {
     path: "/",
-    middleware: [vueRenderer()],
+    middleware: [], // 不需要渲染器中间件，服务器会自动处理
     children: [
       {
         path: "/",
@@ -20,7 +19,7 @@ const routes: NestedComponentRoute[] = [
   },
   {
     path: "/admin",
-    middleware: [reactRenderer()],
+    middleware: [], // 不需要渲染器中间件，服务器会自动处理
     children: [
       {
         path: "/dashboard",

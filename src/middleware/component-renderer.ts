@@ -4,10 +4,16 @@
  */
 
 // Vue SSR 渲染
-const renderVueSSR = async (componentImport: () => Promise<any>, req: Request) => {
+const renderVueSSR = async (componentImport: () => Promise<any>, req: Request, preloadedDeps?: any) => {
   try {
-    const { createSSRApp } = await import("vue");
-    const { renderToString } = await import("@vue/server-renderer");
+    // 使用预加载的依赖或动态导入
+    const { createSSRApp, renderToString } = preloadedDeps || await Promise.all([
+      import("vue"),
+      import("@vue/server-renderer")
+    ]).then(([vue, renderer]) => ({
+      createSSRApp: vue.createSSRApp,
+      renderToString: renderer.renderToString
+    }));
 
     const componentModule = await componentImport();
     const component = componentModule.default || componentModule;
@@ -67,15 +73,21 @@ const renderVueSSR = async (componentImport: () => Promise<any>, req: Request) =
 };
 
 // React SSR 渲染
-const renderReactSSR = async (componentImport: () => Promise<any>, req: Request) => {
+const renderReactSSR = async (componentImport: () => Promise<any>, req: Request, preloadedDeps?: any) => {
   try {
-    const React = await import("react");
-    const { renderToString } = await import("react-dom/server");
+    // 使用预加载的依赖或动态导入
+    const { createElement, renderToString } = preloadedDeps || await Promise.all([
+      import("react"),
+      import("react-dom/server")
+    ]).then(([react, renderer]) => ({
+      createElement: react.createElement,
+      renderToString: renderer.renderToString
+    }));
 
     const componentModule = await componentImport();
     const Component = componentModule.default || componentModule;
 
-    const content = React.createElement(Component, {
+    const content = createElement(Component, {
       req,
       params: (req as any).params || {},
       query: Object.fromEntries(new URL(req.url).searchParams),
@@ -127,20 +139,20 @@ const renderReactSSR = async (componentImport: () => Promise<any>, req: Request)
 };
 
 // Vue 组件渲染器 - 专注 SSR
-export const vueRenderer = () => {
+export const vueRenderer = (preloadedDeps?: any) => {
   return async (req: Request, next: () => Promise<Response>) => {
     (req as any).renderVue = async (componentImport: () => Promise<any>) => {
-      return await renderVueSSR(componentImport, req);
+      return await renderVueSSR(componentImport, req, preloadedDeps);
     };
     return next();
   };
 };
 
 // React 组件渲染器 - 专注 SSR
-export const reactRenderer = () => {
+export const reactRenderer = (preloadedDeps?: any) => {
   return async (req: Request, next: () => Promise<Response>) => {
     (req as any).renderReact = async (componentImport: () => Promise<any>) => {
-      return await renderReactSSR(componentImport, req);
+      return await renderReactSSR(componentImport, req, preloadedDeps);
     };
     return next();
   };
