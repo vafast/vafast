@@ -9,13 +9,19 @@
  * @license MIT
  */
 
-import { parseQuery, parseHeaders, parseCookies, parseBody, json } from "../util";
+import {
+  parseQuery,
+  parseHeaders,
+  parseCookies,
+  parseBody,
+  json,
+} from "../util";
 import { goAwait } from "./go-await";
 import {
   validateAllSchemasUltra,
   precompileSchemasUltra,
   type SchemaConfig,
-} from "./validators/validators-ultra";
+} from "./validators/schema-validators-ultra";
 import type { Static } from "@sinclair/typebox";
 
 // 类型推导的配置接口
@@ -37,7 +43,12 @@ export type ValidationErrorHandler = (
 ) => Response | Promise<Response>;
 
 // 默认验证错误处理器
-const defaultValidationErrorHandler: ValidationErrorHandler = (error, field, value, schema) => {
+const defaultValidationErrorHandler: ValidationErrorHandler = (
+  error,
+  field,
+  value,
+  schema
+) => {
   return json(
     {
       success: false,
@@ -102,7 +113,11 @@ function autoResponse(result: any): Response {
     }
 
     // 纯文本类型
-    if (typeof data === "string" || typeof data === "number" || typeof data === "boolean") {
+    if (
+      typeof data === "string" ||
+      typeof data === "number" ||
+      typeof data === "boolean"
+    ) {
       if (!h.has("Content-Type")) {
         h.set("Content-Type", "text/plain; charset=utf-8");
       }
@@ -114,7 +129,11 @@ function autoResponse(result: any): Response {
   }
 
   // 原有的自动序列化逻辑（向后兼容）
-  if (typeof result === "string" || typeof result === "number" || typeof result === "boolean") {
+  if (
+    typeof result === "string" ||
+    typeof result === "number" ||
+    typeof result === "boolean"
+  ) {
     return new Response(String(result), {
       headers: { "Content-Type": "text/plain; charset=utf-8" },
     });
@@ -135,10 +154,17 @@ export function createRouteHandler<
   TBody = TConfig extends { body: any } ? Static<TConfig["body"]> : any,
   TQuery = TConfig extends { query: any } ? Static<TConfig["query"]> : any,
   TParams = TConfig extends { params: any } ? Static<TConfig["params"]> : any,
-  THeaders = TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
-  TCookies = TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any,
+  THeaders = TConfig extends { headers: any }
+    ? Static<TConfig["headers"]>
+    : any,
+  TCookies = TConfig extends { cookies: any }
+    ? Static<TConfig["cookies"]>
+    : any,
   TExtra extends object = {}
->(config: TConfig, handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies, TExtra>) {
+>(
+  config: TConfig,
+  handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies, TExtra>
+) {
   // 检查哪些验证器是必需的
   const hasBodySchema = config.body !== undefined;
   const hasQuerySchema = config.query !== undefined;
@@ -147,12 +173,19 @@ export function createRouteHandler<
   const hasCookiesSchema = config.cookies !== undefined;
 
   // 只在有验证器时预编译Schema
-  if (hasBodySchema || hasQuerySchema || hasParamsSchema || hasHeadersSchema || hasCookiesSchema) {
+  if (
+    hasBodySchema ||
+    hasQuerySchema ||
+    hasParamsSchema ||
+    hasHeadersSchema ||
+    hasCookiesSchema
+  ) {
     precompileSchemasUltra(config);
   }
 
   // 获取验证错误处理器
-  const errorHandler = config.validationErrorHandler || defaultValidationErrorHandler;
+  const errorHandler =
+    config.validationErrorHandler || defaultValidationErrorHandler;
 
   return async (req: Request) => {
     try {
@@ -182,7 +215,9 @@ export function createRouteHandler<
 
       if (hasParamsSchema) {
         // 从 req 的第二个参数获取路径参数，或者从 req.pathParams 获取
-        params = ((req as any).pathParams || (req as any).params || {}) as TParams;
+        params = ((req as any).pathParams ||
+          (req as any).params ||
+          {}) as TParams;
       }
 
       // 只在有验证器时执行验证
@@ -225,10 +260,10 @@ export function createRouteHandler<
         const field = extractFieldFromError(error);
         const value = extractValueFromError(error);
         const schema = extractSchemaFromError(error);
-        
+
         return await errorHandler(error, field, value, schema);
       }
-      
+
       // 其他错误使用默认处理
       return json(
         {

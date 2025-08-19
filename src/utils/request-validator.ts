@@ -11,7 +11,10 @@
 
 import type { TSchema } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
-import { validateAllSchemasUltra, type SchemaConfig } from "./validators/validators-ultra";
+import {
+  validateAllSchemasUltra,
+  type SchemaConfig,
+} from "./validators/schema-validators-ultra";
 import { parseBody, parseQuery, parseHeaders, parseCookies } from "../util";
 
 // 请求数据结构
@@ -27,9 +30,15 @@ export interface RequestData {
 export interface ValidatedRequestData<T extends SchemaConfig> {
   body: T["body"] extends TSchema ? Static<T["body"]> : unknown;
   query: T["query"] extends TSchema ? Static<T["query"]> : unknown;
-  params: T["params"] extends TSchema ? Static<T["params"]> : Record<string, string>;
-  headers: T["headers"] extends TSchema ? Static<T["headers"]> : Record<string, string>;
-  cookies: T["cookies"] extends TSchema ? Static<T["cookies"]> : Record<string, string>;
+  params: T["params"] extends TSchema
+    ? Static<T["params"]>
+    : Record<string, string>;
+  headers: T["headers"] extends TSchema
+    ? Static<T["headers"]>
+    : Record<string, string>;
+  cookies: T["cookies"] extends TSchema
+    ? Static<T["cookies"]>
+    : Record<string, string>;
 }
 
 // 验证结果
