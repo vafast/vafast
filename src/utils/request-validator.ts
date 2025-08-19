@@ -15,7 +15,7 @@ import {
   validateAllSchemasUltra,
   type SchemaConfig,
 } from "./validators/schema-validators-ultra";
-import { parseBody, parseQuery, parseHeaders, parseCookies } from "../util";
+import { parseBody, parseQuery, parseHeaders, parseCookies } from "./parsers";
 
 // 请求数据结构
 export interface RequestData {
