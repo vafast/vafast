@@ -1,5 +1,11 @@
-import { Server, json, parseBody, parseFormData, parseFile } from "./src/index";
-import type { Route } from "./src/types";
+import {
+  Server,
+  json,
+  parseBody,
+  parseFormData,
+  parseFile,
+} from "../../src/index";
+import type { Route } from "../../src/types";
 
 // 测试增强的请求体解析功能
 const routes: Route[] = [

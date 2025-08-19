@@ -1,21 +1,49 @@
-import { Server, json } from "./src/index";
-import type { Route } from "./src/types";
+import { Server, json } from "../../src/index";
+import type { Route } from "../../src/types";
 
 // 测试路由冲突检测
 const routes: Route[] = [
   // 1. 正常的多方法路由（不会冲突）
-  { method: "GET", path: "/users/:id", handler: () => json({ message: "获取用户" }) },
-  { method: "POST", path: "/users/:id", handler: () => json({ message: "创建用户" }) },
-  { method: "PUT", path: "/users/:id", handler: () => json({ message: "更新用户" }) },
-  
+  {
+    method: "GET",
+    path: "/users/:id",
+    handler: () => json({ message: "获取用户" }),
+  },
+  {
+    method: "POST",
+    path: "/users/:id",
+    handler: () => json({ message: "创建用户" }),
+  },
+  {
+    method: "PUT",
+    path: "/users/:id",
+    handler: () => json({ message: "更新用户" }),
+  },
+
   // 2. 冲突路由：相同路径、相同方法
-  { method: "GET", path: "/conflict", handler: () => json({ message: "冲突1" }) },
-  { method: "GET", path: "/conflict", handler: () => json({ message: "冲突2" }) },
-  
+  {
+    method: "GET",
+    path: "/conflict",
+    handler: () => json({ message: "冲突1" }),
+  },
+  {
+    method: "GET",
+    path: "/conflict",
+    handler: () => json({ message: "冲突2" }),
+  },
+
   // 3. 潜在冲突：动态路由
-  { method: "GET", path: "/api/*", handler: () => json({ message: "通配符API" }) },
-  { method: "GET", path: "/api/:version", handler: () => json({ message: "版本API" }) },
-  
+  {
+    method: "GET",
+    path: "/api/*",
+    handler: () => json({ message: "通配符API" }),
+  },
+  {
+    method: "GET",
+    path: "/api/:version",
+    handler: () => json({ message: "版本API" }),
+  },
+
   // 4. 正常的路由
   { method: "GET", path: "/health", handler: () => json({ status: "OK" }) },
   { method: "GET", path: "/", handler: () => json({ message: "首页" }) },
@@ -56,8 +84,11 @@ async function testNormalRoutes() {
     try {
       const response = await server.fetch(req);
       const data = await response.json();
-      
-      if (data.message === testCase.expected || data.status === testCase.expected) {
+
+      if (
+        data.message === testCase.expected ||
+        data.status === testCase.expected
+      ) {
         console.log(`   ✅ 状态: ${response.status}, 响应:`, data);
         successCount++;
       } else {
@@ -85,7 +116,7 @@ async function testConflictRoutes() {
   try {
     const response = await server.fetch(req);
     const data = await response.json();
-    
+
     console.log(`📡 测试: GET /conflict`);
     console.log(`   ✅ 状态: ${response.status}, 响应:`, data);
     console.log(`   ℹ️  注意：虽然定义了两次，但只使用了第一个处理器`);

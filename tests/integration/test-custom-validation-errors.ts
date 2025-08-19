@@ -1,7 +1,7 @@
-import { Server, json, withExtra } from "./src/index";
-import type { ValidationErrorHandler } from "./src/utils/route-handler-factory";
+import { Server, json, withExtra } from "../../src/index";
+import type { ValidationErrorHandler } from "../../src/utils/route-handler-factory";
 import { Type } from "@sinclair/typebox";
-import type { Route } from "./src/types";
+import type { Route } from "../../src/types";
 
 // 测试用的Schema
 const TestSchema = Type.Object({
@@ -10,7 +10,12 @@ const TestSchema = Type.Object({
 });
 
 // 自定义错误处理器 - 测试用
-const testValidationErrorHandler: ValidationErrorHandler = (error, field, value, schema) => {
+const testValidationErrorHandler: ValidationErrorHandler = (
+  error,
+  field,
+  value,
+  schema
+) => {
   return json(
     {
       success: false,
@@ -138,7 +143,9 @@ async function testCustomValidationErrors() {
     console.log("");
   }
 
-  console.log(`🎉 自定义验证错误处理器测试完成! 成功: ${successCount}/${totalCount}`);
+  console.log(
+    `🎉 自定义验证错误处理器测试完成! 成功: ${successCount}/${totalCount}`
+  );
   console.log(`📊 成功率: ${((successCount / totalCount) * 100).toFixed(1)}%`);
 }
 

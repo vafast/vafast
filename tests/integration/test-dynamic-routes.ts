@@ -1,10 +1,14 @@
-import { Server, json } from "./src/index";
-import type { Route } from "./src/types";
+import { Server, json } from "../../src/index";
+import type { Route } from "../../src/types";
 
 // 测试所有常见的动态路由模式
 const routes: Route[] = [
   // 优先级测试：静态 vs 动态 vs 通配符（顺序被构造函数重排）
-  { method: "GET", path: "/priority/static", handler: () => json({ hit: "static" }) },
+  {
+    method: "GET",
+    path: "/priority/static",
+    handler: () => json({ hit: "static" }),
+  },
   {
     method: "GET",
     path: "/priority/:type",
@@ -143,7 +147,10 @@ const routes: Route[] = [
     method: "DELETE",
     path: "/users/:userId/posts/:postId/comments/:commentId",
     handler: (req, params) => {
-      console.log("访问 /users/:userId/posts/:postId/comments/:commentId，参数:", params);
+      console.log(
+        "访问 /users/:userId/posts/:postId/comments/:commentId，参数:",
+        params
+      );
       return json({
         userId: params?.userId,
         postId: params?.postId,
@@ -180,9 +187,24 @@ async function testDynamicRoutes() {
 
   const testCases = [
     // 优先级：静态 > 动态 > 通配符
-    { method: "GET", path: "/priority/static", expectKey: "hit", expectVal: "static" },
-    { method: "GET", path: "/priority/any", expectKey: "hit", expectVal: "param" },
-    { method: "GET", path: "/priority/any/extra", expectKey: "hit", expectVal: "wild" },
+    {
+      method: "GET",
+      path: "/priority/static",
+      expectKey: "hit",
+      expectVal: "static",
+    },
+    {
+      method: "GET",
+      path: "/priority/any",
+      expectKey: "hit",
+      expectVal: "param",
+    },
+    {
+      method: "GET",
+      path: "/priority/any/extra",
+      expectKey: "hit",
+      expectVal: "wild",
+    },
 
     // 基础动态参数
     { method: "GET", path: "/user/123", expected: "用户详情" },
@@ -202,8 +224,16 @@ async function testDynamicRoutes() {
 
     // 可选参数
     { method: "GET", path: "/search/javascript", expected: "搜索结果" },
-    { method: "GET", path: "/search/javascript/frameworks", expected: "搜索结果" },
-    { method: "GET", path: "/search/javascript/frameworks/2", expected: "搜索结果" },
+    {
+      method: "GET",
+      path: "/search/javascript/frameworks",
+      expected: "搜索结果",
+    },
+    {
+      method: "GET",
+      path: "/search/javascript/frameworks/2",
+      expected: "搜索结果",
+    },
 
     // 文件路径模式
     { method: "GET", path: "/files/docs/api.md", expected: "文件访问" },
@@ -214,14 +244,22 @@ async function testDynamicRoutes() {
     { method: "GET", path: "/api/v2/comments/456", expected: "通用API" },
 
     // 带查询参数的动态路由
-    { method: "GET", path: "/posts/2024/01/my-first-post", expected: "博客文章" },
+    {
+      method: "GET",
+      path: "/posts/2024/01/my-first-post",
+      expected: "博客文章",
+    },
     { method: "GET", path: "/posts/2023/12/hello-world", expected: "博客文章" },
 
     // 用户操作路由
     { method: "PUT", path: "/users/123/profile", expected: "更新用户资料" },
 
     // 嵌套资源路由
-    { method: "DELETE", path: "/users/123/posts/456/comments/789", expected: "删除评论" },
+    {
+      method: "DELETE",
+      path: "/users/123/posts/456/comments/789",
+      expected: "删除评论",
+    },
 
     // 静态路由
     { method: "GET", path: "/health", expected: "健康检查" },
