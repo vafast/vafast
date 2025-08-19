@@ -1,5 +1,5 @@
 // 导出所有服务器相关的类和工具
-export { Server } from "../server";
+export { Server } from "./server";
 export { ComponentServer } from "./component-server";
 export { BaseServer } from "./base-server";
 export { ServerFactory } from "./server-factory";

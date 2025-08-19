@@ -4,12 +4,12 @@ import type {
   Route,
   NestedRoute,
   FlattenedRoute,
-} from "./types";
-import { matchPath, flattenNestedRoutes } from "./router";
-import { composeMiddleware } from "./middleware";
-import { json } from "./utils/response";
-import { BaseServer } from "./server/base-server";
-import { PathMatcher } from "./utils/path-matcher";
+} from "../types";
+import { matchPath, flattenNestedRoutes } from "../router";
+import { composeMiddleware } from "../middleware";
+import { json } from "../utils/response";
+import { BaseServer } from "./base-server";
+import { PathMatcher } from "../utils/path-matcher";
 
 export class Server extends BaseServer {
   private routes: FlattenedRoute[];
