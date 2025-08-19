@@ -1,20 +1,10 @@
-// src/cookie.ts（带日志）
+// src/cookie.ts
+import { parseCookies } from "./utils/parsers.js";
+
+/** 获取单个 Cookie 值 */
 export function getCookie(req: Request, key: string): string | null {
-  const cookie = req.headers.get("cookie");
-  console.log("[Vafast] 接收到的 Cookie:", cookie); // ✅ 已添加
-
-  if (!cookie) return null;
-
-  const pairs = cookie.split(";").map((c) => c.trim().split("="));
-  for (const [k, v] of pairs) {
-    if (k === key) {
-      console.log(`[Vafast] 匹配的 Cookie: ${k}=${v}`); // ✅ 已添加
-      return decodeURIComponent(v);
-    }
-  }
-
-  console.log("[Vafast] 没有匹配的 cookie 键:", key);
-  return null;
+  const cookies = parseCookies(req);
+  return cookies[key] || null;
 }
 
 /** 生成 Set-Cookie 头 */
