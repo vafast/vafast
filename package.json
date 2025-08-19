@@ -46,7 +46,7 @@
     "type-check": "tsc --noEmit",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "postbuild": "rimraf src/**/*.d.ts",
-    "release": "bumpp && npm publish",
+    "release": "npm run lint && npm run type-check && npm run build && npm run test:run && bumpp && npm publish",
     "docs:dev": "bun run docs:serve",
     "docs:build": "bun run docs:build",
     "docs:serve": "bun run docs:serve"
