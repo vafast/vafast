@@ -4,87 +4,28 @@ import type {
   FlattenedComponentRoute,
 } from "../types/component-route";
 import { flattenComponentRoutes } from "../middleware/component-router";
+import { BaseServer } from "./base-server";
+import { PathMatcher } from "../utils/path-matcher";
+import { HtmlRenderer } from "../utils/html-renderer";
+import { DependencyManager } from "../utils/dependency-manager";
 
 /**
  * 组件路由服务器
  * 专门处理声明式组件路由
  */
-export class ComponentServer {
+export class ComponentServer extends BaseServer {
   private routes: FlattenedComponentRoute[];
-  private globalMiddleware: any[] = [];
-
-  // 按需加载的依赖缓存
-  private dependencyCache = new Map<string, any>();
+  private dependencyManager: DependencyManager;
 
   constructor(routes: (ComponentRoute | NestedComponentRoute)[]) {
+    super();
     this.routes = flattenComponentRoutes(routes);
-    this.logFlattenedRoutes();
+    this.dependencyManager = new DependencyManager();
+
+    // 检测路由冲突
+    this.detectRouteConflicts(this.routes);
+    this.logFlattenedRoutes(this.routes, "组件路由");
     console.log("🚀 依赖按需加载，服务器启动完成");
-  }
-
-  use(mw: any) {
-    this.globalMiddleware.push(mw);
-  }
-
-  /**
-   * 按需获取框架依赖
-   */
-  private async getFrameworkDeps(framework: "vue" | "react") {
-    if (this.dependencyCache.has(framework)) {
-      return this.dependencyCache.get(framework);
-    }
-
-    console.log(`📦 按需加载 ${framework} 依赖...`);
-
-    try {
-      let deps;
-      switch (framework) {
-        case "vue":
-          deps = await Promise.all([import("vue"), import("@vue/server-renderer")]);
-          break;
-        case "react":
-          deps = await Promise.all([import("react"), import("react-dom/server")]);
-          break;
-        default:
-          throw new Error(`不支持的框架: ${framework}`);
-      }
-
-      this.dependencyCache.set(framework, deps);
-      console.log(`✅ ${framework} 依赖加载完成`);
-      return deps;
-    } catch (error) {
-      console.error(`❌ ${framework} 依赖加载失败:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * 检测组件类型
-   */
-  private detectComponentType(component: any): "vue" | "react" {
-    // 简单的组件类型检测
-    if (component.render && typeof component.render === "function") {
-      return "vue";
-    }
-    if (component.$$typeof) {
-      return "react";
-    }
-    // 默认使用 Vue
-    return "vue";
-  }
-
-  /**
-   * 打印扁平化后的路由信息
-   */
-  private logFlattenedRoutes(): void {
-    console.log("🚀 扁平化后的组件路由:");
-    for (const route of this.routes) {
-      console.log(`  GET ${route.fullPath}`);
-      if (route.middlewareChain.length > 0) {
-        console.log(`    中间件链: ${route.middlewareChain.length} 个`);
-      }
-    }
-    console.log("");
   }
 
   /**
@@ -103,7 +44,7 @@ export class ComponentServer {
     // 查找匹配的路由
     let matchedRoute: FlattenedComponentRoute | null = null;
     for (const route of this.routes) {
-      if (this.matchPath(route.fullPath, pathname)) {
+      if (PathMatcher.matchPath(route.fullPath, pathname)) {
         matchedRoute = route;
         break;
       }
@@ -117,7 +58,7 @@ export class ComponentServer {
       // 创建中间件上下文
       const context = {
         req,
-        params: this.extractParams(matchedRoute.fullPath, pathname),
+        params: PathMatcher.extractParams(matchedRoute.fullPath, pathname),
         query: Object.fromEntries(url.searchParams),
         pathname,
       };
@@ -148,10 +89,11 @@ export class ComponentServer {
       const component = componentModule.default || componentModule;
 
       // 自动检测组件类型
-      const componentType = this.detectComponentType(component);
+      const componentType =
+        this.dependencyManager.detectComponentType(component);
 
       // 按需加载依赖
-      const deps = await this.getFrameworkDeps(componentType);
+      const deps = await this.dependencyManager.getFrameworkDeps(componentType);
 
       // 根据组件类型渲染
       if (componentType === "vue") {
@@ -180,7 +122,11 @@ export class ComponentServer {
   /**
    * 渲染 Vue 组件
    */
-  private async renderVueComponent(component: any, context: any, deps: any): Promise<Response> {
+  private async renderVueComponent(
+    component: any,
+    context: any,
+    deps: any
+  ): Promise<Response> {
     try {
       const [vue, renderer] = deps;
       const app = vue.createSSRApp(component);
@@ -193,32 +139,11 @@ export class ComponentServer {
       });
 
       const html = await renderer.renderToString(app);
+      const fullHtml = HtmlRenderer.generateVueHtml(html, context);
 
-      return new Response(
-        `
-        <!doctype html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Vafast SSR App</title>
-          </head>
-          <body>
-            <div id="app">${html}</div>
-            <script>
-              window.__ROUTE_INFO__ = {
-                params: ${JSON.stringify(context.params || {})},
-                query: ${JSON.stringify(context.query || {})},
-                pathname: '${context.pathname}'
-              };
-            </script>
-            <script type="module" src="/client.js"></script>
-          </body>
-        </html>
-      `,
-        {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        }
-      );
+      return new Response(fullHtml, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
     } catch (error) {
       console.error("Vue 组件渲染失败:", error);
       return new Response("Vue Component Render Error", { status: 500 });
@@ -228,7 +153,11 @@ export class ComponentServer {
   /**
    * 渲染 React 组件
    */
-  private async renderReactComponent(component: any, context: any, deps: any): Promise<Response> {
+  private async renderReactComponent(
+    component: any,
+    context: any,
+    deps: any
+  ): Promise<Response> {
     try {
       const [react, renderer] = deps;
       const content = react.createElement(component, {
@@ -238,32 +167,11 @@ export class ComponentServer {
       });
 
       const html = renderer.renderToString(content);
+      const fullHtml = HtmlRenderer.generateReactHtml(html, context);
 
-      return new Response(
-        `
-        <!doctype html>
-        <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Vafast SSR App</title>
-          </head>
-          <body>
-            <div id="root">${html}</div>
-            <script>
-              window.__ROUTE_INFO__ = {
-                params: ${JSON.stringify(context.params || {})},
-                query: ${JSON.stringify(context.query || {})},
-                pathname: '${context.pathname}'
-              };
-            </script>
-            <script type="module" src="/client.js"></script>
-          </body>
-        </html>
-      `,
-        {
-          headers: { "Content-Type": "text/html; charset=utf-8" },
-        }
-      );
+      return new Response(fullHtml, {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
     } catch (error) {
       console.error("React 组件渲染失败:", error);
       return new Response("React Component Render Error", { status: 500 });
@@ -271,40 +179,9 @@ export class ComponentServer {
   }
 
   /**
-   * 路径匹配
+   * 获取依赖管理器（用于外部访问）
    */
-  private matchPath(pattern: string, path: string): boolean {
-    const patternParts = pattern.split("/").filter(Boolean);
-    const pathParts = path.split("/").filter(Boolean);
-
-    if (patternParts.length !== pathParts.length) {
-      return false;
-    }
-
-    for (let i = 0; i < patternParts.length; i++) {
-      if (patternParts[i] !== pathParts[i] && !patternParts[i].startsWith(":")) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * 提取路径参数
-   */
-  private extractParams(pattern: string, path: string): Record<string, string> {
-    const params: Record<string, string> = {};
-    const patternParts = pattern.split("/").filter(Boolean);
-    const pathParts = path.split("/").filter(Boolean);
-
-    for (let i = 0; i < patternParts.length; i++) {
-      if (patternParts[i].startsWith(":")) {
-        const paramName = patternParts[i].slice(1);
-        params[paramName] = pathParts[i];
-      }
-    }
-
-    return params;
+  getDependencyManager(): DependencyManager {
+    return this.dependencyManager;
   }
 }
