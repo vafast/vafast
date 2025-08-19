@@ -61,7 +61,7 @@ class NativeMonitor {
       ...config,
     };
 
-    this.isEnabled = this.config.enabled;
+    this.isEnabled = this.config.enabled ?? true;
 
     if (this.isEnabled && this.config.console) {
       console.log("✅ 原生监控已启用");
@@ -87,7 +87,8 @@ class NativeMonitor {
     // 控制台输出
     if (this.config.console) {
       const status = metrics.statusCode < 400 ? "✅" : "❌";
-      const timeColor = metrics.totalTime > this.config.slowThreshold! ? "🐌" : "⚡";
+      const timeColor =
+        metrics.totalTime > this.config.slowThreshold! ? "🐌" : "⚡";
 
       console.log(
         `${status} ${metrics.method} ${metrics.path} - ${
@@ -97,7 +98,11 @@ class NativeMonitor {
 
       // 慢请求警告
       if (metrics.totalTime > this.config.slowThreshold!) {
-        console.warn(`🐌 慢请求警告: ${metrics.path} 耗时 ${metrics.totalTime.toFixed(2)}ms`);
+        console.warn(
+          `🐌 慢请求警告: ${metrics.path} 耗时 ${metrics.totalTime.toFixed(
+            2
+          )}ms`
+        );
       }
     }
   }
@@ -109,10 +114,14 @@ class NativeMonitor {
     }
 
     const totalRequests = this.metrics.length;
-    const successfulRequests = this.metrics.filter((m) => m.statusCode < 400).length;
+    const successfulRequests = this.metrics.filter(
+      (m) => m.statusCode < 400
+    ).length;
     const failedRequests = totalRequests - successfulRequests;
     const avgResponseTime =
-      totalRequests > 0 ? this.metrics.reduce((sum, m) => sum + m.totalTime, 0) / totalRequests : 0;
+      totalRequests > 0
+        ? this.metrics.reduce((sum, m) => sum + m.totalTime, 0) / totalRequests
+        : 0;
 
     return {
       enabled: true,
@@ -164,7 +173,9 @@ export function withMonitoring(
   // 创建带监控的 fetch 方法
   const monitoredFetch = async (req: Request): Promise<Response> => {
     const startTime = performance.now();
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const requestId = `req_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
     const { pathname } = new URL(req.url);
     const method = req.method;
 
