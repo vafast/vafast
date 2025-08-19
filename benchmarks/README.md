@@ -19,56 +19,41 @@ yarn benchmark
 ### 运行特定测试
 ```bash
 # 快速基准测试
-bun run benchmarks/quick-benchmark.ts
+bun run benchmarks/benchmarks/quick-benchmark.ts
 
 # 验证器性能测试
-bun run benchmarks/validators-benchmark.ts
+bun run benchmarks/benchmarks/validators-benchmark.ts
 
 # 超性能测试
-bun run benchmarks/ultra-performance-test.ts
+bun run benchmarks/benchmarks/ultra-performance-test.ts
 
 # 终极性能测试
-bun run benchmarks/ultimate-performance-test.ts
+bun run benchmarks/benchmarks/ultimate-performance-test.ts
 
 # 综合性能测试
-bun run benchmarks/comprehensive-benchmark.ts
+bun run benchmarks/benchmarks/comprehensive-benchmark.ts
 ```
 
 ## 📊 测试分类
 
-### ⚡ 快速基准测试 (`quick-benchmark.ts`)
-轻量级性能测试，适合日常开发：
-- 基础路由性能
-- 简单中间件性能
-- 快速性能回归检测
+### ⚡ 基准测试 (`benchmarks/`)
+性能基准测试，用于性能对比和优化：
+- `quick-benchmark.ts` - 快速性能测试
+- `validators-benchmark.ts` - 验证器性能测试
+- `ultra-performance-test.ts` - 超性能测试
+- `ultimate-performance-test.ts` - 终极性能测试
+- `comprehensive-benchmark.ts` - 综合性能测试
 
-### 🔍 验证器基准测试 (`validators-benchmark.ts`)
-专门测试验证器性能：
-- 基础验证器 vs Ultra验证器
-- 不同数据类型验证性能
-- 批量验证性能
-- 内存使用分析
+### 🧪 性能测试 (`performance/`)
+性能回归测试，确保性能不退化：
+- `regression/` - 性能回归测试
+- `stress/` - 压力测试
+- `memory/` - 内存使用测试
 
-### 🚀 超性能测试 (`ultra-performance-test.ts`)
-深度性能优化测试：
-- 极致性能场景
-- 内存池优化效果
-- 缓存命中率分析
-- 并发性能测试
-
-### 🏆 终极性能测试 (`ultimate-performance-test.ts`)
-极限性能挑战：
-- 百万级请求处理
-- 极端并发场景
-- 内存压力测试
-- 长时间稳定性测试
-
-### 📈 综合性能测试 (`comprehensive-benchmark.ts`)
-完整性能评估：
-- 多框架对比测试
-- 不同场景性能分析
-- 性能回归检测
-- 详细性能报告
+### 📈 性能分析 (`analysis/`)
+性能数据分析和报告：
+- `performance-report.ts` - 性能报告生成
+- `comparison.ts` - 性能对比分析
 
 ## 🎯 测试场景
 
@@ -153,7 +138,7 @@ BENCHMARK_CONCURRENCY=200 bun run benchmark
 DEBUG=vafast:benchmark bun run benchmark
 
 # 单步调试
-bun --inspect-brk run benchmarks/quick-benchmark.ts
+bun --inspect-brk run benchmarks/benchmarks/quick-benchmark.ts
 ```
 
 ## 🤝 贡献基准测试
