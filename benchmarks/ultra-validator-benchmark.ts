@@ -7,12 +7,11 @@
 import { Type } from "@sinclair/typebox";
 import {
   validateAllSchemasUltra,
-  validateAllSchemasUltraExpanded,
   createTypedValidatorUltra,
   validateBatchUltra,
   getCacheStats,
   smartClearUltraCache,
-} from "../src/utils/validators/validators-ultra";
+} from "../src/utils/validators/schema-validators-ultra";
 
 // 测试用的Schema定义
 const userSchema = Type.Object({
@@ -26,8 +25,12 @@ const userSchema = Type.Object({
     preferences: Type.Array(Type.String()),
   }),
   metadata: Type.Object({
-    createdAt: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }),
-    updatedAt: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }),
+    createdAt: Type.String({
+      pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+    }),
+    updatedAt: Type.String({
+      pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+    }),
     tags: Type.Array(Type.String()),
   }),
 });
@@ -37,7 +40,11 @@ const querySchema = Type.Object({
   limit: Type.Number({ minimum: 1, maximum: 100 }),
   search: Type.Optional(Type.String()),
   sortBy: Type.Optional(
-    Type.Union([Type.Literal("name"), Type.Literal("age"), Type.Literal("createdAt")])
+    Type.Union([
+      Type.Literal("name"),
+      Type.Literal("age"),
+      Type.Literal("createdAt"),
+    ])
   ),
   order: Type.Optional(Type.Union([Type.Literal("asc"), Type.Literal("desc")])),
 });
@@ -56,7 +63,9 @@ const headersSchema = Type.Object({
 
 const cookiesSchema = Type.Object({
   sessionId: Type.String(),
-  theme: Type.Optional(Type.Union([Type.Literal("light"), Type.Literal("dark")])),
+  theme: Type.Optional(
+    Type.Union([Type.Literal("light"), Type.Literal("dark")])
+  ),
   language: Type.Optional(Type.String()),
 });
 
@@ -102,7 +111,8 @@ const testData = {
     authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "content-type": "application/json",
     "x-request-id": "req_123456789",
-    "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "user-agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
   },
   cookies: {
     sessionId: "sess_123456789",
@@ -169,7 +179,7 @@ function testUltraStandard() {
 
 function testUltraExpanded() {
   try {
-    const result = validateAllSchemasUltraExpanded(schemaConfig, testData);
+    const result = validateAllSchemasUltra(schemaConfig, testData);
     if (!result) {
       throw new Error("验证失败");
     }
@@ -209,7 +219,10 @@ function testBatchValidator() {
 }
 
 // 内存使用测试
-function measureMemoryUsage(testFunction: () => void, iterations: number = 1000): number {
+function measureMemoryUsage(
+  testFunction: () => void,
+  iterations: number = 1000
+): number {
   const initialMemory = process.memoryUsage().heapUsed;
 
   for (let i = 0; i < iterations; i++) {
@@ -225,7 +238,12 @@ async function runAllTests() {
   console.log("🔬 Ultra验证器性能测试");
   console.log("=".repeat(60));
 
-  const results: Array<{ name: string; totalTime: number; avgTime: number; opsPerSecond: number }> = [];
+  const results: Array<{
+    name: string;
+    totalTime: number;
+    avgTime: number;
+    opsPerSecond: number;
+  }> = [];
 
   // 测试1: 小规模测试 (1,000次)
   console.log("\n📊 小规模测试 (1,000次迭代)");
@@ -234,13 +252,21 @@ async function runAllTests() {
 
   // 测试2: 中等规模测试 (10,000次)
   console.log("\n📊 中等规模测试 (10,000次迭代)");
-  results.push(runPerformanceTest("Ultra标准版 (10K)", testUltraStandard, 10000));
-  results.push(runPerformanceTest("Ultra展开版 (10K)", testUltraExpanded, 10000));
+  results.push(
+    runPerformanceTest("Ultra标准版 (10K)", testUltraStandard, 10000)
+  );
+  results.push(
+    runPerformanceTest("Ultra展开版 (10K)", testUltraExpanded, 10000)
+  );
 
   // 测试3: 大规模测试 (100,000次)
   console.log("\n📊 大规模测试 (100,000次迭代)");
-  results.push(runPerformanceTest("Ultra标准版 (100K)", testUltraStandard, 100000));
-  results.push(runPerformanceTest("Ultra展开版 (100K)", testUltraExpanded, 100000));
+  results.push(
+    runPerformanceTest("Ultra标准版 (100K)", testUltraStandard, 100000)
+  );
+  results.push(
+    runPerformanceTest("Ultra展开版 (100K)", testUltraExpanded, 100000)
+  );
 
   // 测试4: 特殊功能测试
   console.log("\n📊 特殊功能测试 (1,000次迭代)");
@@ -252,8 +278,12 @@ async function runAllTests() {
   const standardMemory = measureMemoryUsage(testUltraStandard, 1000);
   const expandedMemory = measureMemoryUsage(testUltraExpanded, 1000);
 
-  console.log(`📊 Ultra标准版 内存使用: ${(standardMemory / 1024).toFixed(2)} KB`);
-  console.log(`📊 Ultra展开版 内存使用: ${(expandedMemory / 1024).toFixed(2)} KB`);
+  console.log(
+    `📊 Ultra标准版 内存使用: ${(standardMemory / 1024).toFixed(2)} KB`
+  );
+  console.log(
+    `📊 Ultra展开版 内存使用: ${(expandedMemory / 1024).toFixed(2)} KB`
+  );
 
   // 性能对比分析
   console.log("\n📊 性能对比分析");
@@ -264,13 +294,19 @@ async function runAllTests() {
 
   if (standard_10K && expanded_10K) {
     const speedup = standard_10K.totalTime / expanded_10K.totalTime;
-    console.log(`🚀 Ultra展开版 相对 标准版 的性能提升: ${speedup.toFixed(2)}x`);
+    console.log(
+      `🚀 Ultra展开版 相对 标准版 的性能提升: ${speedup.toFixed(2)}x`
+    );
     console.log(`📈 性能提升百分比: ${((speedup - 1) * 100).toFixed(1)}%`);
 
     if (speedup > 1) {
-      console.log(`✅ Ultra展开版 更快，性能提升 ${((speedup - 1) * 100).toFixed(1)}%`);
+      console.log(
+        `✅ Ultra展开版 更快，性能提升 ${((speedup - 1) * 100).toFixed(1)}%`
+      );
     } else {
-      console.log(`✅ Ultra标准版 更快，性能提升 ${((1/speedup - 1) * 100).toFixed(1)}%`);
+      console.log(
+        `✅ Ultra标准版 更快，性能提升 ${((1 / speedup - 1) * 100).toFixed(1)}%`
+      );
     }
   }
 

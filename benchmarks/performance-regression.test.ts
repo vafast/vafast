@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { Server } from "../../../src/server";
+import { Server } from "../src/server";
 
 // 性能基准配置
 const PERFORMANCE_THRESHOLDS = {

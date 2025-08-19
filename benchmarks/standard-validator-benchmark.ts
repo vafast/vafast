@@ -35,7 +35,7 @@
  * 🚀 使用方法:
  * ```bash
  * # 直接运行
- * bun run benchmarks/validators-benchmark.ts
+ * bun run benchmarks/standard-validator-benchmark.ts
  *
  * # 使用npm脚本
  * bun run benchmark:validators
@@ -55,7 +55,7 @@
  * - 性能比例: 0.9-1.1x (均衡)
  *
  * 🔍 与快速测试的区别:
- * - 完整测试 (validators-benchmark.ts): 全面性能分析，约8-12秒
+ * - 完整测试 (standard-validator-benchmark.ts): 全面性能分析，约8-12秒
  * - 快速测试 (quick-benchmark.ts): 核心指标检查，约2-3秒
  *
  * 📋 输出报告:
@@ -77,7 +77,7 @@
  * @license MIT
  */
 
-// benchmarks/validators-benchmark.ts
+// benchmarks/standard-validator-benchmark.ts
 import { Type, Static } from "@sinclair/typebox";
 import type { TSchema } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
@@ -248,9 +248,13 @@ function benchmarkBasicTypes() {
   console.log("📊 基础类型验证性能测试");
   console.log("=".repeat(50));
 
-  benchmark("字符串验证 (成功)", () => validateSchema(SimpleSchema, simpleData));
+  benchmark("字符串验证 (成功)", () =>
+    validateSchema(SimpleSchema, simpleData)
+  );
   benchmark("数字验证 (成功)", () => validateSchema(NumberSchema, numberData));
-  benchmark("布尔值验证 (成功)", () => validateSchema(BooleanSchema, booleanData));
+  benchmark("布尔值验证 (成功)", () =>
+    validateSchema(BooleanSchema, booleanData)
+  );
 }
 
 // 复杂对象验证性能测试
@@ -258,9 +262,21 @@ function benchmarkComplexObjects() {
   console.log("📊 复杂对象验证性能测试");
   console.log("=".repeat(50));
 
-  benchmark("用户对象验证 (成功)", () => validateSchema(UserSchema, validUserData), 50000);
-  benchmark("用户对象验证 (失败)", () => validateSchema(UserSchema, invalidUserData), 50000);
-  benchmark("嵌套对象验证", () => validateSchema(NestedObjectSchema, nestedObjectData), 50000);
+  benchmark(
+    "用户对象验证 (成功)",
+    () => validateSchema(UserSchema, validUserData),
+    50000
+  );
+  benchmark(
+    "用户对象验证 (失败)",
+    () => validateSchema(UserSchema, invalidUserData),
+    50000
+  );
+  benchmark(
+    "嵌套对象验证",
+    () => validateSchema(NestedObjectSchema, nestedObjectData),
+    50000
+  );
 }
 
 // 数组验证性能测试
@@ -268,7 +284,11 @@ function benchmarkArrays() {
   console.log("📊 数组验证性能测试");
   console.log("=".repeat(50));
 
-  benchmark("复杂数组验证", () => validateSchema(ComplexArraySchema, complexArrayData), 10000);
+  benchmark(
+    "复杂数组验证",
+    () => validateSchema(ComplexArraySchema, complexArrayData),
+    10000
+  );
 }
 
 // 错误处理性能测试
@@ -294,7 +314,9 @@ function benchmarkErrorHandling() {
   console.log(`  迭代次数: 10,000`);
   console.log(`  总时间: ${duration.toFixed(2)}ms`);
   console.log(`  生成错误总数: ${errorCount.toLocaleString()}`);
-  console.log(`  平均每次验证时间: ${((duration / 10000) * 1000).toFixed(3)}μs`);
+  console.log(
+    `  平均每次验证时间: ${((duration / 10000) * 1000).toFixed(3)}μs`
+  );
   console.log("");
 }
 
@@ -326,10 +348,18 @@ function benchmarkMemoryUsage() {
   const finalMemory = process.memoryUsage();
 
   console.log("内存使用情况:");
-  console.log(`  初始内存: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
-  console.log(`  最终内存: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`);
   console.log(
-    `  内存增长: ${((finalMemory.heapUsed - initialMemory.heapUsed) / 1024 / 1024).toFixed(2)}MB`
+    `  初始内存: ${(initialMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`
+  );
+  console.log(
+    `  最终内存: ${(finalMemory.heapUsed / 1024 / 1024).toFixed(2)}MB`
+  );
+  console.log(
+    `  内存增长: ${(
+      (finalMemory.heapUsed - initialMemory.heapUsed) /
+      1024 /
+      1024
+    ).toFixed(2)}MB`
   );
   console.log("");
 }
@@ -350,11 +380,16 @@ function benchmarkSuccessVsFailure() {
     100000
   );
 
-  const performanceRatio = failureResult.opsPerSecond / successResult.opsPerSecond;
+  const performanceRatio =
+    failureResult.opsPerSecond / successResult.opsPerSecond;
 
   console.log("性能对比分析:");
-  console.log(`  成功验证: ${successResult.opsPerSecond.toLocaleString()} ops/sec`);
-  console.log(`  失败验证: ${failureResult.opsPerSecond.toLocaleString()} ops/sec`);
+  console.log(
+    `  成功验证: ${successResult.opsPerSecond.toLocaleString()} ops/sec`
+  );
+  console.log(
+    `  失败验证: ${failureResult.opsPerSecond.toLocaleString()} ops/sec`
+  );
   console.log(`  性能比例: ${performanceRatio.toFixed(2)}x (失败场景相对较慢)`);
   console.log("");
 }
