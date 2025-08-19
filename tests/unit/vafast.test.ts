@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach } from "bun:test";
-import { Server } from "../src";
-import type { Route } from "../src";
+import { describe, it, expect, beforeEach } from "vitest";
+import { Server } from "../../src";
+import type { Route } from "../../src";
 
 describe("Vafast Server", () => {
   let server: Server;
@@ -45,7 +45,9 @@ describe("Vafast Server", () => {
   });
 
   it("应该为不存在的路由返回 404", async () => {
-    const request = new Request("http://localhost/nonexistent", { method: "GET" });
+    const request = new Request("http://localhost/nonexistent", {
+      method: "GET",
+    });
     const response = await server.fetch(request);
     expect(response.status).toBe(404);
   });

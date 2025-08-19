@@ -1,7 +1,7 @@
 // src/middleware/authMiddleware.ts
 import type { Middleware } from "../types";
 import { VafastError } from "../middleware";
-import { getCookie } from "../cookie";
+import { getCookie } from "../utils/handle";
 
 export const requireAuth: Middleware = async (req, next) => {
   const token = getCookie(req, "auth");

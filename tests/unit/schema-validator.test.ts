@@ -4,7 +4,7 @@
  * 测试validateSchemaConfig和相关函数的功能
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { Type } from "@sinclair/typebox";
 import {
   validateSchemaConfig,
@@ -12,7 +12,7 @@ import {
   createSchemaValidator,
   type SchemaConfig,
   type RequestData,
-} from "../src/utils/validators/schema-validator";
+} from "../../src/utils/validators/schema-validator";
 
 // 测试用的Schema定义
 const testUserSchema = Type.Object({
@@ -295,7 +295,9 @@ describe("Schema验证器", () => {
         }),
         metadata: Type.Object({
           tags: Type.Array(Type.String()),
-          createdAt: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$" }),
+          createdAt: Type.String({
+            pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+          }),
         }),
       });
 

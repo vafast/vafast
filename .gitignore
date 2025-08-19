@@ -10,6 +10,13 @@ dist
 coverage
 *.lcov
 
+# test reports
+test-results.*
+*.html.meta.json.gz
+favicon.ico
+favicon.svg
+bg.png
+
 # logs
 logs
 _.log

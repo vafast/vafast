@@ -1,5 +1,11 @@
-import { describe, it, expect } from "bun:test";
-import { json, redirect, parseBody, parseQuery, parseHeaders, parseCookies } from "../src/util";
+import { describe, it, expect } from "vitest";
+import { json, redirect } from "../../src/utils/response";
+import {
+  parseBody,
+  parseQuery,
+  parseHeaders,
+  parseCookies,
+} from "../../src/utils/parsers";
 
 describe("工具函数测试", () => {
   describe("json() 函数", () => {
@@ -190,7 +196,9 @@ describe("工具函数测试", () => {
     });
 
     it("应该处理特殊字符", () => {
-      const request = new Request("http://localhost/test?message=Hello%20World&symbol=%26%3D%3F");
+      const request = new Request(
+        "http://localhost/test?message=Hello%20World&symbol=%26%3D%3F"
+      );
       const result = parseQuery(request);
 
       expect(result.message).toBe("Hello World");
@@ -198,7 +206,9 @@ describe("工具函数测试", () => {
     });
 
     it("应该处理空值参数", () => {
-      const request = new Request("http://localhost/test?empty=&null=null&undefined=undefined");
+      const request = new Request(
+        "http://localhost/test?empty=&null=null&undefined=undefined"
+      );
       const result = parseQuery(request);
 
       expect(result.empty).toBe("");
@@ -214,7 +224,9 @@ describe("工具函数测试", () => {
     });
 
     it("应该处理重复的查询参数", () => {
-      const request = new Request("http://localhost/test?name=张三&name=李四&name=王五");
+      const request = new Request(
+        "http://localhost/test?name=张三&name=李四&name=王五"
+      );
       const result = parseQuery(request);
 
       // qs库会处理重复参数，通常保留最后一个或创建数组
@@ -222,7 +234,9 @@ describe("工具函数测试", () => {
     });
 
     it("应该处理嵌套对象查询参数", () => {
-      const request = new Request("http://localhost/test?user[name]=张三&user[age]=25");
+      const request = new Request(
+        "http://localhost/test?user[name]=张三&user[age]=25"
+      );
       const result = parseQuery(request);
 
       // qs库会解析嵌套对象

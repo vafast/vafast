@@ -1,7 +1,13 @@
-import type { Handler, Middleware, Route, NestedRoute, FlattenedRoute } from "./types";
+import type {
+  Handler,
+  Middleware,
+  Route,
+  NestedRoute,
+  FlattenedRoute,
+} from "./types";
 import { matchPath, flattenNestedRoutes } from "./router";
 import { composeMiddleware } from "./middleware";
-import { json } from "./util";
+import { json } from "./utils/response";
 
 export class Server {
   private routes: FlattenedRoute[];
@@ -10,7 +16,7 @@ export class Server {
   constructor(routes: (Route | NestedRoute)[]) {
     // 扁平化嵌套路由，计算完整的中间件链
     this.routes = flattenNestedRoutes(routes);
-    
+
     // 在构造时按路由"特异性"排序：静态 > 动态(:param) > 通配符(*)
     const score = (path: string): number => {
       const parts = path.split("/").filter(Boolean);
@@ -24,11 +30,13 @@ export class Server {
       return s * 10 + parts.length;
     };
 
-    this.routes = this.routes.sort((a, b) => score(b.fullPath) - score(a.fullPath));
+    this.routes = this.routes.sort(
+      (a, b) => score(b.fullPath) - score(a.fullPath)
+    );
 
     // 检测路由冲突
     this.detectRouteConflicts();
-    
+
     // 打印扁平化后的路由信息
     this.logFlattenedRoutes();
   }
@@ -75,7 +83,9 @@ export class Server {
 
         if (uniqueMethods.length === 1) {
           // 相同路径、相同方法 - 这是冲突！
-          console.warn(`⚠️  路由冲突: ${uniqueMethods[0]} ${path} 定义了 ${routes.length} 次`);
+          console.warn(
+            `⚠️  路由冲突: ${uniqueMethods[0]} ${path} 定义了 ${routes.length} 次`
+          );
           routes.forEach((route, index) => {
             console.warn(`   ${index + 1}. ${route.method} ${route.fullPath}`);
           });
@@ -94,7 +104,9 @@ export class Server {
    * 检测动态路由的潜在冲突
    */
   private detectDynamicRouteConflicts(): void {
-    const dynamicRoutes = this.routes.filter((r) => r.fullPath.includes(":") || r.fullPath.includes("*"));
+    const dynamicRoutes = this.routes.filter(
+      (r) => r.fullPath.includes(":") || r.fullPath.includes("*")
+    );
 
     for (let i = 0; i < dynamicRoutes.length; i++) {
       for (let j = i + 1; j < dynamicRoutes.length; j++) {
@@ -138,7 +150,10 @@ export class Server {
       }
 
       // 如果一个是通配符，另一个是动态参数，可能冲突
-      if ((p1 === "*" && p2.startsWith(":")) || (p2 === "*" && p1.startsWith(":"))) {
+      if (
+        (p1 === "*" && p2.startsWith(":")) ||
+        (p2 === "*" && p1.startsWith(":"))
+      ) {
         return true;
       }
     }

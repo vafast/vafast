@@ -7,7 +7,7 @@ export interface Middleware {
 
 // 基础路由配置
 export interface BaseRouteConfig {
-  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
   path: string;
   handler: (req: Request) => Response | Promise<Response>;
 }

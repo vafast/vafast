@@ -1,10 +1,11 @@
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { Type } from "@sinclair/typebox";
 import {
   validateSchema,
   ValidationResult,
   ValidationError,
-} from "../src/utils/validators/validators";
+  Static,
+} from "../../src/utils/validators/validators";
 
 describe("数据验证函数测试", () => {
   describe("基础验证功能", () => {
@@ -213,7 +214,7 @@ describe("数据验证函数测试", () => {
 
       // 验证类型推断
       type User = typeof UserSchema;
-      type UserData = import("../src/utils/validators/validators").Static<User>;
+      type UserData = Static<User>;
 
       const userData: UserData = {
         id: 1,

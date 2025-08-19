@@ -1,7 +1,7 @@
-import { describe, it, expect } from "bun:test";
-import { Server } from "../src/server";
-import { flattenNestedRoutes } from "../src/router";
-import type { NestedRoute, Route } from "../src/types";
+import { describe, it, expect } from "vitest";
+import { Server } from "../../src/server";
+import { flattenNestedRoutes } from "../../src/router";
+import type { NestedRoute, Route } from "../../src/types";
 
 // 模拟中间件
 const mockMiddleware = (name: string) => {
@@ -9,7 +9,10 @@ const mockMiddleware = (name: string) => {
     const response = await next();
     // 将中间件名称添加到响应头中，用于验证执行顺序
     const existing = response.headers.get("X-Middleware") || "";
-    response.headers.set("X-Middleware", existing ? `${existing},${name}` : name);
+    response.headers.set(
+      "X-Middleware",
+      existing ? `${existing},${name}` : name
+    );
     return response;
   };
 };
@@ -18,7 +21,7 @@ const mockMiddleware = (name: string) => {
 const mockHandler = (message: string) => {
   return async (req: Request) => {
     return new Response(JSON.stringify({ message }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   };
 };
@@ -35,14 +38,14 @@ describe("嵌套路由功能", () => {
               path: "/users",
               method: "GET",
               handler: mockHandler("获取用户"),
-              middleware: [mockMiddleware("audit")]
-            }
-          ]
-        }
+              middleware: [mockMiddleware("audit")],
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
-      
+
       expect(flattened).toHaveLength(1);
       expect(flattened[0].fullPath).toBe("/admin/users");
       expect(flattened[0].method).toBe("GET");
@@ -64,16 +67,16 @@ describe("嵌套路由功能", () => {
                 {
                   path: "/users",
                   method: "GET",
-                  handler: mockHandler("获取用户v1")
-                }
-              ]
-            }
-          ]
-        }
+                  handler: mockHandler("获取用户v1"),
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
-      
+
       expect(flattened).toHaveLength(1);
       expect(flattened[0].fullPath).toBe("/api/v1/users");
       expect(flattened[0].middlewareChain).toHaveLength(2);
@@ -90,21 +93,21 @@ describe("嵌套路由功能", () => {
                 {
                   path: "/",
                   method: "GET",
-                  handler: mockHandler("产品列表")
+                  handler: mockHandler("产品列表"),
                 },
                 {
                   path: "/:id",
                   method: "GET",
-                  handler: mockHandler("产品详情")
-                }
-              ]
-            }
-          ]
-        }
+                  handler: mockHandler("产品详情"),
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
-      
+
       expect(flattened).toHaveLength(2);
       expect(flattened[0].fullPath).toBe("/shop/products/");
       expect(flattened[1].fullPath).toBe("/shop/products/:id");
@@ -120,14 +123,14 @@ describe("嵌套路由功能", () => {
               path: "/dashboard",
               method: "GET",
               handler: mockHandler("仪表板"),
-              middleware: [mockMiddleware("audit"), mockMiddleware("cache")]
-            }
-          ]
-        }
+              middleware: [mockMiddleware("audit"), mockMiddleware("cache")],
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
-      
+
       expect(flattened[0].middlewareChain).toHaveLength(4);
       // 顺序应该是：父中间件 + 子中间件
       expect(flattened[0].middlewareChain[0]).toBeDefined();
@@ -151,28 +154,28 @@ describe("嵌套路由功能", () => {
                 {
                   path: "/users",
                   method: "GET",
-                  handler: mockHandler("获取用户v1")
-                }
-              ]
-            }
-          ]
-        }
+                  handler: mockHandler("获取用户v1"),
+                },
+              ],
+            },
+          ],
+        },
       ];
 
       const server = new Server(routes);
-      
+
       const req = new Request("http://localhost:3000/api/v1/users", {
-        method: "GET"
+        method: "GET",
       });
 
       const response = await server.fetch(req);
-      
+
       expect(response.status).toBe(200);
       // 验证中间件执行顺序：cors,version
       const middlewareHeader = response.headers.get("X-Middleware");
       expect(middlewareHeader).toContain("cors");
       expect(middlewareHeader).toContain("version");
-      
+
       const body = await response.json();
       expect(body.message).toBe("获取用户v1");
     });
@@ -183,7 +186,7 @@ describe("嵌套路由功能", () => {
         {
           path: "/health",
           method: "GET",
-          handler: mockHandler("健康检查")
+          handler: mockHandler("健康检查"),
         },
         // 嵌套路由
         {
@@ -193,21 +196,25 @@ describe("嵌套路由功能", () => {
             {
               path: "/users",
               method: "GET",
-              handler: mockHandler("管理员用户列表")
-            }
-          ]
-        }
+              handler: mockHandler("管理员用户列表"),
+            },
+          ],
+        },
       ];
 
       const server = new Server(routes);
-      
+
       // 测试普通路由
-      const healthReq = new Request("http://localhost:3000/health", { method: "GET" });
+      const healthReq = new Request("http://localhost:3000/health", {
+        method: "GET",
+      });
       const healthRes = await server.fetch(healthReq);
       expect(healthRes.status).toBe(200);
-      
+
       // 测试嵌套路由
-      const adminReq = new Request("http://localhost:3000/admin/users", { method: "GET" });
+      const adminReq = new Request("http://localhost:3000/admin/users", {
+        method: "GET",
+      });
       const adminRes = await server.fetch(adminReq);
       expect(adminRes.status).toBe(200);
       expect(adminRes.headers.get("X-Middleware")).toBe("auth");
@@ -221,16 +228,16 @@ describe("嵌套路由功能", () => {
             {
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表")
-            }
-          ]
-        }
+              handler: mockHandler("用户列表"),
+            },
+          ],
+        },
       ];
 
       const server = new Server(routes);
-      
+
       const req = new Request("http://localhost:3000/api/nonexistent", {
-        method: "GET"
+        method: "GET",
       });
 
       const response = await server.fetch(req);
@@ -245,16 +252,16 @@ describe("嵌套路由功能", () => {
             {
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表")
-            }
-          ]
-        }
+              handler: mockHandler("用户列表"),
+            },
+          ],
+        },
       ];
 
       const server = new Server(routes);
-      
+
       const req = new Request("http://localhost:3000/api/users", {
-        method: "POST"
+        method: "POST",
       });
 
       const response = await server.fetch(req);
@@ -267,8 +274,8 @@ describe("嵌套路由功能", () => {
       const routes: NestedRoute[] = [
         {
           path: "/api",
-          children: []
-        }
+          children: [],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
@@ -283,10 +290,10 @@ describe("嵌套路由功能", () => {
             {
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表")
-            }
-          ]
-        }
+              handler: mockHandler("用户列表"),
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);
@@ -301,10 +308,10 @@ describe("嵌套路由功能", () => {
             {
               path: "/",
               method: "GET",
-              handler: mockHandler("首页")
-            }
-          ]
-        }
+              handler: mockHandler("首页"),
+            },
+          ],
+        },
       ];
 
       const flattened = flattenNestedRoutes(routes);

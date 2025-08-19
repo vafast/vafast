@@ -1,4 +1,11 @@
-export type Method = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+export type Method =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "DELETE"
+  | "PATCH"
+  | "OPTIONS"
+  | "HEAD";
 
 export type Handler = (
   req: Request,
@@ -6,7 +13,10 @@ export type Handler = (
   user?: Record<string, any>
 ) => Response | Promise<Response>;
 
-export type Middleware = (req: Request, next: () => Promise<Response>) => Promise<Response>;
+export type Middleware = (
+  req: Request,
+  next: () => Promise<Response>
+) => Promise<Response>;
 
 export interface Route {
   method: Method;

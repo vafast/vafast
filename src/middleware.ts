@@ -1,6 +1,6 @@
 // src/middleware.ts
 
-import { json } from "./util";
+import { json } from "./utils/response";
 
 import type { Handler, Middleware } from "./types";
 /** 中间件类型：使用 next() 传递给下一个处理 */
@@ -32,18 +32,25 @@ export class VafastError extends Error {
 /**
  * 组合类型: 自动注入错误处理器进行中间件组合
  */
-export function composeMiddleware(middleware: Middleware[], finalHandler: Handler): Handler {
+export function composeMiddleware(
+  middleware: Middleware[],
+  finalHandler: Handler
+): Handler {
   const all = [errorHandler, ...middleware];
 
   return function composedHandler(req: Request): Promise<Response> {
     let i = -1;
 
     const dispatch = (index: number): Promise<Response> => {
-      if (index <= i) return Promise.reject(new Error("next() called multiple times"));
+      if (index <= i)
+        return Promise.reject(new Error("next() called multiple times"));
       i = index;
       const fn = index < all.length ? all[index] : finalHandler;
       return Promise.resolve(
-        fn(req, (() => dispatch(index + 1)) as unknown as Record<string, string> &
+        fn(req, (() => dispatch(index + 1)) as unknown as Record<
+          string,
+          string
+        > &
           (() => Promise<Response>))
       );
     };
