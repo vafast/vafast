@@ -2,7 +2,6 @@ export * from "./server";
 export * from "./middleware";
 export * from "./utils/parsers";
 export * from "./utils/response";
-export * from "./cookie";
 export * from "./router";
 export * from "./middleware/authMiddleware";
 export * from "./middleware/rateLimit";

@@ -1,5 +1,4 @@
-// src/cookie.ts
-import { parseCookies } from "./utils/parsers.js";
+import { parseCookies } from "./parsers";
 
 /** 获取单个 Cookie 值 */
 export function getCookie(req: Request, key: string): string | null {
@@ -26,4 +25,10 @@ export function setCookie(
   if (options.maxAge) cookie += `; Max-Age=${options.maxAge}`;
 
   return cookie;
+}
+
+// 提供给中间件写入"局部上下文"的工具函数
+export function setLocals<T extends object>(req: Request, extras: T) {
+  const target = req as any;
+  target.__locals = { ...(target.__locals ?? {}), ...extras };
 }

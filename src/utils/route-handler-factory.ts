@@ -9,14 +9,9 @@
  * @license MIT
  */
 
-import {
-  parseQuery,
-  parseHeaders,
-  parseCookies,
-  parseBody,
-  json,
-} from "../util";
+import { parseQuery, parseHeaders, parseCookies, parseBody } from "./parsers";
 import { goAwait } from "./go-await";
+import { json } from "./response";
 import {
   validateAllSchemasUltra,
   precompileSchemasUltra,
@@ -80,12 +75,6 @@ export type TypedHandler<
     cookies: TCookies;
   } & TExtra
 ) => Response | Promise<Response> | any | Promise<any>;
-
-// 提供给中间件写入"局部上下文"的工具函数
-export function setLocals<T extends object>(req: Request, extras: T) {
-  const target = req as any;
-  target.__locals = { ...(target.__locals ?? {}), ...extras };
-}
 
 // 自动转换返回值为 Response 的辅助函数
 function autoResponse(result: any): Response {
