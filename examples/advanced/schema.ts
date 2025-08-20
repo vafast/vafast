@@ -10,12 +10,18 @@
 
 import { Type } from "@sinclair/typebox";
 import type { TypedRoute } from "../../src/types/route";
-import { json } from "../../src/util";
 import { Server } from "../../src/server";
-import { createRouteHandler, withExtra, setLocals } from "../../src/utils/route-handler-factory";
+import {
+  createRouteHandler,
+  withExtra,
+} from "../../src/utils/route-handler-factory";
+import { setLocals } from "../../src/utils/handle";
 
 // 创建类型化的处理器工厂
-const createTypedHandler = withExtra<{ apiKeyInfo: ApiKeyInfo; userContext: UserContext }>();
+const createTypedHandler = withExtra<{
+  apiKeyInfo: ApiKeyInfo;
+  userContext: UserContext;
+}>();
 
 // 简化的测试用Logger中间件
 const logger = async (req: Request, next: Function) => {
@@ -32,7 +38,9 @@ const logger = async (req: Request, next: Function) => {
   // 记录响应信息
   const duration = Date.now() - start;
   const status = response.status;
-  console.log(`📤 [${new Date().toISOString()}] ${method} ${url} → ${status} (${duration}ms)`);
+  console.log(
+    `📤 [${new Date().toISOString()}] ${method} ${url} → ${status} (${duration}ms)`
+  );
 
   return response;
 };
@@ -330,11 +338,16 @@ const schemaTestRoutes: TypedRoute[] = [
     middleware: [logger],
     handler: withExtra()({}, ({ req }) => {
       // 模拟生成 token
-      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const token = `token_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
 
       // 设置 cookie
       const headers = new Headers();
-      headers.set("Set-Cookie", `auth=${token}; HttpOnly; Path=/; Max-Age=3600`);
+      headers.set(
+        "Set-Cookie",
+        `auth=${token}; HttpOnly; Path=/; Max-Age=3600`
+      );
 
       // 使用新的返回值格式：{ data, status, headers }
       return {

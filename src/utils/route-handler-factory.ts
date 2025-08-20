@@ -76,65 +76,68 @@ export type TypedHandler<
   } & TExtra
 ) => Response | Promise<Response> | any | Promise<any>;
 
-// 自动转换返回值为 Response 的辅助函数
+// 自动转换返回值为 Response 的辅助函数 - 性能优化版本
 function autoResponse(result: any): Response {
+  // 快速路径：已经是 Response 对象
   if (result instanceof Response) {
     return result;
   }
 
-  // 支持 { data, status, headers } 格式
-  if (result && typeof result === "object" && "data" in result) {
-    const {
-      data,
-      status = 200,
-      headers = {},
-    } = result as {
-      data: any;
-      status?: number;
-      headers?: HeadersInit;
-    };
-
-    const h = new Headers(headers);
-
-    // 无内容
-    if (data === null || data === undefined) {
-      return new Response("", { status: status ?? 204, headers: h });
-    }
-
-    // 纯文本类型
-    if (
-      typeof data === "string" ||
-      typeof data === "number" ||
-      typeof data === "boolean"
-    ) {
-      if (!h.has("Content-Type")) {
-        h.set("Content-Type", "text/plain; charset=utf-8");
-      }
-      return new Response(String(data), { status, headers: h });
-    }
-
-    // JSON 类型
-    return json(data, status, h);
-  }
-
-  // 原有的自动序列化逻辑（向后兼容）
-  if (
-    typeof result === "string" ||
-    typeof result === "number" ||
-    typeof result === "boolean"
-  ) {
-    return new Response(String(result), {
-      headers: { "Content-Type": "text/plain; charset=utf-8" },
-    });
-  }
-
-  // null/undefined → 204，无内容
+  // 快速路径：null/undefined
   if (result === null || result === undefined) {
     return new Response("", { status: 204 });
   }
 
-  // 对象、数组等 JSON 类型
-  return json(result);
+  // 使用 switch 语句优化类型检查
+  switch (typeof result) {
+    case "string":
+      return new Response(result, {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+
+    case "number":
+    case "boolean":
+      return new Response(String(result), {
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      });
+
+    case "object":
+      // 检查是否是 { data, status, headers } 格式
+      if ("data" in result) {
+        const { data, status = 200, headers = {} } = result;
+
+        // 无内容
+        if (data === null || data === undefined) {
+          return new Response("", {
+            status: status === 200 ? 204 : status,
+            headers,
+          });
+        }
+
+        // 纯文本类型
+        if (
+          typeof data === "string" ||
+          typeof data === "number" ||
+          typeof data === "boolean"
+        ) {
+          const finalHeaders = {
+            "Content-Type": "text/plain; charset=utf-8",
+            ...headers,
+          };
+          return new Response(String(data), { status, headers: finalHeaders });
+        }
+
+        // JSON 类型 - 复用 json 函数
+        return json(data, status, headers);
+      }
+
+      // 普通对象/数组，复用 json 函数
+      return json(result);
+
+    default:
+      // 其他类型（如 symbol, function 等）
+      return new Response("", { status: 204 });
+  }
 }
 
 // 创建路由处理器的通用函数

@@ -6,6 +6,15 @@ export function json(
   status = 200,
   headers: HeadersInit = {}
 ): Response {
+  // 优化：只在有自定义 headers 时才创建 Headers 对象
+  if (Object.keys(headers).length === 0) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // 有自定义 headers 时才创建 Headers 对象
   const h = new Headers({
     "Content-Type": "application/json",
     ...headers,
