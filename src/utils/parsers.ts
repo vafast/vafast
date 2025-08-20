@@ -22,14 +22,80 @@ export interface FormData {
  */
 export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
-    return await req.json();
+
+  try {
+    // JSON 格式 - 最常用的格式
+    if (contentType.includes("application/json")) {
+      try {
+        const body = await req.json();
+        // 如果 body 是空字符串或 null，返回 undefined
+        if (body === "" || body === null) {
+          return undefined;
+        }
+        return body;
+      } catch (error) {
+        // JSON 解析失败时返回 undefined
+        console.warn("JSON 解析失败:", error);
+        return undefined;
+      }
+    }
+
+    // 表单数据
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      try {
+        const text = await req.text();
+        if (!text) return undefined;
+        return Object.fromEntries(new URLSearchParams(text));
+      } catch (error) {
+        console.warn("表单数据解析失败:", error);
+        return undefined;
+      }
+    }
+
+    // 文件上传
+    if (contentType.includes("multipart/form-data")) {
+      try {
+        return await parseMultipartFormData(req);
+      } catch (error) {
+        console.warn("文件上传解析失败:", error);
+        return undefined;
+      }
+    }
+
+    // 纯文本
+    if (contentType.includes("text/plain")) {
+      try {
+        const text = await req.text();
+        return text || undefined;
+      } catch (error) {
+        console.warn("文本解析失败:", error);
+        return undefined;
+      }
+    }
+
+    // 二进制数据
+    if (contentType.includes("application/octet-stream")) {
+      try {
+        return await req.arrayBuffer();
+      } catch (error) {
+        console.warn("二进制数据解析失败:", error);
+        return undefined;
+      }
+    }
+
+    // 默认当作文本处理
+    try {
+      const text = await req.text();
+      return text || undefined;
+    } catch (error) {
+      console.warn("默认文本解析失败:", error);
+      return undefined;
+    }
+  } catch (error) {
+    // 捕获任何未预期的错误
+    console.error("parseBody 发生未预期错误:", error);
+    return undefined;
   }
-  if (contentType.includes("application/x-www-form-urlencoded")) {
-    const text = await req.text();
-    return Object.fromEntries(new URLSearchParams(text));
-  }
-  return await req.text(); // fallback
 }
 
 /**

@@ -194,30 +194,19 @@ export function createRouteHandler<
       let body: TBody = undefined as TBody;
       let params: TParams = {} as TParams;
 
-      // 按需解析和验证数据
-      if (hasQuerySchema) {
-        queryObj = parseQuery(req) as TQuery;
-      }
+      // 默认总是解析所有数据，只有在有验证器时才进行验证
+      queryObj = parseQuery(req) as TQuery;
+      headers = parseHeaders(req) as THeaders;
+      cookies = parseCookies(req) as TCookies;
 
-      if (hasHeadersSchema) {
-        headers = parseHeaders(req) as THeaders;
-      }
+      // 总是解析 body
+      const [, parsedBody] = await goAwait(parseBody(req));
+      body = parsedBody as TBody;
 
-      if (hasCookiesSchema) {
-        cookies = parseCookies(req) as TCookies;
-      }
-
-      if (hasBodySchema) {
-        const [, parsedBody] = await goAwait(parseBody(req));
-        body = parsedBody as TBody;
-      }
-
-      if (hasParamsSchema) {
-        // 从 req 的第二个参数获取路径参数，或者从 req.pathParams 获取
-        params = ((req as any).pathParams ||
-          (req as any).params ||
-          {}) as TParams;
-      }
+      // 总是尝试获取路径参数
+      params = ((req as any).pathParams ||
+        (req as any).params ||
+        {}) as TParams;
 
       // 只在有验证器时执行验证
       if (
