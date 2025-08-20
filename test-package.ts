@@ -1,4 +1,5 @@
 // TypeScript 测试文件 - 验证打包后的包是否可用
+import { Type } from "@sinclair/typebox";
 import {
   Server,
   json,
@@ -18,7 +19,20 @@ import {
 } from "./dist/index.js";
 
 import type { Route, Handler } from "./dist/index.js";
-
+const BatchProcessSchema = Type.Object({
+  items: Type.Array(
+    Type.Object({
+      id: Type.Number(),
+      value: Type.Number(),
+      name: Type.String(),
+    })
+  ),
+  operation: Type.Union([
+    Type.Literal("sum"),
+    Type.Literal("average"),
+    Type.Literal("count"),
+  ]),
+});
 console.log("🧪 开始 TypeScript 测试打包后的 vafast 包...");
 
 // 测试类型定义
@@ -94,7 +108,7 @@ const routes: Route[] = [
         };
       },
       {
-        // 可以添加验证配置
+        body: BatchProcessSchema,
       }
     ),
   },
