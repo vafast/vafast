@@ -27,7 +27,7 @@ function createTestRequest() {
 
 describe("工厂路由功能测试", () => {
   it("应该正确处理无 schema 配置的工厂路由", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ body }) => {
+    const factoryHandler = createRouteHandler(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -52,19 +52,19 @@ describe("工厂路由功能测试", () => {
 
   it("应该正确处理有 body schema 配置的工厂路由", async () => {
     const factoryHandler = createRouteHandler(
-      {
-        body: Type.Object({
-          name: Type.String(),
-          age: Type.Number(),
-          email: Type.String(),
-        }),
-      },
       async ({ body }) => {
         return {
           message: simpleMessage,
           body: body,
           hasBody: body !== undefined,
         };
+      },
+      {
+        body: Type.Object({
+          name: Type.String(),
+          age: Type.Number(),
+          email: Type.String(),
+        }),
       }
     );
 
@@ -84,7 +84,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该正确处理空请求体", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ body }) => {
+    const factoryHandler = createRouteHandler(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -105,17 +105,17 @@ describe("工厂路由功能测试", () => {
 
   it("应该支持 query 参数解析", async () => {
     const factoryHandler = createRouteHandler(
-      {
-        query: Type.Object({
-          name: Type.String(),
-          age: Type.String(),
-        }),
-      },
       async ({ query }) => {
         return {
           message: simpleMessage,
           query,
         };
+      },
+      {
+        query: Type.Object({
+          name: Type.String(),
+          age: Type.String(),
+        }),
       }
     );
 
@@ -133,17 +133,17 @@ describe("工厂路由功能测试", () => {
 
   it("应该支持 headers 参数解析", async () => {
     const factoryHandler = createRouteHandler(
-      {
-        headers: Type.Object({
-          "content-type": Type.String(),
-          "user-agent": Type.String(),
-        }),
-      },
       async ({ headers }) => {
         return {
           message: simpleMessage,
           headers,
         };
+      },
+      {
+        headers: Type.Object({
+          "content-type": Type.String(),
+          "user-agent": Type.String(),
+        }),
       }
     );
 
@@ -164,7 +164,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 query 参数", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ query }) => {
+    const factoryHandler = createRouteHandler(async ({ query }) => {
       return {
         message: simpleMessage,
         query,
@@ -184,7 +184,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 headers", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ headers }) => {
+    const factoryHandler = createRouteHandler(async ({ headers }) => {
       return {
         message: simpleMessage,
         headers,
@@ -210,7 +210,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 cookies", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ cookies }) => {
+    const factoryHandler = createRouteHandler(async ({ cookies }) => {
       return {
         message: simpleMessage,
         cookies,
@@ -236,7 +236,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 params", async () => {
-    const factoryHandler = createRouteHandler({}, async ({ params }) => {
+    const factoryHandler = createRouteHandler(async ({ params }) => {
       return {
         message: simpleMessage,
         params,
@@ -258,7 +258,6 @@ describe("工厂路由功能测试", () => {
 
   it("应该默认解析所有数据", async () => {
     const factoryHandler = createRouteHandler(
-      {},
       async ({ body, query, headers, cookies }) => {
         return {
           message: simpleMessage,

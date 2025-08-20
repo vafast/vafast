@@ -149,9 +149,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/body",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        body: TestBodySchema,
-      },
       ({ req, body }) => {
         // 现在可以直接使用 req，也可以解构需要的参数
         const userAgent = req.headers.get("user-agent");
@@ -165,6 +162,9 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        body: TestBodySchema,
       }
     ),
   },
@@ -178,9 +178,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/query",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        query: TestQuerySchema,
-      },
       ({ req, query }) => {
         // 可以解构需要的参数
         return {
@@ -191,6 +188,9 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        query: TestQuerySchema,
       }
     ),
   },
@@ -204,9 +204,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/params/:id/:action",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        params: TestParamsSchema,
-      },
       ({ req, params }) => {
         // 可以解构需要的参数
         return {
@@ -217,6 +214,9 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        params: TestParamsSchema,
       }
     ),
   },
@@ -230,9 +230,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/headers",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        headers: TestHeadersSchema,
-      },
       ({ req, headers, cookies }) => {
         // 可以解构需要的参数
         return {
@@ -244,6 +241,9 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        headers: TestHeadersSchema,
       }
     ),
   },
@@ -257,9 +257,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/cookies",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        cookies: TestCookiesSchema,
-      },
       ({ req, cookies }) => {
         // 可以解构需要的参数
         return {
@@ -270,6 +267,9 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        cookies: TestCookiesSchema,
       }
     ),
   },
@@ -283,13 +283,6 @@ const schemaTestRoutes: TypedRoute[] = [
     path: "/test/all/:id/:action",
     middleware: [logger],
     handler: createRouteHandler(
-      {
-        body: TestBodySchema,
-        query: TestQuerySchema,
-        params: TestParamsSchema,
-        headers: TestHeadersSchema,
-        cookies: TestCookiesSchema,
-      },
       ({ req, body, query, params, headers, cookies }) => {
         // 可以解构所有需要的参数
         return {
@@ -304,6 +297,13 @@ const schemaTestRoutes: TypedRoute[] = [
             timestamp: new Date().toISOString(),
           },
         };
+      },
+      {
+        body: TestBodySchema,
+        query: TestQuerySchema,
+        params: TestParamsSchema,
+        headers: TestHeadersSchema,
+        cookies: TestCookiesSchema,
       }
     ),
   },
@@ -316,7 +316,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/middleware-order",
     middleware: [logger],
-    handler: createRouteHandler({}, ({ req }) => {
+    handler: createRouteHandler(({ req }) => {
       // 不需要任何解析数据时，可以只使用 req
       return {
         success: true,

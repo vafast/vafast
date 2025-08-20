@@ -161,8 +161,8 @@ export function createRouteHandler<
     : any,
   TExtra extends object = {}
 >(
-  config: TConfig,
-  handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies, TExtra>
+  handler: TypedHandler<TBody, TQuery, TParams, THeaders, TCookies, TExtra>,
+  config: TConfig = {} as TConfig
 ) {
   // 检查哪些验证器是必需的
   const hasBodySchema = config.body !== undefined;
