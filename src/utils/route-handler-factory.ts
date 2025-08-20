@@ -304,6 +304,6 @@ export function withExtra<TExtra extends object = {}>() {
       TConfig extends { headers: any } ? Static<TConfig["headers"]> : any,
       TConfig extends { cookies: any } ? Static<TConfig["cookies"]> : any,
       TExtra
-    >(config, handler);
+    >(handler, config);
   };
 }
