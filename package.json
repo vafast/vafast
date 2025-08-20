@@ -24,7 +24,7 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target bun",
+    "build": "tsdown",
     "dev": "bun --watch index.ts",
     "start": "bun run dist/index.js",
     "test": "vitest",
@@ -81,6 +81,7 @@
     "bun-types": "^1.2.20",
     "jsdom": "^26.1.0",
     "rimraf": "^6.0.1",
+    "tsdown": "^0.14.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
