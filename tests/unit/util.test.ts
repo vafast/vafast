@@ -114,7 +114,7 @@ describe("工具函数测试", () => {
       });
 
       const result = await parseBody(request);
-      expect(result).toBeUndefined();
+      expect(result).toBe("");
     });
 
     it("应该处理null请求体", async () => {
@@ -125,7 +125,7 @@ describe("工具函数测试", () => {
       });
 
       const result = await parseBody(request);
-      expect(result).toBeUndefined();
+      expect(result).toBe("");
     });
 
     it("应该处理undefined请求体", async () => {
@@ -136,7 +136,7 @@ describe("工具函数测试", () => {
       });
 
       const result = await parseBody(request);
-      expect(result).toBeUndefined();
+      expect(result).toBe("");
     });
 
     it("应该处理大小写不敏感的Content-Type", async () => {

@@ -63,16 +63,26 @@ const nativeResponse = () =>
     headers: { "Content-Type": "text/plain" },
   });
 
-// 性能测试函数
+// 性能测试函数 - 支持两种类型的处理器
 async function benchmarkFramework(
   name: string,
-  handler: (req: Request) => Response | Promise<Response>,
+  handler:
+    | ((req: Request) => Response | Promise<Response>)
+    | (() => Response | Promise<Response>),
   iterations: number = TEST_CONFIG.iterations
 ) {
   // 预热
   for (let i = 0; i < TEST_CONFIG.warmupRequests; i++) {
     const testRequest = new Request("http://localhost:3000/");
-    await handler(testRequest);
+    if (handler.length === 0) {
+      // 无参数处理器
+      await (handler as () => Response | Promise<Response>)();
+    } else {
+      // 带参数处理器
+      await (handler as (req: Request) => Response | Promise<Response>)(
+        testRequest
+      );
+    }
   }
 
   const start = performance.now();
@@ -80,7 +90,15 @@ async function benchmarkFramework(
   // 实际测试
   for (let i = 0; i < iterations; i++) {
     const testRequest = new Request("http://localhost:3000/");
-    await handler(testRequest);
+    if (handler.length === 0) {
+      // 无参数处理器
+      await (handler as () => Response | Promise<Response>)();
+    } else {
+      // 带参数处理器
+      await (handler as (req: Request) => Response | Promise<Response>)(
+        testRequest
+      );
+    }
   }
 
   const end = performance.now();
@@ -90,10 +108,12 @@ async function benchmarkFramework(
   return { name, rps, duration };
 }
 
-// 并发测试函数
+// 并发测试函数 - 支持两种类型的处理器
 async function concurrentBenchmark(
   name: string,
-  handler: (req: Request) => Response | Promise<Response>,
+  handler:
+    | ((req: Request) => Response | Promise<Response>)
+    | (() => Response | Promise<Response>),
   concurrency: number = TEST_CONFIG.concurrency,
   totalRequests: number = TEST_CONFIG.totalRequests
 ) {
@@ -105,7 +125,15 @@ async function concurrentBenchmark(
   const workers = Array.from({ length: concurrency }, async () => {
     for (let i = 0; i < requestsPerWorker; i++) {
       const testRequest = new Request("http://localhost:3000/");
-      await handler(testRequest);
+      if (handler.length === 0) {
+        // 无参数处理器
+        await (handler as () => Response | Promise<Response>)();
+      } else {
+        // 带参数处理器
+        await (handler as (req: Request) => Response | Promise<Response>)(
+          testRequest
+        );
+      }
     }
   });
 
@@ -148,13 +176,13 @@ async function runPerformanceBenchmark() {
   console.log("\n🔍 单线程性能测试:");
   console.log("-".repeat(50));
 
-  const nativeResult = await benchmarkFramework("原生 Response", async () => {
+  const nativeResult = await benchmarkFramework("原生 Response", () => {
     return nativeResponse();
   });
 
-  const directResult = await benchmarkFramework("直接路由", async () => {
+  const directResult = await benchmarkFramework("直接路由", () => {
     const route = tirneRoutesDirect[0]!;
-    return await route.handler();
+    return route.handler();
   });
 
   const factoryResult = await benchmarkFramework("工厂路由", async (req) => {
@@ -176,18 +204,15 @@ async function runPerformanceBenchmark() {
 
   const nativeConcurrentResult = await concurrentBenchmark(
     "原生 Response",
-    async () => {
+    () => {
       return nativeResponse();
     }
   );
 
-  const directConcurrentResult = await concurrentBenchmark(
-    "直接路由",
-    async () => {
-      const route = tirneRoutesDirect[0]!;
-      return await route.handler();
-    }
-  );
+  const directConcurrentResult = await concurrentBenchmark("直接路由", () => {
+    const route = tirneRoutesDirect[0]!;
+    return route.handler();
+  });
 
   const factoryConcurrentResult = await concurrentBenchmark(
     "工厂路由",
