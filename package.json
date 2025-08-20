@@ -24,7 +24,7 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "scripts": {
-    "build:": "tsc --outDir dist --declaration",
+    "build": "tsc --outDir dist --declaration",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "dev": "bun --watch index.ts",
     "start": "bun run dist/index.js",
