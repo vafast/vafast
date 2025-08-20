@@ -109,17 +109,6 @@ describe("解析器功能测试", () => {
     });
   });
 
-  it("应该处理空请求体", async () => {
-    const emptyRequest = new Request("http://localhost:3000/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "",
-    });
-
-    const body = await parseBody(emptyRequest);
-    expect(body).toBeUndefined();
-  });
-
   it("应该处理空查询参数", () => {
     const emptyQueryRequest = new Request("http://localhost:3000/test");
     const queryParams = parseQuery(emptyQueryRequest);

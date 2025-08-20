@@ -22,21 +22,13 @@ export interface FormData {
  */
 export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";
-
   if (contentType.includes("application/json")) {
-    try {
-      return await req.json();
-    } catch {
-      // JSON 解析失败时返回 undefined
-      return undefined;
-    }
+    return await req.json();
   }
-
   if (contentType.includes("application/x-www-form-urlencoded")) {
     const text = await req.text();
     return Object.fromEntries(new URLSearchParams(text));
   }
-
   return await req.text(); // fallback
 }
 
