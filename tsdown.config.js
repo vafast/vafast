@@ -1,14 +1,13 @@
-import { defineConfig } from "tsdown";
+const { defineConfig } = require("tsdown/config");
 
-export default defineConfig({
-  entry: ["./src/index.ts"],
-  format: ["esm"],
-  dts: true,
+module.exports = defineConfig({
   clean: true,
+  entry: ["src/index.ts"],
+  sourcemap: true,
+  minify: true,
+  // 使用cjs格式，兼容性更好
+  format: ["cjs"],
   outDir: "dist",
-  target: "esnext",
-  splitting: false,
-  sourcemap: false,
-  minify: false,
-  treeshake: true,
+  dts: true,
 });
+
