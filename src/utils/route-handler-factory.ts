@@ -79,7 +79,7 @@ export type TypedHandler<
 // 预定义的常用响应头，避免重复创建
 const TEXT_HEADERS = { "Content-Type": "text/plain; charset=utf-8" };
 const JSON_HEADERS = { "Content-Type": "application/json" };
-const EMPTY_RESPONSE_204 = new Response("", { status: 204 });
+const EMPTY_RESPONSE_204 = new Response(null, { status: 204 });
 
 // 超高性能的 Response 自动转换函数 - 生产环境推荐使用
 function autoResponseUltra(result: any): Response {
