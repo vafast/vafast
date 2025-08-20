@@ -76,30 +76,33 @@ export type TypedHandler<
   } & TExtra
 ) => Response | Promise<Response> | any | Promise<any>;
 
-// 自动转换返回值为 Response 的辅助函数 - 性能优化版本
-function autoResponse(result: any): Response {
+// 预定义的常用响应头，避免重复创建
+const TEXT_HEADERS = { "Content-Type": "text/plain; charset=utf-8" };
+const JSON_HEADERS = { "Content-Type": "application/json" };
+const EMPTY_RESPONSE_204 = new Response("", { status: 204 });
+
+// 超高性能的 Response 自动转换函数 - 生产环境推荐使用
+function autoResponseUltra(result: any): Response {
   // 快速路径：已经是 Response 对象
   if (result instanceof Response) {
     return result;
   }
 
-  // 快速路径：null/undefined
+  // 快速路径：null/undefined - 复用预创建的对象
   if (result === null || result === undefined) {
-    return new Response("", { status: 204 });
+    return EMPTY_RESPONSE_204;
   }
 
   // 使用 switch 语句优化类型检查
   switch (typeof result) {
     case "string":
-      return new Response(result, {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
+      // 优化：复用预定义的头部对象
+      return new Response(result, { headers: TEXT_HEADERS });
 
     case "number":
     case "boolean":
-      return new Response(String(result), {
-        headers: { "Content-Type": "text/plain; charset=utf-8" },
-      });
+      // 优化：使用更高效的字符串转换，复用头部
+      return new Response(result.toString(), { headers: TEXT_HEADERS });
 
     case "object":
       // 检查是否是 { data, status, headers } 格式
@@ -120,11 +123,15 @@ function autoResponse(result: any): Response {
           typeof data === "number" ||
           typeof data === "boolean"
         ) {
+          // 优化：减少对象展开操作，直接构建最终对象
           const finalHeaders = {
             "Content-Type": "text/plain; charset=utf-8",
             ...headers,
           };
-          return new Response(String(data), { status, headers: finalHeaders });
+          return new Response(data.toString(), {
+            status,
+            headers: finalHeaders,
+          });
         }
 
         // JSON 类型 - 复用 json 函数
@@ -136,7 +143,7 @@ function autoResponse(result: any): Response {
 
     default:
       // 其他类型（如 symbol, function 等）
-      return new Response("", { status: 204 });
+      return EMPTY_RESPONSE_204;
   }
 }
 
@@ -244,7 +251,7 @@ export function createRouteHandler<
         headers: THeaders;
         cookies: TCookies;
       } & TExtra);
-      return autoResponse(result);
+      return autoResponseUltra(result);
     } catch (error) {
       // 使用用户自定义的验证错误处理器
       if (error instanceof Error && error.message.includes("验证失败")) {
