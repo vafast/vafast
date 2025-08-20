@@ -1,6 +1,6 @@
 {
   "name": "vafast",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "description": "专为Bun构建的极简结构化Web框架。Go风格，函数优先。",
   "type": "module",
   "repository": {
