@@ -17,49 +17,47 @@ export interface FormData {
 }
 
 /**
- * 增强的请求体解析函数
- * 支持多种内容类型：JSON、表单、文件上传、纯文本等
+ * 简化的请求体解析函数
+ * 优先简洁性，处理最常见的场景
  */
 export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";
-  const contentLength = req.headers.get("content-length");
 
-  // 检查内容长度限制（默认 10MB）
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  if (contentLength && parseInt(contentLength) > maxSize) {
-    throw new Error(
-      `请求体过大: ${contentLength} bytes (最大允许: ${maxSize} bytes)`
-    );
+  // JSON - 最常用的格式
+  if (contentType.includes("application/json")) {
+    try {
+      return await req.json();
+    } catch {
+      return undefined; // 空请求体或格式错误时返回 undefined
+    }
   }
 
-  try {
-    if (contentType.includes("application/json")) {
-      return await req.json();
-    }
+  // 表单数据
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    const text = await req.text();
+    return Object.fromEntries(new URLSearchParams(text));
+  }
 
-    if (contentType.includes("application/x-www-form-urlencoded")) {
-      const text = await req.text();
-      return Object.fromEntries(new URLSearchParams(text));
-    }
+  // 文件上传
+  if (contentType.includes("multipart/form-data")) {
+    return await parseMultipartFormData(req);
+  }
 
-    if (contentType.includes("multipart/form-data")) {
-      return await parseMultipartFormData(req);
-    }
-
-    if (contentType.includes("text/plain")) {
-      return await req.text();
-    }
-
-    if (contentType.includes("application/octet-stream")) {
-      return await req.arrayBuffer();
-    }
-
-    // 默认返回文本
+  // 纯文本
+  if (contentType.includes("text/plain")) {
     return await req.text();
-  } catch (error) {
-    throw new Error(
-      `解析请求体失败: ${error instanceof Error ? error.message : "未知错误"}`
-    );
+  }
+
+  // 二进制数据
+  if (contentType.includes("application/octet-stream")) {
+    return await req.arrayBuffer();
+  }
+
+  // 默认当作文本处理
+  try {
+    return await req.text();
+  } catch {
+    return undefined;
   }
 }
 
