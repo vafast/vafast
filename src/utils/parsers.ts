@@ -22,43 +22,14 @@ export interface FormData {
  */
 export async function parseBody(req: Request): Promise<unknown> {
   const contentType = req.headers.get("content-type") || "";
-
-  // JSON - 最常用的格式
   if (contentType.includes("application/json")) {
-    try {
-      return await req.json();
-    } catch {
-      return undefined; // 空请求体或格式错误时返回 undefined
-    }
+    return await req.json();
   }
-
-  // 表单数据
   if (contentType.includes("application/x-www-form-urlencoded")) {
     const text = await req.text();
     return Object.fromEntries(new URLSearchParams(text));
   }
-
-  // 文件上传
-  if (contentType.includes("multipart/form-data")) {
-    return await parseMultipartFormData(req);
-  }
-
-  // 纯文本
-  if (contentType.includes("text/plain")) {
-    return await req.text();
-  }
-
-  // 二进制数据
-  if (contentType.includes("application/octet-stream")) {
-    return await req.arrayBuffer();
-  }
-
-  // 默认当作文本处理
-  try {
-    return await req.text();
-  } catch {
-    return undefined;
-  }
+  return await req.text(); // fallback
 }
 
 /**
