@@ -24,7 +24,8 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsdown",
+    "build:": "tsc --outDir dist --declaration",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "dev": "bun --watch index.ts",
     "start": "bun run dist/index.js",
     "test": "vitest",
@@ -44,7 +45,6 @@
     "format": "prettier --write src/**/*.ts tests/**/*.ts benchmarks/**/*.ts",
     "format:check": "prettier --check src/**/*.ts tests/**/*.ts benchmarks/**/*.ts",
     "type-check": "tsc --noEmit",
-    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "postbuild": "rimraf src/**/*.d.ts",
     "release": "bun run type-check && bun run build && bun run test:run && bumpp && bun publish",
     "docs:dev": "bun run docs:serve",
@@ -81,7 +81,6 @@
     "bun-types": "^1.2.20",
     "jsdom": "^26.1.0",
     "rimraf": "^6.0.1",
-    "tsdown": "^0.14.1",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   },
