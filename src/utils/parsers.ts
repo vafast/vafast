@@ -28,8 +28,12 @@ export async function parseBody(req: Request): Promise<unknown> {
     if (contentType.includes("application/json")) {
       try {
         const body = await req.json();
-        // 如果 body 是空字符串或 null，返回 undefined
-        if (body === "" || body === null) {
+        // 如果 body 是空对象、空字符串或 null，返回 undefined
+        if (
+          body === "" ||
+          body === null ||
+          (typeof body === "object" && Object.keys(body).length === 0)
+        ) {
           return undefined;
         }
         return body;

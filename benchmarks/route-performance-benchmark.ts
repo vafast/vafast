@@ -69,10 +69,9 @@ async function benchmarkFramework(
   handler: (req: Request) => Response | Promise<Response>,
   iterations: number = TEST_CONFIG.iterations
 ) {
-  const testRequest = new Request("http://localhost:3000/");
-
   // 预热
   for (let i = 0; i < TEST_CONFIG.warmupRequests; i++) {
+    const testRequest = new Request("http://localhost:3000/");
     await handler(testRequest);
   }
 
@@ -80,6 +79,7 @@ async function benchmarkFramework(
 
   // 实际测试
   for (let i = 0; i < iterations; i++) {
+    const testRequest = new Request("http://localhost:3000/");
     await handler(testRequest);
   }
 
@@ -97,7 +97,6 @@ async function concurrentBenchmark(
   concurrency: number = TEST_CONFIG.concurrency,
   totalRequests: number = TEST_CONFIG.totalRequests
 ) {
-  const testRequest = new Request("http://localhost:3000/");
   const requestsPerWorker = Math.ceil(totalRequests / concurrency);
 
   const start = performance.now();
@@ -105,6 +104,7 @@ async function concurrentBenchmark(
   // 创建并发工作器
   const workers = Array.from({ length: concurrency }, async () => {
     for (let i = 0; i < requestsPerWorker; i++) {
+      const testRequest = new Request("http://localhost:3000/");
       await handler(testRequest);
     }
   });
@@ -162,33 +162,48 @@ async function runPerformanceBenchmark() {
     return await route.handler(req);
   });
 
-  const fullResult = await benchmarkFramework("tirne原生 (带验证版本)", async (req) => {
-    const route = tirneRoutesFull[0]!;
-    return await route.handler(req);
-  });
+  const fullResult = await benchmarkFramework(
+    "tirne原生 (带验证版本)",
+    async (req) => {
+      const route = tirneRoutesFull[0]!;
+      return await route.handler(req);
+    }
+  );
 
   // 2. 并发性能测试
   console.log("\n🚀 并发性能测试:");
   console.log("-".repeat(50));
 
-  const nativeConcurrentResult = await concurrentBenchmark("原生 Response", async () => {
-    return nativeResponse();
-  });
+  const nativeConcurrentResult = await concurrentBenchmark(
+    "原生 Response",
+    async () => {
+      return nativeResponse();
+    }
+  );
 
-  const directConcurrentResult = await concurrentBenchmark("直接路由", async () => {
-    const route = tirneRoutesDirect[0]!;
-    return await route.handler();
-  });
+  const directConcurrentResult = await concurrentBenchmark(
+    "直接路由",
+    async () => {
+      const route = tirneRoutesDirect[0]!;
+      return await route.handler();
+    }
+  );
 
-  const factoryConcurrentResult = await concurrentBenchmark("工厂路由", async (req) => {
-    const route = tirneRoutesFactory[0]!;
-    return await route.handler(req);
-  });
+  const factoryConcurrentResult = await concurrentBenchmark(
+    "工厂路由",
+    async (req) => {
+      const route = tirneRoutesFactory[0]!;
+      return await route.handler(req);
+    }
+  );
 
-  const fullConcurrentResult = await concurrentBenchmark("tirne原生 (带验证版本)", async (req) => {
-    const route = tirneRoutesFull[0]!;
-    return await route.handler(req);
-  });
+  const fullConcurrentResult = await concurrentBenchmark(
+    "tirne原生 (带验证版本)",
+    async (req) => {
+      const route = tirneRoutesFull[0]!;
+      return await route.handler(req);
+    }
+  );
 
   // 显示测试结果
   console.log("\n" + "=".repeat(80));
@@ -197,11 +212,17 @@ async function runPerformanceBenchmark() {
 
   // 单线程结果
   console.log("\n📊 单线程性能:");
-  const singleThreadResults = [nativeResult, directResult, factoryResult, fullResult];
+  const singleThreadResults = [
+    nativeResult,
+    directResult,
+    factoryResult,
+    fullResult,
+  ];
   singleThreadResults.sort((a, b) => b.rps - a.rps);
 
   singleThreadResults.forEach((result, index) => {
-    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "📊";
+    const medal =
+      index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "📊";
     const rpsFormatted = formatPerformance(result.rps).padStart(8);
 
     console.log(`${medal} ${result.name.padEnd(30)}: ${rpsFormatted} 请求/秒`);
@@ -218,7 +239,8 @@ async function runPerformanceBenchmark() {
   concurrentResults.sort((a, b) => b.rps - a.rps);
 
   concurrentResults.forEach((result, index) => {
-    const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "📊";
+    const medal =
+      index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "📊";
     const rpsFormatted = formatPerformance(result.rps).padStart(8);
 
     console.log(`${medal} ${result.name.padEnd(30)}: ${rpsFormatted} 请求/秒`);
@@ -230,13 +252,20 @@ async function runPerformanceBenchmark() {
 
   const fastestSingle = singleThreadResults[0]!;
   const slowestSingle = singleThreadResults[singleThreadResults.length - 1]!;
-  const performanceGap = ((fastestSingle.rps / slowestSingle.rps - 1) * 100).toFixed(1);
+  const performanceGap = (
+    (fastestSingle.rps / slowestSingle.rps - 1) *
+    100
+  ).toFixed(1);
 
   console.log(
-    `🏆 单线程最快: ${fastestSingle.name} (${formatPerformance(fastestSingle.rps)} 请求/秒)`
+    `🏆 单线程最快: ${fastestSingle.name} (${formatPerformance(
+      fastestSingle.rps
+    )} 请求/秒)`
   );
   console.log(
-    `🐌 单线程最慢: ${slowestSingle.name} (${formatPerformance(slowestSingle.rps)} 请求/秒)`
+    `🐌 单线程最慢: ${slowestSingle.name} (${formatPerformance(
+      slowestSingle.rps
+    )} 请求/秒)`
   );
   console.log(`📊 性能差距: ${performanceGap}%`);
 
@@ -246,9 +275,16 @@ async function runPerformanceBenchmark() {
 
   const baseRps = fullResult.rps;
   if (baseRps > 0) {
-    const nativeImprovement = ((nativeResult.rps / baseRps - 1) * 100).toFixed(1);
-    const directImprovement = ((directResult.rps / baseRps - 1) * 100).toFixed(1);
-    const factoryImprovement = ((factoryResult.rps / baseRps - 1) * 100).toFixed(1);
+    const nativeImprovement = ((nativeResult.rps / baseRps - 1) * 100).toFixed(
+      1
+    );
+    const directImprovement = ((directResult.rps / baseRps - 1) * 100).toFixed(
+      1
+    );
+    const factoryImprovement = (
+      (factoryResult.rps / baseRps - 1) *
+      100
+    ).toFixed(1);
 
     console.log(`📈 原生 Response vs 带验证版本: ${nativeImprovement}% 提升`);
     console.log(`📈 直接路由 vs 带验证版本: ${directImprovement}% 提升`);
