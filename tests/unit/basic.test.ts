@@ -56,7 +56,8 @@ describe("基础示例", () => {
         {
           method: "GET",
           path: "/users/:id",
-          handler: (req, params) => {
+          handler: (req) => {
+            const params = (req as any).params;
             const id = parseInt(params?.id || "0");
             const user = users.find((u) => u.id === id);
 
