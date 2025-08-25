@@ -73,12 +73,10 @@ export abstract class BaseServer {
    * 检测动态路由的潜在冲突
    */
   private detectDynamicRouteConflicts(routes: any[]): void {
-    const dynamicRoutes = routes.filter(
-      (r) => {
-        const path = r.fullPath || r.path;
-        return path.includes(":") || path.includes("*");
-      }
-    );
+    const dynamicRoutes = routes.filter((r) => {
+      const path = r.fullPath || r.path;
+      return path.includes(":") || path.includes("*");
+    });
 
     for (let i = 0; i < dynamicRoutes.length; i++) {
       for (let j = i + 1; j < dynamicRoutes.length; j++) {
@@ -149,7 +147,10 @@ export abstract class BaseServer {
     }
 
     for (let i = 0; i < patternParts.length; i++) {
-      if (patternParts[i] !== pathParts[i] && !patternParts[i].startsWith(":")) {
+      if (
+        patternParts[i] !== pathParts[i] &&
+        !patternParts[i].startsWith(":")
+      ) {
         return false;
       }
     }
@@ -160,7 +161,10 @@ export abstract class BaseServer {
   /**
    * 提取路径参数
    */
-  protected extractParams(pattern: string, path: string): Record<string, string> {
+  protected extractParams(
+    pattern: string,
+    path: string
+  ): Record<string, string> {
     const params: Record<string, string> = {};
     const patternParts = pattern.split("/").filter(Boolean);
     const pathParts = path.split("/").filter(Boolean);
@@ -173,32 +177,5 @@ export abstract class BaseServer {
     }
 
     return params;
-  }
-
-  /**
-   * 处理 OPTIONS 请求
-   */
-  protected handleOptions(pathname: string, routes: any[]): Response {
-    const availableMethods: string[] = [];
-
-    for (const route of routes) {
-      const path = route.fullPath || route.path;
-      const method = route.method || "GET";
-      if (this.matchPath(path, pathname)) {
-        availableMethods.push(method);
-      }
-    }
-
-    // 去重并排序
-    const uniqueMethods = [...new Set(availableMethods)].sort();
-
-    return new Response(null, {
-      status: 204,
-      headers: {
-        Allow: uniqueMethods.join(", "),
-        "Access-Control-Allow-Methods": uniqueMethods.join(", "),
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      },
-    });
   }
 }

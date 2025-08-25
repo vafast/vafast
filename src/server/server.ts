@@ -33,14 +33,9 @@ export class Server extends BaseServer {
     this.logFlattenedRoutes(this.routes);
   }
 
-  fetch = async (req: Request): Promise<Response> => {
+    fetch = async (req: Request): Promise<Response> => {
     const { pathname } = new URL(req.url);
     const method = req.method;
-
-    // 自动处理 OPTIONS 请求
-    if (method === "OPTIONS") {
-      return this.handleOptions(pathname, this.routes);
-    }
 
     let matched: FlattenedRoute | undefined;
     let params: Record<string, string> = {};
