@@ -1,5 +1,5 @@
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src";
+import type { Route, Middleware } from "../../src/types";
 
 // 日志中间件
 const logger: Middleware = async (req, next) => {
@@ -10,7 +10,9 @@ const logger: Middleware = async (req, next) => {
 
   const duration = Date.now() - start;
   console.log(
-    `[${new Date().toISOString()}] ${req.method} ${req.url} - ${response.status} (${duration}ms)`
+    `[${new Date().toISOString()}] ${req.method} ${req.url} - ${
+      response.status
+    } (${duration}ms)`
   );
 
   return response;

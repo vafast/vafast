@@ -1,4 +1,4 @@
-import { Route } from "../types";
+import { Route } from "./types";
 
 // 定义中间件类型
 export interface Middleware {

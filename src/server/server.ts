@@ -64,7 +64,7 @@ export class Server extends BaseServer {
       if (matched) {
         // 将路径参数设置到 req 对象上，以便 TypedRoute 处理器能够访问
         (req as any).params = params;
-        return await matched.handler(req, params);
+        return await matched.handler(req);
       } else if (availableMethods.length > 0) {
         // 路径存在但方法不匹配，返回 405 Method Not Allowed
         return json(

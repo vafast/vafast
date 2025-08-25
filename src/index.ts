@@ -8,7 +8,7 @@ export * from "./middleware/cors";
 export * from "./auth/token";
 export * from "./middleware/auth";
 export * from "./defineRoute";
-export * from "./types";
+export * from "./types/index";
 
 // 重新导出 Type 以便用户使用
 export { Type } from "@sinclair/typebox";

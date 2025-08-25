@@ -1,14 +1,16 @@
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src";
+import type { Route, Middleware } from "../../src/types";
 
 // CORS 中间件 - 符合 Vafast 文档风格
-export function createCORS(options: {
-  origin?: string[] | "*";
-  methods?: string[];
-  headers?: string[];
-  credentials?: boolean;
-  maxAge?: number;
-} = {}): Middleware {
+export function createCORS(
+  options: {
+    origin?: string[] | "*";
+    methods?: string[];
+    headers?: string[];
+    credentials?: boolean;
+    maxAge?: number;
+  } = {}
+): Middleware {
   const {
     origin = "*",
     methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -21,18 +23,21 @@ export function createCORS(options: {
     const reqOrigin = req.headers.get("Origin") || "";
 
     // 判断：是否为允许的 Origin？
-    const isAllowedOrigin =
-      origin === "*" || origin.includes(reqOrigin);
+    const isAllowedOrigin = origin === "*" || origin.includes(reqOrigin);
 
     // 预检 (OPTIONS) 请求处理
     if (req.method === "OPTIONS") {
       const resHeaders = new Headers();
 
       if (isAllowedOrigin) {
-        resHeaders.set("Access-Control-Allow-Origin", origin === "*" ? "*" : reqOrigin);
+        resHeaders.set(
+          "Access-Control-Allow-Origin",
+          origin === "*" ? "*" : reqOrigin
+        );
         resHeaders.set("Access-Control-Allow-Methods", methods.join(","));
         resHeaders.set("Access-Control-Allow-Headers", headers.join(","));
-        if (credentials) resHeaders.set("Access-Control-Allow-Credentials", "true");
+        if (credentials)
+          resHeaders.set("Access-Control-Allow-Credentials", "true");
         if (maxAge) resHeaders.set("Access-Control-Max-Age", maxAge.toString());
       }
 
@@ -43,8 +48,12 @@ export function createCORS(options: {
     const res = await next();
 
     if (isAllowedOrigin) {
-      res.headers.set("Access-Control-Allow-Origin", origin === "*" ? "*" : reqOrigin);
-      if (credentials) res.headers.set("Access-Control-Allow-Credentials", "true");
+      res.headers.set(
+        "Access-Control-Allow-Origin",
+        origin === "*" ? "*" : reqOrigin
+      );
+      if (credentials)
+        res.headers.set("Access-Control-Allow-Credentials", "true");
     }
 
     return res;
@@ -64,23 +73,30 @@ const routes: Route[] = [
   {
     method: "GET",
     path: "/data",
-    handler: () => new Response(JSON.stringify({ 
-      message: "Hello with CORS" 
-    }), {
-      headers: { "Content-Type": "application/json" }
-    }),
+    handler: () =>
+      new Response(
+        JSON.stringify({
+          message: "Hello with CORS",
+        }),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      ),
   },
   {
     method: "POST",
     path: "/data",
     handler: async (req) => {
       const body = await req.json();
-      return new Response(JSON.stringify({ 
-        message: "Data received with CORS",
-        data: body 
-      }), {
-        headers: { "Content-Type": "application/json" }
-      });
+      return new Response(
+        JSON.stringify({
+          message: "Data received with CORS",
+          data: body,
+        }),
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     },
   },
 ];
