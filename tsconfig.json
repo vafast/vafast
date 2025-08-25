@@ -19,6 +19,6 @@
     "declaration": true, // 生成类型定义
     "emitDeclarationOnly": false // 是否只输出类型定义，false 表示也输出实现代码
   },
-  "include": ["src/**/*"], // 🎯 只编译核心源码
+  "include": ["src/**/*", "src/**/index.ts"], // 🎯 只编译核心源码
   "exclude": ["node_modules", "dist", "examples", "tests", "benchmarks"] // 🧹 忽略的目录
 }

@@ -106,7 +106,8 @@ function autoResponseUltra(result: any): Response {
 
     case "object":
       // 检查是否是 { data, status, headers } 格式
-      if ("data" in result) {
+      // 只有当对象同时包含 data、status 或 headers 字段时，才认为是这种格式
+      if ("data" in result && ("status" in result || "headers" in result)) {
         const { data, status = 200, headers = {} } = result;
 
         // 无内容

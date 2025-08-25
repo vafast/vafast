@@ -1,4 +1,4 @@
-import { Route } from "..";
+import { Route } from "../types";
 
 // 定义中间件类型
 export interface Middleware {
@@ -55,4 +55,21 @@ export type CompatibleRoute = Route | TypedRoute;
 export interface FlattenedRoute extends ExtendedRouteConfig {
   fullPath: string;
   middlewareChain: Middleware[];
+}
+
+// 导出一些实际的函数，确保 JavaScript 代码生成
+export function createTypedRoute(
+  config: ExtendedRouteConfig
+): ExtendedRouteConfig {
+  return config;
+}
+
+export function isTypedRoute(route: any): route is TypedRoute {
+  return (
+    route &&
+    typeof route === "object" &&
+    "method" in route &&
+    "path" in route &&
+    "handler" in route
+  );
 }
