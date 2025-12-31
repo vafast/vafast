@@ -3,6 +3,7 @@ name: Publish
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 defaults:
   run:
@@ -42,10 +43,24 @@ jobs:
       - name: Run tests
         run: bun run test:run
 
-      # OIDC Trusted Publishing：发布鉴权走 GitHub OIDC（无需 npm token）。
-      # 重要：如果环境里存在 NODE_AUTH_TOKEN（例如老的 classic token / 组织级变量），npm 可能会优先使用它并导致 “token 已撤销/过期”。
-      - name: Publish to npm with provenance
+      # 先尝试 OIDC Trusted Publishing（无需 token）。如果 OIDC 未生效，则回退到 NPM_TOKEN（granular/automation token）。
+      - name: Publish to npm with provenance (OIDC)
+        id: publish_oidc
+        continue-on-error: true
         env:
-          # 强制禁用 token，确保走 OIDC Trusted Publishing
+          # 防止环境里存在旧 token 导致 npm 优先走 token（classic token 已被撤销会直接失败）
           NODE_AUTH_TOKEN: ""
         run: npm publish --provenance --access=public
+
+      - name: Publish to npm with provenance (token fallback)
+        if: steps.publish_oidc.outcome == 'failure' && secrets.NPM_TOKEN != ''
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access=public
+
+      - name: Fail if both OIDC and token are unavailable
+        if: steps.publish_oidc.outcome == 'failure' && secrets.NPM_TOKEN == ''
+        run: |
+          echo "npm OIDC Trusted Publishing 未生效（ENEEDAUTH），且未配置 secrets.NPM_TOKEN。"
+          echo "请检查 npm 包 vafast 的 Trusted Publishing 绑定是否保存成功，或创建 granular/automation token 并添加到 GitHub Secrets: NPM_TOKEN。"
+          exit 1
