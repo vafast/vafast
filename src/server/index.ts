@@ -1,10 +1,15 @@
-// 导出所有服务器相关的类和工具
+/**
+ * 服务器模块导出
+ */
+
+// 主服务器类
 export { Server } from "./server";
+
+// 组件服务器 (SSR)
 export { ComponentServer } from "./component-server";
-export { BaseServer } from "./base-server";
+
+// 服务器工厂
 export { ServerFactory } from "./server-factory";
 
-// 导出工具类
-export { PathMatcher } from "../utils/path-matcher";
-export { HtmlRenderer } from "../utils/html-renderer";
-export { DependencyManager } from "../utils/dependency-manager";
+// 基类 (仅用于扩展)
+export { BaseServer } from "./base-server";

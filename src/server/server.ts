@@ -1,91 +1,182 @@
+/**
+ * Vafast 核心服务器
+ *
+ * 基于 Radix Tree 的高性能路由匹配
+ * 时间复杂度: O(k)，k 为路径段数
+ *
+ * @author Framework Team
+ * @version 2.0.0
+ * @license MIT
+ */
+
 import type {
   Handler,
   Middleware,
   Route,
   NestedRoute,
   FlattenedRoute,
+  Method,
 } from "../types";
-import { matchPath, flattenNestedRoutes } from "../router";
+import { flattenNestedRoutes } from "../router";
 import { composeMiddleware } from "../middleware";
 import { json } from "../utils/response";
 import { BaseServer } from "./base-server";
-import { PathMatcher } from "../utils/path-matcher";
+import { RadixRouter } from "../router/radix-tree";
 
+/**
+ * Vafast 服务器
+ *
+ * 使用 Radix Tree 实现高性能路由匹配
+ * 运行时无关设计，支持 Bun、Deno、Node.js 等
+ *
+ * @example
+ * ```typescript
+ * import { Server, createHandler } from "vafast";
+ * import { Type } from "@sinclair/typebox";
+ *
+ * const server = new Server([
+ *   {
+ *     method: "GET",
+ *     path: "/",
+ *     handler: () => new Response("Hello World"),
+ *   },
+ *   {
+ *     method: "POST",
+ *     path: "/users",
+ *     handler: createHandler({
+ *       body: Type.Object({ name: Type.String() })
+ *     })(({ body }) => ({ id: 1, name: body.name })),
+ *   },
+ * ]);
+ *
+ * // 导出 fetch 方法供运行时使用
+ * export default { fetch: server.fetch };
+ * ```
+ */
 export class Server extends BaseServer {
+  private router: RadixRouter;
   private routes: FlattenedRoute[];
 
-  constructor(routes: (Route | NestedRoute)[]) {
+  constructor(routes: (Route | NestedRoute)[] = []) {
     super();
-    // 扁平化嵌套路由，计算完整的中间件链
-    this.routes = flattenNestedRoutes(routes);
+    this.router = new RadixRouter();
+    this.routes = [];
 
-    // 在构造时按路由"特异性"排序：静态 > 动态(:param) > 通配符(*)
-    this.routes = this.routes.sort(
-      (a, b) =>
-        PathMatcher.calculatePathScore(b.fullPath) -
-        PathMatcher.calculatePathScore(a.fullPath)
-    );
-
-    // 检测路由冲突
-    this.detectRouteConflicts(this.routes);
-
-    // 打印扁平化后的路由信息
-    this.logFlattenedRoutes(this.routes);
+    // 初始化路由
+    if (routes.length > 0) {
+      this.registerRoutes(routes);
+    }
   }
 
-    fetch = async (req: Request): Promise<Response> => {
-    const { pathname } = new URL(req.url);
-    const method = req.method;
+  /**
+   * 注册路由
+   */
+  private registerRoutes(routes: (Route | NestedRoute)[]): void {
+    // 扁平化嵌套路由
+    const flattened = flattenNestedRoutes(routes);
+    this.routes.push(...flattened);
 
-    let matched: FlattenedRoute | undefined;
-    let params: Record<string, string> = {};
-    let availableMethods: string[] = [];
-
-    for (const route of this.routes) {
-      const result = matchPath(route.fullPath, pathname);
-      if (result.matched) {
-        if (route.method === method) {
-          matched = route;
-          params = result.params;
-          break;
-        } else {
-          // 路径匹配但方法不匹配，收集可用方法
-          availableMethods.push(route.method);
-        }
-      }
+    // 注册到 Radix Tree
+    for (const route of flattened) {
+      this.router.register(
+        route.method as Method,
+        route.fullPath,
+        route.handler,
+        route.middlewareChain || []
+      );
     }
 
-    const handler: Handler = async (req) => {
-      if (matched) {
-        // 将路径参数设置到 req 对象上，以便 TypedRoute 处理器能够访问
-        (req as any).params = params;
-        return await matched.handler(req);
-      } else if (availableMethods.length > 0) {
-        // 路径存在但方法不匹配，返回 405 Method Not Allowed
-        return json(
-          {
-            success: false,
-            error: "Method Not Allowed",
-            message: `Method ${method} not allowed for this endpoint`,
-            allowedMethods: availableMethods,
-          },
-          405,
-          {
-            Allow: availableMethods.join(", "),
-          }
-        );
-      } else {
-        // 路径不存在，返回 404 Not Found
-        return json({ success: false, error: "Not Found" }, 404);
-      }
+    // 检测路由冲突
+    this.detectRouteConflicts(flattened);
+
+    // 打印路由信息
+    this.logFlattenedRoutes(flattened);
+  }
+
+  /**
+   * 处理请求
+   */
+  fetch = async (req: Request): Promise<Response> => {
+    const { pathname } = new URL(req.url);
+    const method = req.method as Method;
+
+    // O(k) 路由匹配
+    const match = this.router.match(method, pathname);
+
+    if (match) {
+      // 注入路径参数
+      (req as unknown as Record<string, unknown>).params = match.params;
+
+      // 组合中间件链
+      const middlewareChain = [...this.globalMiddleware, ...match.middleware];
+      const composedHandler = composeMiddleware(middlewareChain, match.handler);
+
+      return composedHandler(req);
+    }
+
+    // 检查是否是方法不允许
+    const allowedMethods = this.router.getAllowedMethods(pathname);
+    if (allowedMethods.length > 0) {
+      return json(
+        {
+          success: false,
+          error: "Method Not Allowed",
+          message: `Method ${method} not allowed for this endpoint`,
+          allowedMethods,
+        },
+        405,
+        { Allow: allowedMethods.join(", ") }
+      );
+    }
+
+    // 路径不存在
+    return json({ success: false, error: "Not Found" }, 404);
+  };
+
+  /**
+   * 添加单个路由
+   */
+  addRoute(route: Route): void {
+    const flattenedRoute: FlattenedRoute = {
+      ...route,
+      fullPath: route.path,
+      middlewareChain: route.middleware || [],
     };
 
-    const middlewareChain = matched?.middlewareChain
-      ? [...this.globalMiddleware, ...matched.middlewareChain]
-      : this.globalMiddleware;
+    this.routes.push(flattenedRoute);
+    this.router.register(
+      route.method as Method,
+      route.path,
+      route.handler,
+      route.middleware || []
+    );
+  }
 
-    // 使用 composeMiddleware 来确保错误处理中间件被应用
-    const composedHandler = composeMiddleware(middlewareChain, handler);
-    return await composedHandler(req);
-  };
+  /**
+   * 批量添加路由
+   */
+  addRoutes(routes: (Route | NestedRoute)[]): void {
+    this.registerRoutes(routes);
+  }
+
+  /**
+   * 获取所有已注册的路由
+   */
+  getRoutes(): Array<{ method: Method; path: string }> {
+    return this.router.getRoutes();
+  }
+
+  /**
+   * 获取路由器缓存统计
+   */
+  getCacheStats(): { size: number; maxSize: number } {
+    return this.router.getCacheStats();
+  }
+
+  /**
+   * 清除路由器缓存
+   */
+  clearCache(): void {
+    this.router.clearCache();
+  }
 }

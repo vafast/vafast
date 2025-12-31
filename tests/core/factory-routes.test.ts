@@ -1,12 +1,9 @@
 /**
- * 工厂路由测试文件
- * 测试 createRouteHandler 的核心功能
- *
- * 这个文件应该保留，因为它测试了核心的工厂路由功能
+ * createHandler 核心功能测试
  */
 
 import { describe, it, expect } from "vitest";
-import { createRouteHandler } from "../../src/utils/route-handler-factory";
+import { createHandler, simpleHandler } from "../../src/utils/create-handler";
 import { Type } from "@sinclair/typebox";
 
 // 测试用的简单响应内容
@@ -25,9 +22,9 @@ function createTestRequest() {
   });
 }
 
-describe("工厂路由功能测试", () => {
-  it("应该正确处理无 schema 配置的工厂路由", async () => {
-    const factoryHandler = createRouteHandler(async ({ body }) => {
+describe("createHandler 功能测试", () => {
+  it("应该正确处理无 schema 配置的处理器", async () => {
+    const factoryHandler = createHandler({})(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -38,11 +35,10 @@ describe("工厂路由功能测试", () => {
     const request = createTestRequest();
     const response = await factoryHandler(request);
 
-    // 现在默认总是解析 body
     expect(response.status).toBe(200);
 
     const data = await response.json();
-    expect(data.hasBody).toBe(true); // body 现在应该有值
+    expect(data.hasBody).toBe(true);
     expect(data.body).toEqual({
       name: "测试用户",
       age: 25,
@@ -50,28 +46,24 @@ describe("工厂路由功能测试", () => {
     });
   });
 
-  it("应该正确处理有 body schema 配置的工厂路由", async () => {
-    const factoryHandler = createRouteHandler(
-      async ({ body }) => {
-        return {
-          message: simpleMessage,
-          body: body,
-          hasBody: body !== undefined,
-        };
-      },
-      {
-        body: Type.Object({
-          name: Type.String(),
-          age: Type.Number(),
-          email: Type.String(),
-        }),
-      }
-    );
+  it("应该正确处理有 body schema 配置的处理器", async () => {
+    const factoryHandler = createHandler({
+      body: Type.Object({
+        name: Type.String(),
+        age: Type.Number(),
+        email: Type.String(),
+      }),
+    })(async ({ body }) => {
+      return {
+        message: simpleMessage,
+        body: body,
+        hasBody: body !== undefined,
+      };
+    });
 
     const request = createTestRequest();
     const response = await factoryHandler(request);
 
-    // 有 schema 时，应该能正确解析 body
     expect(response.status).toBe(200);
 
     const data = await response.json();
@@ -84,7 +76,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该正确处理空请求体", async () => {
-    const factoryHandler = createRouteHandler(async ({ body }) => {
+    const factoryHandler = createHandler({})(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -99,25 +91,21 @@ describe("工厂路由功能测试", () => {
     });
 
     const response = await factoryHandler(emptyRequest);
-    // 空请求体时，应该返回 200，但 body 是 undefined
     expect(response.status).toBe(200);
   });
 
-  it("应该支持 query 参数解析", async () => {
-    const factoryHandler = createRouteHandler(
-      async ({ query }) => {
-        return {
-          message: simpleMessage,
-          query,
-        };
-      },
-      {
-        query: Type.Object({
-          name: Type.String(),
-          age: Type.String(),
-        }),
-      }
-    );
+  it("应该支持 query 参数解析和验证", async () => {
+    const factoryHandler = createHandler({
+      query: Type.Object({
+        name: Type.String(),
+        age: Type.String(),
+      }),
+    })(async ({ query }) => {
+      return {
+        message: simpleMessage,
+        query,
+      };
+    });
 
     const request = new Request("http://localhost:3000/?name=张三&age=25");
     const response = await factoryHandler(request);
@@ -132,20 +120,17 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该支持 headers 参数解析", async () => {
-    const factoryHandler = createRouteHandler(
-      async ({ headers }) => {
-        return {
-          message: simpleMessage,
-          headers,
-        };
-      },
-      {
-        headers: Type.Object({
-          "content-type": Type.String(),
-          "user-agent": Type.String(),
-        }),
-      }
-    );
+    const factoryHandler = createHandler({
+      headers: Type.Object({
+        "content-type": Type.String(),
+        "user-agent": Type.String(),
+      }),
+    })(async ({ headers }) => {
+      return {
+        message: simpleMessage,
+        headers,
+      };
+    });
 
     const request = new Request("http://localhost:3000/", {
       headers: {
@@ -164,7 +149,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 query 参数", async () => {
-    const factoryHandler = createRouteHandler(async ({ query }) => {
+    const factoryHandler = createHandler({})(async ({ query }) => {
       return {
         message: simpleMessage,
         query,
@@ -184,7 +169,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 headers", async () => {
-    const factoryHandler = createRouteHandler(async ({ headers }) => {
+    const factoryHandler = createHandler({})(async ({ headers }) => {
       return {
         message: simpleMessage,
         headers,
@@ -210,7 +195,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 cookies", async () => {
-    const factoryHandler = createRouteHandler(async ({ cookies }) => {
+    const factoryHandler = createHandler({})(async ({ cookies }) => {
       return {
         message: simpleMessage,
         cookies,
@@ -236,7 +221,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析 params", async () => {
-    const factoryHandler = createRouteHandler(async ({ params }) => {
+    const factoryHandler = createHandler({})(async ({ params }) => {
       return {
         message: simpleMessage,
         params,
@@ -244,11 +229,12 @@ describe("工厂路由功能测试", () => {
     });
 
     // 模拟带有路径参数的请求
-    const request = new Request("http://localhost:3000/users/123");
-    // 手动设置路径参数
-    (request as any).pathParams = { id: "123" };
+    const request = new Request(
+      "http://localhost:3000/users/123"
+    ) as unknown as Record<string, unknown>;
+    request.params = { id: "123" };
 
-    const response = await factoryHandler(request);
+    const response = await factoryHandler(request as unknown as Request);
 
     expect(response.status).toBe(200);
 
@@ -257,7 +243,7 @@ describe("工厂路由功能测试", () => {
   });
 
   it("应该默认解析所有数据", async () => {
-    const factoryHandler = createRouteHandler(
+    const factoryHandler = createHandler({})(
       async ({ body, query, headers, cookies }) => {
         return {
           message: simpleMessage,
@@ -288,5 +274,20 @@ describe("工厂路由功能测试", () => {
     expect(data.query.name).toBe("张三");
     expect(data.headers["user-agent"]).toBe("VafastTest/1.0");
     expect(data.cookies.sessionId).toBe("abc123");
+  });
+});
+
+describe("simpleHandler 功能测试", () => {
+  it("应该支持简单处理器", async () => {
+    const handler = simpleHandler(({ req }) => {
+      return { url: req.url };
+    });
+
+    const request = new Request("http://localhost:3000/test");
+    const response = await handler(request);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.url).toBe("http://localhost:3000/test");
   });
 });

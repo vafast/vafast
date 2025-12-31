@@ -109,7 +109,8 @@ describe("嵌套路由功能", () => {
       const flattened = flattenNestedRoutes(routes);
 
       expect(flattened).toHaveLength(2);
-      expect(flattened[0].fullPath).toBe("/shop/products/");
+      // normalizePath 会去除末尾斜杠
+      expect(flattened[0].fullPath).toBe("/shop/products");
       expect(flattened[1].fullPath).toBe("/shop/products/:id");
     });
 
@@ -315,7 +316,8 @@ describe("嵌套路由功能", () => {
       ];
 
       const flattened = flattenNestedRoutes(routes);
-      expect(flattened[0].fullPath).toBe("//");
+      // normalizePath 会合并重复斜杠
+      expect(flattened[0].fullPath).toBe("/");
     });
   });
 });

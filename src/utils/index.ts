@@ -1,11 +1,39 @@
-// 导出所有工具函数
-export * from "./handle";
-export * from "./parsers";
-export * from "./response";
-export * from "./base64url";
-export * from "./go-await";
-export * from "./route-handler-factory";
-export * from "./path-matcher";
-export * from "./html-renderer";
-export * from "./dependency-manager";
-export * from "./request-validator";
+/**
+ * 工具函数模块导出
+ */
+
+// 处理器工厂
+export {
+  createHandler,
+  createHandlerWithExtra,
+  simpleHandler,
+} from "./create-handler";
+
+// 请求解析
+export { parseBody, parseQuery, parseHeaders, parseCookies } from "./parsers";
+
+// 响应工具
+export { json, text, html, redirect, empty, stream } from "./response";
+
+// Go 风格错误处理
+export { goAwait } from "./go-await";
+
+// Base64 编码
+export { base64urlEncode, base64urlDecode } from "./base64url";
+
+// 请求上下文
+export { setLocals, getLocals } from "./handle";
+
+// 请求验证
+export {
+  parseRequest,
+  validateRequest,
+  parseAndValidateRequest,
+  createRequestValidator,
+} from "./request-validator";
+
+// HTML 渲染 (SSR)
+export { HtmlRenderer } from "./html-renderer";
+
+// 依赖管理
+export { DependencyManager } from "./dependency-manager";

@@ -1,11 +1,18 @@
-import { ComponentServer } from "../../src/server/component-server";
-import type { ComponentRoute, NestedComponentRoute } from "../../src/types/component-route";
+/**
+ * 组件服务器示例
+ *
+ * 展示 SSR 组件路由的使用
+ * 运行时无关设计
+ */
 
-// 组件路由配置 - 直接使用中间件
+import { ComponentServer } from "../../src/server/component-server";
+import type { NestedComponentRoute } from "../../src/types/component-route";
+
+// 组件路由配置
 const routes: NestedComponentRoute[] = [
   {
     path: "/",
-    middleware: [], // 不需要渲染器中间件，服务器会自动处理
+    middleware: [],
     children: [
       {
         path: "/",
@@ -19,7 +26,7 @@ const routes: NestedComponentRoute[] = [
   },
   {
     path: "/admin",
-    middleware: [], // 不需要渲染器中间件，服务器会自动处理
+    middleware: [],
     children: [
       {
         path: "/dashboard",
@@ -32,46 +39,21 @@ const routes: NestedComponentRoute[] = [
 // 创建组件路由服务器实例
 const server = new ComponentServer(routes);
 
-// 启动 HTTP 服务器
-const port = 3000;
-const host = "localhost";
+// 导出 fetch 方法供运行时使用
+export default { fetch: server.fetch };
 
-console.log("🚀 Vafast SSR 组件路由服务器启动");
-console.log(`📝 访问地址:`);
-console.log(`  http://${host}:${port}/ - Vue SSR 首页`);
-console.log(`  http://${host}:${port}/about - Vue SSR 关于页面`);
-console.log(`  http://${host}:${port}/admin/dashboard - React SSR 管理员仪表板`);
-console.log("");
+// 也导出 server 实例以便扩展
+export { server };
 
-// 创建 HTTP 服务器
-const httpServer = Bun.serve({
-  port,
-  hostname: host,
-  fetch: async (req: Request) => {
-    const url = new URL(req.url);
-
-    // 静态文件服务 - 只保留客户端激活脚本
-    if (url.pathname === "/client.js") {
-      const file = Bun.file("./example/advanced/public/client.js");
-      return new Response(file, {
-        headers: { "Content-Type": "application/javascript" },
-      });
-    }
-
-    // 组件路由处理
-    return server.fetch(req);
-  },
-});
-
-console.log(`✅ 服务器运行在 http://${host}:${port}`);
-console.log("🌐 现在可以通过浏览器访问上述地址了！");
-console.log("");
-console.log("💡 专注 SSR 的优势:");
-console.log("  - 服务端渲染，SEO 友好");
-console.log("  - 首屏性能优秀");
-console.log("  - 嵌套路由 + 中间件继承");
-console.log("  - 类型安全的服务端开发");
-console.log("  - 声明式组件路由配置");
-console.log("  - 按 Ctrl+C 停止服务器");
-
-export { server, httpServer };
+// 使用说明
+if (process.env.NODE_ENV !== "test") {
+  console.log("🚀 Vafast SSR 组件路由服务器");
+  console.log("");
+  console.log("📋 可用路由:");
+  console.log("  /           - Vue SSR 首页");
+  console.log("  /about      - Vue SSR 关于页面");
+  console.log("  /admin/dashboard - React SSR 管理员仪表板");
+  console.log("");
+  console.log("💡 使用方式:");
+  console.log("  export default { fetch: server.fetch };");
+}

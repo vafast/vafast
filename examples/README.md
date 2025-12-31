@@ -1,87 +1,209 @@
-# Vafast 使用示例
+# Vafast 示例
 
-这个文件夹包含了 Vafast 框架的各种使用示例，按功能分类组织。
+本目录包含 Vafast 框架的各种使用示例。
 
-## 示例分类
+## 目录结构
 
-### 📁 basic/ - 基础示例
-- `hello-world.ts` - 最简单的 Hello World 示例
-- `rest-api.ts` - 完整的 REST API 示例
+```
+examples/
+├── basics/              # 基础示例
+│   └── hello-world.ts   # 简单的 Hello World
+├── routing/             # 路由示例
+│   ├── dynamic-params.ts # 动态路由参数
+│   └── wildcard.ts      # 通配符路由
+├── validation/          # 验证示例
+│   └── type-safe-handler.ts # 类型安全处理器
+├── middleware/          # 中间件示例
+│   └── nested-routes.ts # 嵌套路由与中间件
+├── advanced/            # 高级示例
+│   ├── schema.ts        # Schema 验证综合示例
+│   └── component-server.ts # 组件服务器
+└── README.md
+```
 
-### 📁 advanced/ - 高级示例  
-- `file-upload.ts` - 文件上传示例
-- `streaming.ts` - 流式响应示例
-- `component-routes.ts` - 组件路由示例
-- `component-server.ts` - 组件服务器示例
-- `middleware-order.ts` - 中间件顺序示例
-- `nested-routes.ts` - 嵌套路由示例
-- `schema-validation.ts` - Schema验证示例
-- `schema.ts` - 完整Schema示例
-- `simple-test.ts` - 简单测试示例
-- `ssr-vs-spa-test.ts` - SSR vs SPA 对比示例
-- `vue-ssr/` - Vue服务端渲染示例
-- `components/` - 各种组件示例
-- `native-monitoring.ts` - 原生监控示例
-- `custom-validation-errors.ts` - 自定义验证错误示例
-- `request-validator-example.ts` - 请求验证器示例
-- `schema-validation-example.ts` - Schema验证示例
+## 快速开始
 
-### 📁 middleware/ - 中间件示例
-- `basic-middleware.ts` - 基础中间件示例
-- `cors.ts` - CORS 中间件示例
-- `error-handling.ts` - 错误处理示例
-- `vafast-rate-limit.ts` - 速率限制示例
-- `vafast-style.ts` - 综合中间件示例
+### 基础示例
+
+```typescript
+import { Server, createHandler } from "vafast";
+import { Type } from "@sinclair/typebox";
+
+// 创建路由
+const routes = [
+  {
+    method: "GET",
+    path: "/",
+    handler: () => new Response("Hello World"),
+  },
+  {
+    method: "POST",
+    path: "/users",
+    handler: createHandler({
+      body: Type.Object({
+        name: Type.String(),
+        email: Type.String(),
+      }),
+    })(({ body }) => ({
+      id: 1,
+      name: body.name,
+      email: body.email,
+    })),
+  },
+];
+
+// 创建服务器
+const server = new Server(routes);
+
+export default { fetch: server.fetch };
+```
+
+## 核心特性
+
+### 1. createHandler - 类型安全处理器
+
+```typescript
+import { createHandler } from "vafast";
+import { Type } from "@sinclair/typebox";
+
+// 定义 Schema
+const CreateUserSchema = Type.Object({
+  name: Type.String(),
+  email: Type.String(),
+  age: Type.Optional(Type.Number()),
+});
+
+// 创建处理器 - body 自动获得完整类型推导
+const handler = createHandler({
+  body: CreateUserSchema,
+})(({ body }) => {
+  // body 类型: { name: string; email: string; age?: number }
+  return { success: true, user: body };
+});
+```
+
+### 2. 动态路由参数
+
+```typescript
+import { Server, createHandler } from "vafast";
+import { Type } from "@sinclair/typebox";
+
+const routes = [
+  {
+    method: "GET",
+    path: "/users/:id",
+    handler: createHandler({
+      params: Type.Object({ id: Type.String() }),
+    })(({ params }) => {
+      // params.id 是 string 类型
+      return { userId: params.id };
+    }),
+  },
+];
+```
+
+### 3. 通配符路由
+
+```typescript
+import { Server } from "vafast";
+
+const routes = [
+  // 默认通配符 - 参数名为 "*"
+  {
+    method: "GET",
+    path: "/files/*",
+    handler: (req) => {
+      const params = (req as any).params;
+      // params["*"] = "path/to/file.txt"
+      return new Response(params["*"]);
+    },
+  },
+
+  // 命名通配符 - 自定义参数名
+  {
+    method: "GET",
+    path: "/static/*filepath",
+    handler: (req) => {
+      const params = (req as any).params;
+      // params.filepath = "assets/css/style.css"
+      return new Response(params.filepath);
+    },
+  },
+];
+```
+
+### 4. 中间件注入类型化数据
+
+```typescript
+import { createHandlerWithExtra, setLocals } from "vafast";
+
+// 定义中间件注入的类型
+type AuthContext = {
+  user: { id: number; role: "admin" | "user" };
+};
+
+// 认证中间件
+const authMiddleware = async (req: Request, next: () => Promise<Response>) => {
+  const token = req.headers.get("Authorization");
+  if (!token) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  // 注入类型化数据
+  setLocals(req, {
+    user: { id: 1, role: "admin" },
+  });
+
+  return next();
+};
+
+// 创建带额外上下文的处理器
+const handler = createHandlerWithExtra<AuthContext>()({
+  body: Type.Object({ action: Type.String() }),
+})(({ body, user }) => {
+  // body: { action: string }
+  // user: { id: number; role: "admin" | "user" }
+  return { success: true, operator: user.id };
+});
+```
 
 ## 运行示例
 
 ```bash
-# 运行基础示例
-bun run examples/basic/hello-world.ts
-
-# 运行中间件示例
-bun run examples/middleware/cors.ts
+# 运行特定示例
+bun run examples/routing/dynamic-params.ts
 
 # 运行高级示例
-bun run examples/advanced/file-upload.ts
+bun run examples/advanced/schema.ts
 ```
-
-## 关键特性
-
-Vafast 使用现代的 Web API 设计：
-- 基于 `Server` 类和 `Route` 数组
-- 使用标准的 `Request`/`Response` API
-- 支持 Bun 的默认导出格式
-- 内置中间件支持
-- 结构化错误处理
 
 ## 示例说明
 
-### 基础示例
-适合初学者，展示框架的基本用法：
-- 创建服务器
-- 定义路由
-- 处理请求和响应
+### routing/dynamic-params.ts
+演示动态路由参数的使用：
+- 单个参数: `/users/:id`
+- 多个参数: `/users/:userId/posts/:postId`
+- 获取参数: `params.id`, `params.userId`
 
-### 中间件示例
-展示中间件的各种用法：
-- 日志记录
-- 错误处理
-- CORS 配置
-- 速率限制
+### routing/wildcard.ts
+演示通配符路由的使用：
+- 默认通配符: `/files/*` -> `params["*"]`
+- 命名通配符: `/static/*filepath` -> `params.filepath`
+- API 代理: `/api/*rest` -> 捕获所有 API 路径
 
-### 高级示例
-适合有经验的开发者：
-- Schema 验证
-- 组件渲染
-- 文件上传
-- 流式响应
-- 监控系统
+### validation/type-safe-handler.ts
+演示完整的 CRUD API 实现：
+- GET 列表 (带分页)
+- GET 单个
+- POST 创建 (body 验证)
+- PUT 更新
+- DELETE 删除 (认证)
 
-## 更多示例
-
-欢迎贡献更多示例代码！每个示例都应该：
-1. 有清晰的注释说明
-2. 包含运行说明
-3. 展示最佳实践
-4. 易于理解和修改
+### advanced/schema.ts
+演示所有 Schema 验证功能：
+- body Schema
+- query Schema
+- params Schema
+- headers Schema
+- cookies Schema
+- 中间件数据注入

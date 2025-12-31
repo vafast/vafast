@@ -7,7 +7,7 @@ import {
   html,
   redirect,
   empty,
-  createRouteHandler,
+  createHandler,
   createAuth,
   createCORS,
   rateLimit,
@@ -19,6 +19,7 @@ import {
 } from "./dist/index.js";
 
 import type { Route, Handler } from "./dist/index.js";
+
 const BatchProcessSchema = Type.Object({
   items: Type.Array(
     Type.Object({
@@ -33,6 +34,7 @@ const BatchProcessSchema = Type.Object({
     Type.Literal("count"),
   ]),
 });
+
 console.log("🧪 开始 TypeScript 测试打包后的 vafast 包...");
 
 // 测试类型定义
@@ -96,21 +98,18 @@ const routes: Route[] = [
   {
     path: "/api/data",
     method: "POST",
-    handler: createRouteHandler(
-      async ({ body, query, headers }) => {
-        return {
-          data: {
-            received: body,
-            query,
-            contentType: headers["content-type"],
-          },
-          success: true,
-        };
-      },
-      {
-        body: BatchProcessSchema,
-      }
-    ),
+    handler: createHandler({
+      body: BatchProcessSchema,
+    })(async ({ body, query, headers }) => {
+      return {
+        data: {
+          received: body,
+          query,
+          contentType: headers["content-type"],
+        },
+        success: true,
+      };
+    }),
   },
 ];
 
@@ -276,7 +275,6 @@ async function runTests() {
     console.log("✅ 类型定义正确");
     console.log("✅ 所有功能正常运行");
 
-    // 更新 TODO
     console.log("\n📋 测试总结:");
     console.log("- 模块导入: ✅");
     console.log("- 类型定义: ✅");

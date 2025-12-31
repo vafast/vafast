@@ -101,7 +101,8 @@ describe("高级示例", () => {
       // 验证FormData构造正确
       expect(file.name).toBe("test.txt");
       expect(file.size).toBe(12);
-      expect(file.type).toBe("text/plain");
+      // Bun 可能会添加 charset=utf-8，所以用 toContain
+      expect(file.type).toContain("text/plain");
 
       // 跳过实际的HTTP请求测试，因为FormData处理可能有问题
       expect(formData.has("file")).toBe(true);
