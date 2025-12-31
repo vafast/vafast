@@ -50,137 +50,243 @@ bun add vafast
 
 ### 结构即真相 — 无装饰器，无链式魔法
 
+**Elysia 完整示例：**
 ```typescript
-// ❌ Elysia - 链式 builder 模式，路由分散
+import { Elysia } from 'elysia';
+
 const app = new Elysia()
-  .get('/users', () => 'list')
-  .post('/users', () => 'create')
-  .get('/users/:id', ({ params }) => params.id)
-  .use(plugin1)  // 插件在哪生效？
-  .use(plugin2);
+  .get('/users', () => 'list users')
+  .post('/users', ({ body }) => body)
+  .get('/users/:id', ({ params }) => `User ${params.id}`)
+  .use(somePlugin);  // 插件作用域？要看文档
 
-// ❌ Hono - 同样是链式，路由定义分散
-const app = new Hono()
-  .get('/users', (c) => c.text('list'))
-  .post('/users', (c) => c.text('create'))
-  .use('/*', cors());  // 全局中间件
-
-// ✅ Vafast - 声明式数组，一眼看清所有路由
-const routes = [
-  { method: 'GET', path: '/users', handler: listUsers },
-  { method: 'POST', path: '/users', handler: createUser },
-  { method: 'GET', path: '/users/:id', middleware: [auth], handler: getUser }
-];
+export default app;
 ```
+
+**Hono 完整示例：**
+```typescript
+import { Hono } from 'hono';
+
+const app = new Hono();
+app.get('/users', (c) => c.text('list users'));
+app.post('/users', async (c) => c.json(await c.req.json()));
+app.get('/users/:id', (c) => c.text(`User ${c.req.param('id')}`));
+
+export default app;
+```
+
+**Vafast 完整示例：**
+```typescript
+import { Server, createHandler } from 'vafast';
+import type { Route } from 'vafast';
+
+const routes: Route[] = [
+  { method: 'GET',  path: '/users',     handler: createHandler(() => 'list users') },
+  { method: 'POST', path: '/users',     handler: createHandler(({ body }) => body) },
+  { method: 'GET',  path: '/users/:id', handler: createHandler(({ params }) => `User ${params.id}`) },
+];
+
+const server = new Server(routes);
+export default { fetch: server.fetch };
+```
+
+**对比：Vafast 的路由是一个数组，一眼看清所有 API 端点。**
 
 ### 错误即数据 — 不是混乱，是契约
 
+**Hono 完整示例：**
 ```typescript
-// ❌ Elysia - error() 返回，但无标准结构
-app.get('/user', ({ error }) => {
-  if (!user) return error(404, 'Not found');  // 字符串？对象？
-});
-
-// ❌ Hono - HTTPException，但格式自己定
+import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-throw new HTTPException(404, { message: 'Not found' });
 
-// ✅ Vafast - 结构化错误，类型+状态+可见性
-import { VafastError } from 'vafast';
+const app = new Hono();
 
-throw new VafastError('用户不存在', {
-  status: 404,
-  type: 'not_found',
-  expose: true  // 控制是否暴露给客户端
+app.get('/user', (c) => {
+  const name = c.req.query('name');
+  if (!name) {
+    throw new HTTPException(400, { message: 'Missing name' });
+    // 响应格式自己定，没有标准
+  }
+  return c.text(`Hello, ${name}`);
 });
-// 自动序列化: { type: 'not_found', message: '用户不存在' }
+
+export default app;
 ```
+
+**Vafast 完整示例：**
+```typescript
+import { Server, VafastError, createHandler } from 'vafast';
+import type { Route } from 'vafast';
+
+const routes: Route[] = [
+  {
+    method: 'GET',
+    path: '/user',
+    handler: createHandler((ctx) => {
+      const name = ctx.query.name;
+      if (!name) {
+        throw new VafastError('Missing name', {
+          status: 400,
+          type: 'bad_request',
+          expose: true,  // 控制是否暴露给客户端
+        });
+      }
+      return `Hello, ${name}`;
+    }),
+  },
+];
+
+const server = new Server(routes);
+export default { fetch: server.fetch };
+// 错误响应: { type: 'bad_request', message: 'Missing name' }
+```
+
+**对比：VafastError 有统一的 `type` + `status` + `expose` 契约。**
 
 ### 组合优于约定 — 显式优于隐式
 
+**Hono 完整示例：**
 ```typescript
-// ❌ Elysia - 插件作用域不清晰
-const app = new Elysia()
-  .use(cors())           // 全局？
-  .group('/api', app => 
-    app.use(auth())      // 只在 /api？要看文档
-       .get('/users', handler)
-  );
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
-// ❌ Hono - use() 路径匹配容易出错
-app.use('/*', cors());        // 全局
-app.use('/api/*', auth());    // /api 下，但 /api 本身呢？
+const app = new Hono();
 
-// ✅ Vafast - 每个路由的中间件一目了然
-const routes = [
-  { path: '/public', handler: publicHandler },              // 无中间件
-  { path: '/api/users', middleware: [auth], handler },      // 仅 auth
-  { path: '/admin', middleware: [auth, admin], handler }    // auth + admin
-];
+// 中间件作用域通过路径匹配，容易出错
+app.use('/*', cors());           // 全局
+app.use('/api/*', authMiddleware);  // /api/* 但 /api 本身呢？
+
+app.get('/public', (c) => c.text('public'));
+app.get('/api/users', (c) => c.text('users'));
+
+export default app;
 ```
+
+**Vafast 完整示例：**
+```typescript
+import { Server, createHandler } from 'vafast';
+import type { Route, Middleware } from 'vafast';
+
+const authMiddleware: Middleware = async (req, next) => {
+  const token = req.headers.get('Authorization');
+  if (!token) return new Response('Unauthorized', { status: 401 });
+  return next();
+};
+
+const routes: Route[] = [
+  // 无中间件
+  { method: 'GET', path: '/public', handler: createHandler(() => 'public') },
+  // 仅 auth
+  { method: 'GET', path: '/api/users', middleware: [authMiddleware], handler: createHandler(() => 'users') },
+];
+
+const server = new Server(routes);
+export default { fetch: server.fetch };
+```
+
+**对比：Vafast 的中间件直接声明在路由上，一目了然。**
 
 ### 类型注入 — 跨文件不丢失
 
+**Hono 跨文件类型问题：**
 ```typescript
-// ❌ Hono - 类型绑定在 App 实例，跨文件丢失
-// file: app.ts
-type Env = { Variables: { user: User } };
+// -------- file: app.ts --------
+import { Hono } from 'hono';
+
+type Env = { Variables: { user: { id: string; role: string } } };
 const app = new Hono<Env>();
 
-// file: routes.ts
-export function setupRoutes(app: Hono) {  // 类型参数丢失！
+// -------- file: routes.ts --------
+import { Hono } from 'hono';
+
+// 类型参数丢失！
+export function setupRoutes(app: Hono) {
   app.get('/profile', (c) => {
-    const user = c.get('user');  // ❌ unknown
+    const user = c.get('user');  // ❌ 类型是 unknown
+    return c.json(user);
   });
 }
+```
 
-// ❌ Elysia - 类型随链式调用传递，跨文件断裂
-// file: plugin.ts
-export const authPlugin = new Elysia()
-  .derive(() => ({ user: { id: '1', role: 'admin' } }));
-
-// file: app.ts
-const app = new Elysia()
-  .use(authPlugin)
-  .get('/profile', ({ user }) => user);  // ⚠️ 类型可能丢失
-
-// ✅ Vafast - 类型在 Handler 级别定义，天然独立
-// file: types.ts
+**Vafast 跨文件类型完整：**
+```typescript
+// -------- file: types.ts --------
 export type AuthContext = { user: { id: string; role: string } };
 
-// file: handlers/profile.ts (任意位置，类型完整)
+// -------- file: middleware/auth.ts --------
+import type { Middleware } from 'vafast';
+
+export const authMiddleware: Middleware = async (req, next) => {
+  const user = await verifyToken(req.headers.get('Authorization'));
+  (req as any).__locals = { user };
+  return next();
+};
+
+// -------- file: handlers/profile.ts --------
 import { createHandlerWithExtra } from 'vafast';
 import type { AuthContext } from '../types';
 
-export const getProfile = createHandlerWithExtra<AuthContext>(
-  (ctx) => {
-    const user = ctx.user;  // ✅ { id: string; role: string }
-    return { profile: user };
-  }
-);
+// 类型在 Handler 级别定义，任意文件都能用！
+export const getProfile = createHandlerWithExtra<AuthContext>((ctx) => {
+  const user = ctx.user;  // ✅ 类型完整: { id: string; role: string }
+  return { profile: user, isAdmin: user.role === 'admin' };
+});
 
-// file: routes.ts
+// -------- file: routes.ts --------
+import { Server } from 'vafast';
+import type { Route } from 'vafast';
+import { authMiddleware } from './middleware/auth';
 import { getProfile } from './handlers/profile';
-const routes = [
-  { method: 'GET', path: '/profile', middleware: [auth], handler: getProfile }
+
+const routes: Route[] = [
+  { method: 'GET', path: '/profile', middleware: [authMiddleware], handler: getProfile },
 ];
+
+const server = new Server(routes);
+export default { fetch: server.fetch };
 ```
 
-**Vafast 的设计：类型跟着 Handler 走，而不是跟着 App 实例走。**
+**对比：Vafast 的类型跟着 Handler 走，而不是跟着 App 实例走。**
 
 ### 边缘原生 — 一行代码，任意运行时
 
+**Bun 环境完整示例：**
 ```typescript
-// ✅ Bun
+import { Server, createHandler } from 'vafast';
+
+const server = new Server([
+  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Bun!') }
+]);
+
 export default { port: 3000, fetch: server.fetch };
-
-// ✅ Cloudflare Workers
-export default { fetch: server.fetch };
-
-// ✅ Node.js
-import { serve } from '@vafast/node-server';
-serve({ fetch: server.fetch, port: 3000 });
 ```
+
+**Cloudflare Workers 完整示例：**
+```typescript
+import { Server, createHandler } from 'vafast';
+
+const server = new Server([
+  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Workers!') }
+]);
+
+export default { fetch: server.fetch };
+```
+
+**Node.js 完整示例：**
+```typescript
+import { Server, createHandler } from 'vafast';
+import { serve } from '@vafast/node-server';
+
+const server = new Server([
+  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Node!') }
+]);
+
+serve({ fetch: server.fetch, port: 3000 }, () => {
+  console.log('Server running on http://localhost:3000');
+});
+```
+
+**对比：同一套代码，只需改导出方式即可切换运行时。**
 
 ### 零样板 — 一个文件，即刻运行
 
@@ -211,209 +317,6 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 | **性能 (RPS)** | ~118K | ~56K | **~101K** |
 | **学习曲线** | 中等 | 简单 | **简单** |
 | **API 风格** | 函数式链 | Express-like | **配置式** |
-
-### 详细代码对比
-
-<details>
-<summary><b>📁 路由组织对比</b></summary>
-
-```typescript
-// ❌ Elysia - 路由分散在链式调用中
-const app = new Elysia()
-  .get('/users', listUsers)
-  .post('/users', createUser)
-  .get('/users/:id', getUser)
-  .put('/users/:id', updateUser)
-  .delete('/users/:id', deleteUser)
-  .get('/posts', listPosts)      // 和 users 混在一起
-  .post('/posts', createPost);
-
-// ❌ Hono - 需要创建多个实例来组织
-const users = new Hono();
-users.get('/', listUsers);
-users.post('/', createUser);
-users.get('/:id', getUser);
-
-const posts = new Hono();
-posts.get('/', listPosts);
-
-app.route('/users', users);
-app.route('/posts', posts);
-
-// ✅ Vafast - 结构清晰，一眼看全部
-const routes = [
-  // Users 模块
-  { method: 'GET',    path: '/users',     handler: listUsers },
-  { method: 'POST',   path: '/users',     handler: createUser },
-  { method: 'GET',    path: '/users/:id', handler: getUser },
-  { method: 'PUT',    path: '/users/:id', handler: updateUser },
-  { method: 'DELETE', path: '/users/:id', handler: deleteUser },
-  // Posts 模块
-  { method: 'GET',    path: '/posts',     handler: listPosts },
-  { method: 'POST',   path: '/posts',     handler: createPost },
-];
-```
-
-</details>
-
-<details>
-<summary><b>🔗 嵌套路由与中间件继承</b></summary>
-
-```typescript
-// ❌ Elysia - group 嵌套，中间件作用域不清晰
-const app = new Elysia()
-  .use(globalLogger)
-  .group('/api', (app) => 
-    app
-      .use(apiAuth)  // 只在 /api 下？
-      .group('/users', (app) =>
-        app
-          .get('/', listUsers)
-          .get('/:id', getUser)
-      )
-  );
-
-// ❌ Hono - use() 路径匹配规则复杂
-app.use('/*', logger);
-app.use('/api/*', apiAuth);      // /api 本身有吗？
-app.use('/api/admin/*', admin);  // 顺序重要吗？
-
-// ✅ Vafast - 嵌套结构 + 显式中间件继承
-const routes = [
-  {
-    path: '/api',
-    middleware: [logger, apiAuth],
-    children: [
-      { method: 'GET', path: '/health', handler: healthCheck },
-      {
-        path: '/users',
-        children: [
-          { method: 'GET',    path: '/',    handler: listUsers },
-          { method: 'GET',    path: '/:id', handler: getUser },
-          { method: 'DELETE', path: '/:id', middleware: [adminOnly], handler: deleteUser },
-        ]
-      }
-    ]
-  }
-];
-// 清晰！DELETE /api/users/:id -> [logger, apiAuth, adminOnly]
-```
-
-</details>
-
-<details>
-<summary><b>🔒 跨文件类型安全</b></summary>
-
-```typescript
-// ❌ Hono - 跨文件类型丢失
-// file: middleware/auth.ts
-export const authMiddleware = createMiddleware(async (c, next) => {
-  c.set('user', { id: '1', role: 'admin' });
-  await next();
-});
-
-// file: routes/profile.ts
-import { Hono } from 'hono';
-const app = new Hono();
-app.get('/profile', (c) => {
-  const user = c.get('user');  // ❌ 类型是 unknown！
-  return c.json(user);
-});
-
-// ❌ Elysia - 插件导出类型复杂
-// file: plugins/auth.ts
-export const authPlugin = new Elysia({ name: 'auth' })
-  .derive(({ headers }) => ({
-    user: decodeToken(headers.authorization)
-  }));
-
-// file: routes/profile.ts
-import { authPlugin } from '../plugins/auth';
-// 需要复杂的类型体操才能让 user 类型传递
-
-// ✅ Vafast - Handler 级别类型定义，天然独立
-// file: types/context.ts
-export type AuthContext = { user: { id: string; role: string } };
-
-// file: handlers/profile.ts (任意位置都能用！)
-import { createHandlerWithExtra } from 'vafast';
-import type { AuthContext } from '../types/context';
-
-export const getProfile = createHandlerWithExtra<AuthContext>(
-  (ctx) => {
-    const user = ctx.user;  // ✅ 完整类型：{ id: string; role: string }
-    return { 
-      id: user.id, 
-      isAdmin: user.role === 'admin'  // ✅ 类型安全
-    };
-  }
-);
-
-// file: handlers/admin.ts (另一个文件，类型同样完整)
-import { createHandlerWithExtra, Type } from 'vafast';
-import type { AuthContext } from '../types/context';
-
-export const adminAction = createHandlerWithExtra<AuthContext>(
-  { body: Type.Object({ action: Type.String() }) },
-  (ctx) => {
-    if (ctx.user.role !== 'admin') {  // ✅ 类型安全
-      throw new VafastError('Forbidden', { status: 403 });
-    }
-    return { success: true, action: ctx.body.action };
-  }
-);
-```
-
-</details>
-
-<details>
-<summary><b>⚠️ 错误处理对比</b></summary>
-
-```typescript
-// ❌ Hono - HTTPException，但格式自己定
-import { HTTPException } from 'hono/http-exception';
-
-app.get('/user/:id', (c) => {
-  const user = findUser(c.req.param('id'));
-  if (!user) {
-    throw new HTTPException(404, { message: 'User not found' });
-    // 响应格式？自己猜
-  }
-  return c.json(user);
-});
-
-// ❌ Elysia - error() 返回，类型不统一
-app.get('/user/:id', ({ params, error }) => {
-  const user = findUser(params.id);
-  if (!user) {
-    return error(404, 'User not found');  // 字符串
-    // 或 return error(404, { message: 'Not found' });  // 对象
-    // 格式不统一
-  }
-  return user;
-});
-
-// ✅ Vafast - VafastError 契约，格式统一
-import { VafastError } from 'vafast';
-
-const getUser = createHandler(
-  { params: Type.Object({ id: Type.String() }) },
-  ({ params }) => {
-    const user = findUser(params.id);
-    if (!user) {
-      throw new VafastError('User not found', {
-        status: 404,
-        type: 'not_found',
-        expose: true  // 控制是否暴露给客户端
-      });
-    }
-    return user;
-  }
-);
-// 统一响应：{ type: 'not_found', message: 'User not found' }
-```
-
-</details>
 
 ### 为什么选择 Vafast？
 
