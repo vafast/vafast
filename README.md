@@ -481,9 +481,17 @@ serve({ fetch: server.fetch, port: 3000 });
 
 ## 📚 文档
 
+### 入门
 - [快速开始](./docs/getting-started/quickstart.md)
-- [API 参考](./docs/api/)
 - [示例代码](./examples/)
+
+### 架构设计
+- [路由设计与网关架构](./docs/router-design.md) - 声明式路由的设计哲学、AI 时代能力、网关优势
+- [本地工具模式](./docs/local-tools-mode.md) - 声明式路由作为 AI Tools，无需 HTTP 服务
+
+### 参考
+- [服务器优化](./docs/server-optimization.md)
+- [认证系统](./docs/auth.md)
 
 ## 🤝 贡献
 
