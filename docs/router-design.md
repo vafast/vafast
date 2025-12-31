@@ -887,12 +887,327 @@ const securityReport = await ai.securityAudit(routes)
 }
 ```
 
+---
+
+### 声明式路由作为 AI Tools
+
+声明式路由可以直接转换为 AI Tools（如 OpenAI Function Calling、Claude Tool Use），实现 **一份配置，多种用途**。
+
+#### 路由 → Tools 自动映射
+
+```typescript
+// 你的路由配置
+const routes = [
+  {
+    name: 'getUser',
+    method: 'GET',
+    path: '/users/:id',
+    params: z.object({ id: z.string() }),
+    response: z.object({ name: z.string(), email: z.string() }),
+    meta: { description: '根据 ID 获取用户信息' }
+  },
+  {
+    name: 'createOrder',
+    method: 'POST',
+    path: '/orders',
+    body: z.object({
+      productId: z.string(),
+      quantity: z.number(),
+    }),
+    meta: { description: '创建新订单' }
+  }
+]
+
+// 一行代码自动转换为 OpenAI Tools 格式
+const tools = routesToTools(routes)
+
+// 输出：
+[
+  {
+    type: 'function',
+    function: {
+      name: 'getUser',
+      description: '根据 ID 获取用户信息',
+      parameters: {
+        type: 'object',
+        properties: { id: { type: 'string' } },
+        required: ['id']
+      }
+    }
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'createOrder',
+      description: '创建新订单',
+      parameters: {
+        type: 'object',
+        properties: {
+          productId: { type: 'string' },
+          quantity: { type: 'number' }
+        },
+        required: ['productId', 'quantity']
+      }
+    }
+  }
+]
+```
+
+**链式路由做不到**：没有结构化数据，无法自动转换。
+
+#### AI Tools 核心优势
+
+##### 1. 零成本生成 Tools 定义
+
+```typescript
+// 一行代码，不需要手动维护两份配置
+const tools = routesToTools(routes)
+
+// 路由改了，Tools 自动同步
+```
+
+##### 2. Schema 复用
+
+```typescript
+// 定义一次
+const CreateOrderSchema = z.object({
+  productId: z.string(),
+  quantity: z.number().min(1),
+})
+
+// 用于 HTTP API 校验
+{ method: 'POST', path: '/orders', body: CreateOrderSchema }
+
+// 同时用于 AI Tools 参数定义
+// AI 调用时也会遵循同样的校验规则
+```
+
+##### 3. 权限自动继承
+
+```typescript
+const routes = [
+  {
+    name: 'deleteUser',
+    method: 'DELETE',
+    path: '/users/:id',
+    meta: { 
+      roles: ['admin'],  // 只有管理员能调用
+      description: '删除用户'
+    }
+  }
+]
+
+// AI 调用前自动检查权限
+async function executeAITool(toolName, args, user) {
+  const route = routes.find(r => r.name === toolName)
+  
+  // 权限检查（自动继承路由配置）
+  if (route.meta.roles && !route.meta.roles.includes(user.role)) {
+    return { error: '无权限执行此操作' }
+  }
+  
+  return await callAPI(route, args)
+}
+```
+
+##### 4. 限流/计费/确认控制
+
+```typescript
+const routes = [
+  {
+    name: 'generateReport',
+    method: 'POST',
+    path: '/reports/generate',
+    meta: {
+      aiCost: 'high',        // 标记为高消耗操作
+      rateLimit: 10,         // 每分钟最多 10 次
+      requireConfirm: true,  // AI 调用前需要用户确认
+    }
+  }
+]
+
+// AI 执行前自动检查
+if (route.meta.requireConfirm) {
+  await confirmWithUser('这是一个耗时操作，确认执行？')
+}
+if (route.meta.rateLimit) {
+  await checkRateLimit(user, route.name, route.meta.rateLimit)
+}
+```
+
+##### 5. 智能工具发现
+
+```typescript
+// AI Agent 可以动态发现可用工具
+const availableTools = routes
+  .filter(r => r.meta.aiEnabled !== false)  // 过滤掉禁用的
+  .filter(r => userHasPermission(user, r))  // 过滤掉没权限的
+  .map(routeToTool)
+
+// 告诉 AI："你有这些工具可以用"
+const response = await ai.chat({
+  messages: [...],
+  tools: availableTools,  // 动态工具列表，按用户权限过滤
+})
+```
+
+##### 6. 上下文感知
+
+```typescript
+const routes = [
+  {
+    name: 'getOrderStatus',
+    path: '/orders/:id/status',
+    meta: {
+      description: '查询订单状态',
+      examples: [
+        { input: { id: 'ORD-123' }, output: { status: 'shipped' } }
+      ],
+      useCases: ['用户询问订单进度', '物流查询'],
+    }
+  }
+]
+
+// AI 可以根据 useCases 判断什么时候用这个工具
+// examples 帮助 AI 理解输入输出格式
+```
+
+##### 7. 统一调用链追踪
+
+```typescript
+// 因为所有 AI 调用都经过路由，可以统一追踪和记录
+const aiCallLog = {
+  sessionId: 'session-xxx',
+  user: 'user-123',
+  calls: [
+    { tool: 'getUser', args: { id: '123' }, result: {...}, latency: 50 },
+    { tool: 'createOrder', args: {...}, result: {...}, latency: 120 },
+  ],
+  totalCost: 0.02,
+}
+
+// 方便调试、审计、计费
+```
+
+##### 8. 一套系统，多种接入
+
+```
+              声明式路由配置
+                    │
+       ┌────────────┼────────────┐
+       ▼            ▼            ▼
+    HTTP API    AI Tools     CLI 命令
+       │            │            │
+    前端调用    AI Agent     终端脚本
+```
+
+```typescript
+// 同一份路由配置
+const routes = [...]
+
+// 生成 HTTP API
+app.addRoutes(routes)
+
+// 生成 AI Tools
+const tools = routesToTools(routes)
+
+// 甚至可以生成 CLI
+const commands = routesToCLI(routes)
+// $ vafast user get --id 123
+// $ vafast order create --productId xxx --quantity 2
+```
+
+#### 完整示例：电商 AI 助手
+
+```typescript
+// routes.ts - 单一数据源
+export const routes = [
+  {
+    name: 'searchProducts',
+    method: 'GET',
+    path: '/products',
+    query: z.object({
+      keyword: z.string().optional(),
+      category: z.string().optional(),
+      minPrice: z.number().optional(),
+      maxPrice: z.number().optional(),
+    }),
+    response: z.array(ProductSchema),
+    meta: {
+      description: '搜索商品',
+      aiEnabled: true,
+      examples: [
+        { 
+          userSays: '找一下 100 块以下的手机壳',
+          args: { category: '手机壳', maxPrice: 100 }
+        }
+      ]
+    }
+  },
+  {
+    name: 'createOrder',
+    method: 'POST',
+    path: '/orders',
+    body: z.object({
+      productId: z.string(),
+      quantity: z.number(),
+    }),
+    meta: {
+      description: '创建订单',
+      aiEnabled: true,
+      requireConfirm: true,  // 下单前需要用户确认
+    }
+  }
+]
+
+// server.ts - HTTP API
+app.addRoutes(routes)
+
+// ai-agent.ts - AI 电商助手
+const tools = routes
+  .filter(r => r.meta.aiEnabled)
+  .map(routeToTool)
+
+// 用户对话
+const response = await openai.chat.completions.create({
+  model: 'gpt-4',
+  messages: [
+    { role: 'user', content: '帮我找 100 块以下的手机壳，然后买一个' }
+  ],
+  tools: tools,
+})
+
+// AI 会：
+// 1. 调用 searchProducts({ category: '手机壳', maxPrice: 100 })
+// 2. 展示结果给用户
+// 3. 用户选择后，调用 createOrder({ productId: 'xxx', quantity: 1 })
+// 4. 因为 requireConfirm: true，会先询问用户确认
+```
+
+#### AI Tools 对比总结
+
+| 能力 | 手写 Tools 定义 | 声明式路由生成 |
+|------|----------------|---------------|
+| 维护成本 | 高（两份配置） | 低（一份配置） |
+| 配置同步 | 容易不一致 | 自动同步 |
+| Schema 复用 | ❌ | ✅ |
+| 权限继承 | 需要重复写 | 自动继承 |
+| 限流/计费 | 需要额外开发 | 配置即生效 |
+| 调用追踪 | 需要额外开发 | 统一入口 |
+| 动态工具 | 困难 | 简单过滤 |
+| 多端复用 | ❌ | ✅ HTTP/AI/CLI |
+
+> **一句话**：声明式路由让 API 成为 AI 的「原生工具」，零适配成本。
+
+---
+
 ### AI 时代路由能力总结
 
 | 能力 | 描述 | 链式支持 | 声明式支持 |
 |------|------|----------|------------|
 | 自然语言生成 | 用自然语言描述生成路由 | ❌ | ✅ |
 | 自然语言调用 | 用自然语言调用 API | ❌ | ✅ |
+| **AI Tools 转换** | 路由自动转为 AI 工具定义 | ❌ | ✅ |
 | 智能推荐 | AI 分析路由给出优化建议 | ❌ | ✅ |
 | Schema 推断 | 从示例推断数据结构 | ❌ | ✅ |
 | 异常自愈 | 检测异常自动处理 | ⚠️ 部分 | ✅ |
