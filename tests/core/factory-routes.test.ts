@@ -252,20 +252,17 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析所有数据", async () => {
-    const factoryHandler = createHandler(async ({
-      body,
-      query,
-      headers,
-      cookies,
-    }) => {
-      return {
-        message: simpleMessage,
-        body,
-        query,
-        headers,
-        cookies,
-      };
-    });
+    const factoryHandler = createHandler(
+      async ({ body, query, headers, cookies }) => {
+        return {
+          message: simpleMessage,
+          body,
+          query,
+          headers,
+          cookies,
+        };
+      },
+    );
 
     const request = new Request("http://localhost:3000/?name=张三", {
       method: "POST",

@@ -130,9 +130,7 @@ type EmptySchemaContext = {
 /**
  * 判断是否为 handler 函数
  */
-function isHandler(
-  value: unknown,
-): value is (...args: unknown[]) => unknown {
+function isHandler(value: unknown): value is (...args: unknown[]) => unknown {
   return typeof value === "function";
 }
 
@@ -164,9 +162,7 @@ export function createHandler<const T extends RouteSchema, R>(
 
 // 实现
 export function createHandler<const T extends RouteSchema, R>(
-  schemaOrHandler:
-    | T
-    | ((ctx: EmptySchemaContext) => R | Promise<R>),
+  schemaOrHandler: T | ((ctx: EmptySchemaContext) => R | Promise<R>),
   maybeHandler?: (ctx: HandlerContext<T>) => R | Promise<R>,
 ): (req: Request) => Promise<Response> {
   // 判断调用方式
@@ -284,9 +280,7 @@ export function createHandlerWithExtra<
   const T extends RouteSchema = RouteSchema,
   R = unknown,
 >(
-  schemaOrHandler:
-    | T
-    | ((ctx: EmptySchemaContext & TExtra) => R | Promise<R>),
+  schemaOrHandler: T | ((ctx: EmptySchemaContext & TExtra) => R | Promise<R>),
   maybeHandler?: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>,
 ): (req: Request) => Promise<Response> {
   // 判断调用方式
