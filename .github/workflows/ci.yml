@@ -32,11 +32,6 @@ jobs:
       - name: Run tests
         run: bun run test
 
-      # PR 预览发布
-      - name: Publish Preview
-        if: github.event_name == 'pull_request'
-        run: bunx pkg-pr-new publish
-
   lint:
     name: Lint
     runs-on: ubuntu-latest
