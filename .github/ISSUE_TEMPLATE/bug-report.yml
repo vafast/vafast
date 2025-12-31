@@ -1,0 +1,72 @@
+name: 🐛 Bug Report
+description: 报告一个需要修复的问题
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交 Bug 报告，这有助于改进 Vafast。
+
+        如果您需要使用帮助而不是报告 Bug，请前往 [Discussions](https://github.com/vafast/vafast/discussions)。
+
+        请尽可能提供详细信息，这将帮助我们更快地定位和修复问题。
+
+  - type: input
+    attributes:
+      label: Vafast 版本
+      description: 运行 `bun pm ls | grep vafast` 获取版本信息
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: 运行环境
+      description: |
+        - Bun 版本: `bun --version`
+        - Node 版本: `node --version`
+        - 操作系统: macOS/Linux/Windows + 版本
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 重现步骤
+      description: 请提供能够重现问题的最小代码示例
+      placeholder: |
+        ```typescript
+        import { Server } from "vafast";
+
+        const server = new Server([
+          // 你的代码
+        ]);
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 期望行为
+      description: 您期望发生什么？
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？请提供错误信息或截图
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 补充信息
+      description: 其他可能有帮助的信息
+
+  - type: checkboxes
+    attributes:
+      label: 检查清单
+      options:
+        - label: 我已经搜索过现有的 Issues，确认这不是重复问题
+          required: true
+        - label: 我已经尝试删除 `node_modules` 和 `bun.lockb` 重新安装
+

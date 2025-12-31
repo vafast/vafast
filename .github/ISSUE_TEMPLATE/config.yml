@@ -1,0 +1,10 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 提问 / 讨论
+    url: https://github.com/vafast/vafast/discussions
+    about: 在 Discussions 中提问或讨论
+
+  - name: 📖 文档
+    url: https://github.com/vafast/vafast#readme
+    about: 查看文档和使用指南
+

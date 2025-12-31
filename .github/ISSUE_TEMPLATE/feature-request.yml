@@ -1,0 +1,50 @@
+name: 🚀 Feature Request
+description: 提出一个新功能或改进建议
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢您提交功能建议！这有助于改进 Vafast。
+
+        如果您想讨论想法，请前往 [Discussions](https://github.com/vafast/vafast/discussions)。
+
+  - type: textarea
+    attributes:
+      label: 问题描述
+      description: 这个功能要解决什么问题？
+      placeholder: 我在使用 Vafast 时遇到了...
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 建议的解决方案
+      description: 您希望如何解决这个问题？
+      placeholder: |
+        我希望 Vafast 能够...
+
+        ```typescript
+        // 期望的 API 示例
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: 替代方案
+      description: 您考虑过哪些替代方案？
+      placeholder: 我也考虑过...
+
+  - type: textarea
+    attributes:
+      label: 补充信息
+      description: 其他可能有帮助的信息、截图或链接
+
+  - type: checkboxes
+    attributes:
+      label: 检查清单
+      options:
+        - label: 我已经搜索过现有的 Issues 和 Discussions，确认这不是重复请求
+          required: true
+
