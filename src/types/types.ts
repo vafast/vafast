@@ -22,11 +22,18 @@ export type ResponseBody =
 
 /** Handler 返回值（支持同步/异步，任意类型） */
 
-export type Handler = (
+/** 传统 Handler 类型 */
+export type LegacyHandler = (
   req: Request,
   params?: Record<string, string>,
   user?: Record<string, any>,
 ) => ResponseBody | Promise<ResponseBody>;
+
+/** createHandler 返回的类型 */
+export type FactoryHandler = (req: Request) => Promise<Response>;
+
+/** Handler 联合类型（支持两种风格） */
+export type Handler = LegacyHandler | FactoryHandler;
 
 /** 中间件（返回值必须是 Response 或 Promise<Response>） */
 export type Middleware = (

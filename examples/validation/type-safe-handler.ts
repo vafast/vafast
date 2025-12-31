@@ -51,7 +51,7 @@ interface User {
   tags?: string[];
 }
 
-let users: User[] = [
+const users: User[] = [
   { id: 1, name: "Alice", email: "alice@example.com", age: 25 },
   { id: 2, name: "Bob", email: "bob@example.com", age: 30, tags: ["developer"] },
 ];
@@ -93,89 +93,85 @@ const routes: Route[] = [
   {
     method: "GET",
     path: "/users",
-    handler: createHandler({
-      query: PaginationSchema,
-    })(({ query }) => {
-      // query 类型: { page?: string; limit?: string }
-      const page = parseInt(query.page || "1");
-      const limit = parseInt(query.limit || "10");
-      const start = (page - 1) * limit;
-      const paginatedUsers = users.slice(start, start + limit);
+    handler: createHandler(
+      { query: PaginationSchema },
+      ({ query }) => {
+        // query 类型: { page?: string; limit?: string }
+        const page = parseInt(query.page || "1");
+        const limit = parseInt(query.limit || "10");
+        const start = (page - 1) * limit;
+        const paginatedUsers = users.slice(start, start + limit);
 
-      return {
-        data: paginatedUsers,
-        pagination: {
-          page,
-          limit,
-          total: users.length,
-          totalPages: Math.ceil(users.length / limit),
-        },
-      };
-    }),
+        return {
+          data: paginatedUsers,
+          pagination: {
+            page,
+            limit,
+            total: users.length,
+            totalPages: Math.ceil(users.length / limit),
+          },
+        };
+      }
+    ),
   },
 
   // GET /users/:id - 获取单个用户
   {
     method: "GET",
     path: "/users/:id",
-    handler: createHandler({
-      params: IdParamSchema,
-    })(({ params }) => {
-      // params 类型: { id: string }
-      const user = users.find((u) => u.id === parseInt(params.id));
-      if (!user) {
-        return {
-          data: null,
-          status: 404,
-          headers: {},
-        };
+    handler: createHandler(
+      { params: IdParamSchema },
+      ({ params }) => {
+        // params 类型: { id: string }
+        const user = users.find((u) => u.id === parseInt(params.id));
+        if (!user) {
+          return { data: null, status: 404 };
+        }
+        return user;
       }
-      return user;
-    }),
+    ),
   },
 
   // POST /users - 创建用户
   {
     method: "POST",
     path: "/users",
-    handler: createHandler({
-      body: CreateUserSchema,
-    })(({ body }) => {
-      // body 类型: { name: string; email: string; age?: number; tags?: string[] }
-      const newUser: User = {
-        id: nextId++,
-        name: body.name,
-        email: body.email,
-        age: body.age,
-        tags: body.tags,
-      };
-      users.push(newUser);
+    handler: createHandler(
+      { body: CreateUserSchema },
+      ({ body }) => {
+        // body 类型: { name: string; email: string; age?: number; tags?: string[] }
+        const newUser: User = {
+          id: nextId++,
+          name: body.name,
+          email: body.email,
+          age: body.age,
+          tags: body.tags,
+        };
+        users.push(newUser);
 
-      return {
-        data: newUser,
-        status: 201,
-      };
-    }),
+        return { data: newUser, status: 201 };
+      }
+    ),
   },
 
   // PUT /users/:id - 更新用户
   {
     method: "PUT",
     path: "/users/:id",
-    handler: createHandler({
-      params: IdParamSchema,
-      body: UpdateUserSchema,
-    })(({ params, body }) => {
-      // params 类型: { id: string }
-      // body 类型: { name?: string; email?: string; age?: number }
-      const index = users.findIndex((u) => u.id === parseInt(params.id));
-      if (index === -1) {
-        return { data: null, status: 404 };
-      }
+    handler: createHandler(
+      { params: IdParamSchema, body: UpdateUserSchema },
+      ({ params, body }) => {
+        // params 类型: { id: string }
+        // body 类型: { name?: string; email?: string; age?: number }
+        const index = users.findIndex((u) => u.id === parseInt(params.id));
+        if (index === -1) {
+          return { data: null, status: 404 };
+        }
 
-      users[index] = { ...users[index], ...body };
-      return users[index];
-    }),
+        users[index] = { ...users[index], ...body };
+        return users[index];
+      }
+    ),
   },
 
   // DELETE /users/:id - 删除用户 (需要认证)
@@ -183,31 +179,32 @@ const routes: Route[] = [
     method: "DELETE",
     path: "/users/:id",
     middleware: [authMiddleware],
-    handler: createHandlerWithExtra<AuthContext>()({
-      params: IdParamSchema,
-    })(({ params, user }) => {
-      // params 类型: { id: string }
-      // user 类型: { id: number; role: "admin" | "user" }
+    handler: createHandlerWithExtra<AuthContext>(
+      { params: IdParamSchema },
+      ({ params, user }) => {
+        // params 类型: { id: string }
+        // user 类型: { id: number; role: "admin" | "user" }
 
-      // 只有管理员可以删除
-      if (user.role !== "admin") {
+        // 只有管理员可以删除
+        if (user.role !== "admin") {
+          return {
+            data: { error: "Forbidden", message: "Admin only" },
+            status: 403,
+          };
+        }
+
+        const index = users.findIndex((u) => u.id === parseInt(params.id));
+        if (index === -1) {
+          return { data: null, status: 404 };
+        }
+
+        const deletedUser = users.splice(index, 1)[0];
         return {
-          data: { error: "Forbidden", message: "Admin only" },
-          status: 403,
+          data: { message: "User deleted", user: deletedUser },
+          status: 200,
         };
       }
-
-      const index = users.findIndex((u) => u.id === parseInt(params.id));
-      if (index === -1) {
-        return { data: null, status: 404 };
-      }
-
-      const deletedUser = users.splice(index, 1)[0];
-      return {
-        data: { message: "User deleted", user: deletedUser },
-        status: 200,
-      };
-    }),
+    ),
   },
 ];
 
