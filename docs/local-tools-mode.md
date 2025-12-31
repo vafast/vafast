@@ -371,6 +371,282 @@ console.log(formatted)  // 2024年06月15日
 
 ---
 
+## AI 调用工具流程详解
+
+### 整体流程
+
+```
+用户: "帮我查一下订单 123 的状态"
+           │
+           ▼
+┌─────────────────────────────┐
+│         AI 模型              │
+│  1. 理解用户意图             │
+│  2. 从 tools 中选择合适的    │
+│  3. 生成调用参数             │
+└─────────────────────────────┘
+           │
+           ▼ 返回 tool_calls
+┌─────────────────────────────┐
+│       你的代码               │
+│  1. 解析 tool_calls         │
+│  2. 执行对应的 handler       │
+│  3. 把结果返回给 AI          │
+└─────────────────────────────┘
+           │
+           ▼ 带上执行结果继续对话
+┌─────────────────────────────┐
+│         AI 模型              │
+│  根据工具结果生成最终回答     │
+└─────────────────────────────┘
+           │
+           ▼
+AI: "订单 123 的状态是【已发货】，预计明天送达。"
+```
+
+> **重点**：AI 只是「决定调用什么工具、传什么参数」，**实际执行是你的代码做的**。
+
+### AI Tools 格式
+
+#### OpenAI 格式
+
+```typescript
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "getOrderStatus",
+      description: "查询订单状态",
+      parameters: {
+        type: "object",
+        properties: {
+          orderId: { type: "string", description: "订单号" }
+        },
+        required: ["orderId"]
+      }
+    }
+  }
+]
+```
+
+#### Claude 格式
+
+```typescript
+const tools = [
+  {
+    name: "getOrderStatus",
+    description: "查询订单状态",
+    input_schema: {  // 注意：不是 parameters
+      type: "object",
+      properties: {
+        orderId: { type: "string", description: "订单号" }
+      },
+      required: ["orderId"]
+    }
+  }
+]
+```
+
+#### 格式对比
+
+| 字段 | OpenAI | Claude |
+|------|--------|--------|
+| 参数定义 | `function.parameters` | `input_schema` |
+| 外层包装 | `{ type: "function", function: {...} }` | 直接 `{ name, input_schema }` |
+| 返回参数 | `arguments` (JSON 字符串) | `input` (对象) |
+
+### 完整调用代码
+
+```typescript
+import OpenAI from 'openai'
+
+const openai = new OpenAI()
+
+// 1. 定义工具
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "getOrderStatus",
+      description: "查询订单状态",
+      parameters: {
+        type: "object",
+        properties: {
+          orderId: { type: "string", description: "订单号" }
+        },
+        required: ["orderId"]
+      }
+    }
+  },
+  {
+    type: "function", 
+    function: {
+      name: "createOrder",
+      description: "创建新订单",
+      parameters: {
+        type: "object",
+        properties: {
+          productId: { type: "string" },
+          quantity: { type: "number" }
+        },
+        required: ["productId", "quantity"]
+      }
+    }
+  }
+]
+
+// 2. 定义工具的实际执行函数
+const toolHandlers = {
+  getOrderStatus: async ({ orderId }) => {
+    const order = await db.orders.findById(orderId)
+    return { orderId, status: order.status, eta: order.eta }
+  },
+  
+  createOrder: async ({ productId, quantity }) => {
+    const order = await db.orders.create({ productId, quantity })
+    return { orderId: order.id, total: order.total }
+  }
+}
+
+// 3. 主函数：处理用户消息
+async function chat(userMessage: string) {
+  const messages = [
+    { role: "user", content: userMessage }
+  ]
+  
+  // 循环直到 AI 不再调用工具
+  while (true) {
+    // 调用 AI
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: messages,
+      tools: tools,
+    })
+    
+    const assistantMessage = response.choices[0].message
+    messages.push(assistantMessage)
+    
+    // 没有工具调用，返回最终回答
+    if (!assistantMessage.tool_calls) {
+      return assistantMessage.content
+    }
+    
+    // 执行每个工具调用
+    for (const toolCall of assistantMessage.tool_calls) {
+      const functionName = toolCall.function.name
+      const args = JSON.parse(toolCall.function.arguments)
+      
+      console.log(`执行工具: ${functionName}`, args)
+      
+      // 执行工具
+      const handler = toolHandlers[functionName]
+      const result = await handler(args)
+      
+      console.log(`工具结果:`, result)
+      
+      // 把工具结果加入消息历史
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(result)
+      })
+    }
+    // 继续循环，让 AI 处理工具结果
+  }
+}
+
+// 4. 使用
+const answer = await chat("帮我查一下订单 ORD-123 的状态")
+// "订单 ORD-123 的状态是【已发货】，预计明天送达。"
+```
+
+### 消息流程详解
+
+```typescript
+// 第一轮：用户提问
+messages = [
+  { role: "user", content: "帮我查一下订单 ORD-123 的状态" }
+]
+
+// AI 返回（选择调用工具，不直接回答）
+response.choices[0].message = {
+  role: "assistant",
+  content: null,  // 没有文字回复
+  tool_calls: [
+    {
+      id: "call_abc123",
+      type: "function",
+      function: {
+        name: "getOrderStatus",
+        arguments: '{"orderId": "ORD-123"}'
+      }
+    }
+  ]
+}
+
+// 你执行工具后，消息变成
+messages = [
+  { role: "user", content: "帮我查一下订单 ORD-123 的状态" },
+  { role: "assistant", content: null, tool_calls: [...] },
+  { 
+    role: "tool",                    // 工具结果
+    tool_call_id: "call_abc123",     // 对应哪个调用
+    content: '{"orderId":"ORD-123","status":"shipped","eta":"2024-01-16"}'
+  }
+]
+
+// 第二轮：AI 处理工具结果，生成最终回答
+response.choices[0].message = {
+  role: "assistant",
+  content: "订单 ORD-123 的状态是【已发货】，预计 2024-01-16 送达。"
+}
+```
+
+### 多工具调用
+
+AI 可以一次调用多个工具：
+
+```typescript
+// 用户: "帮我查订单 123 的状态，再下一单买 2 个手机壳"
+
+// AI 返回多个工具调用
+response.choices[0].message.tool_calls = [
+  {
+    id: "call_1",
+    function: { name: "getOrderStatus", arguments: '{"orderId":"123"}' }
+  },
+  {
+    id: "call_2", 
+    function: { name: "createOrder", arguments: '{"productId":"phone-case","quantity":2}' }
+  }
+]
+
+// 你需要执行两个工具，返回两个结果
+for (const call of tool_calls) {
+  const result = await toolHandlers[call.function.name](
+    JSON.parse(call.function.arguments)
+  )
+  messages.push({
+    role: "tool",
+    tool_call_id: call.id,
+    content: JSON.stringify(result)
+  })
+}
+```
+
+### 调用流程总结
+
+| 步骤 | 角色 | 动作 |
+|------|------|------|
+| 1 | 你 | 把 `tools` 定义传给 AI |
+| 2 | AI | 返回 `tool_calls`（要调用什么、参数是什么） |
+| 3 | 你 | 执行这些工具，获取结果 |
+| 4 | 你 | 把结果以 `role: "tool"` 加入消息 |
+| 5 | AI | 处理结果，可能继续调用工具或给出最终回答 |
+| 6 | - | 重复 2-5 直到 AI 不再调用工具 |
+
+---
+
 ## 与 AI Agent 集成
 
 ### 基本集成
