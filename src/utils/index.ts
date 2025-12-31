@@ -37,3 +37,22 @@ export { HtmlRenderer } from "./html-renderer";
 
 // 依赖管理
 export { DependencyManager } from "./dependency-manager";
+
+// 验证器（JIT 编译）
+export {
+  validateSchema,
+  createValidator,
+  validateFast,
+  precompileSchemas,
+  getValidatorCacheStats,
+} from "./validators/validators";
+
+// 序列化器（JIT 编译）
+export {
+  getCompiledSerializer,
+  serializeWithSchema,
+  createSerializer,
+  precompileSerializers,
+  fastSerialize,
+  batchSerialize,
+} from "./serializers";

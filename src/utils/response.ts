@@ -1,14 +1,19 @@
 // src/response.ts
 
+import { fastSerialize } from "./serializers/json-serializer";
+
 /** 生成 JSON 响应 */
 export function json(
   data: unknown,
   status = 200,
   headers: HeadersInit = {},
 ): Response {
+  // 使用优化后的序列化器
+  const body = fastSerialize(data);
+
   // 优化：只在有自定义 headers 时才创建 Headers 对象
   if (Object.keys(headers).length === 0) {
-    return new Response(JSON.stringify(data), {
+    return new Response(body, {
       status,
       headers: { "Content-Type": "application/json" },
     });
@@ -20,7 +25,7 @@ export function json(
     ...headers,
   });
 
-  return new Response(JSON.stringify(data), {
+  return new Response(body, {
     status,
     headers: h,
   });
@@ -45,7 +50,8 @@ export function mapResponse(response: unknown): Response {
 
     case "Object":
     case "Array":
-      return new Response(JSON.stringify(response), { headers: JSON_HEADERS });
+      // 使用优化后的序列化器
+      return new Response(fastSerialize(response), { headers: JSON_HEADERS });
 
     case "Number":
     case "Boolean":
@@ -72,8 +78,8 @@ export function mapResponse(response: unknown): Response {
       if (response instanceof Promise) {
         return response.then(mapResponse) as unknown as Response;
       }
-      // 其他情况尝试 JSON
-      return new Response(JSON.stringify(response), { headers: JSON_HEADERS });
+      // 其他情况尝试优化序列化
+      return new Response(fastSerialize(response), { headers: JSON_HEADERS });
   }
 }
 
