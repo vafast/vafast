@@ -101,7 +101,7 @@ function handleValidationError(error: Error): Response {
       message: error.message,
       timestamp: new Date().toISOString(),
     },
-    400
+    400,
   );
 }
 
@@ -115,7 +115,7 @@ function handleInternalError(error: unknown): Response {
       error: "Internal Error",
       message: error instanceof Error ? error.message : "未知错误",
     },
-    500
+    500,
   );
 }
 
@@ -154,12 +154,18 @@ function handleInternalError(error: unknown): Response {
  */
 export function createHandler<const T extends RouteSchema>(schema: T) {
   // 预编译 schema
-  if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+  if (
+    schema.body ||
+    schema.query ||
+    schema.params ||
+    schema.headers ||
+    schema.cookies
+  ) {
     precompileSchemasUltra(schema);
   }
 
   return <R>(
-    handler: (ctx: HandlerContext<T>) => R | Promise<R>
+    handler: (ctx: HandlerContext<T>) => R | Promise<R>,
   ): ((req: Request) => Promise<Response>) => {
     return async (req: Request): Promise<Response> => {
       try {
@@ -167,7 +173,11 @@ export function createHandler<const T extends RouteSchema>(schema: T) {
         const query = parseQuery(req);
         const headers = parseHeaders(req);
         const cookies = parseCookies(req);
-        const params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+        const params =
+          ((req as unknown as Record<string, unknown>).params as Record<
+            string,
+            string
+          >) || {};
 
         // 解析请求体
         let body: unknown = undefined;
@@ -178,7 +188,13 @@ export function createHandler<const T extends RouteSchema>(schema: T) {
 
         // 验证 schema
         const data = { body, query, params, headers, cookies };
-        if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+        if (
+          schema.body ||
+          schema.query ||
+          schema.params ||
+          schema.headers ||
+          schema.cookies
+        ) {
           validateAllSchemasUltra(schema, data);
         }
 
@@ -226,16 +242,22 @@ export function createHandler<const T extends RouteSchema>(schema: T) {
  * ```
  */
 export function createHandlerWithExtra<
-  TExtra extends Record<string, unknown> = Record<string, never>
+  TExtra extends Record<string, unknown> = Record<string, never>,
 >() {
   return <const T extends RouteSchema>(schema: T) => {
     // 预编译 schema
-    if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+    if (
+      schema.body ||
+      schema.query ||
+      schema.params ||
+      schema.headers ||
+      schema.cookies
+    ) {
       precompileSchemasUltra(schema);
     }
 
     return <R>(
-      handler: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>
+      handler: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>,
     ): ((req: Request) => Promise<Response>) => {
       return async (req: Request): Promise<Response> => {
         try {
@@ -243,7 +265,11 @@ export function createHandlerWithExtra<
           const query = parseQuery(req);
           const headers = parseHeaders(req);
           const cookies = parseCookies(req);
-          const params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+          const params =
+            ((req as unknown as Record<string, unknown>).params as Record<
+              string,
+              string
+            >) || {};
 
           // 解析请求体
           let body: unknown = undefined;
@@ -254,12 +280,19 @@ export function createHandlerWithExtra<
 
           // 验证 schema
           const data = { body, query, params, headers, cookies };
-          if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+          if (
+            schema.body ||
+            schema.query ||
+            schema.params ||
+            schema.headers ||
+            schema.cookies
+          ) {
             validateAllSchemasUltra(schema, data);
           }
 
           // 获取中间件注入的额外数据
-          const extras = (((req as unknown as Record<string, unknown>).__locals) ?? {}) as TExtra;
+          const extras = ((req as unknown as Record<string, unknown>)
+            .__locals ?? {}) as TExtra;
 
           // 调用 handler
           const result = await handler({
@@ -295,7 +328,7 @@ export function createHandlerWithExtra<
  * ```
  */
 export function simpleHandler<R>(
-  handler: (ctx: { req: Request }) => R | Promise<R>
+  handler: (ctx: { req: Request }) => R | Promise<R>,
 ): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     try {
@@ -306,4 +339,3 @@ export function simpleHandler<R>(
     }
   };
 }
-

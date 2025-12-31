@@ -59,7 +59,7 @@ export interface FlattenedRoute extends ExtendedRouteConfig {
 
 // 导出一些实际的函数，确保 JavaScript 代码生成
 export function createTypedRoute(
-  config: ExtendedRouteConfig
+  config: ExtendedRouteConfig,
 ): ExtendedRouteConfig {
   return config;
 }

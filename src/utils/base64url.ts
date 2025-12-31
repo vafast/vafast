@@ -1,6 +1,6 @@
 export function base64urlEncode(str: string): string {
   return btoa(str)
-    .replace(/=/g, "")   // ✅ 删除填充
+    .replace(/=/g, "") // ✅ 删除填充
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
 }

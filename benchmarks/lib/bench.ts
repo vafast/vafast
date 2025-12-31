@@ -79,7 +79,10 @@ function calculateStats(values: number[]): {
   const min = sorted[0];
   const max = sorted[n - 1];
   const mean = values.reduce((a, b) => a + b, 0) / n;
-  const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+  const median =
+    n % 2 === 0
+      ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2
+      : sorted[Math.floor(n / 2)];
   const p95 = sorted[Math.floor(n * 0.95)];
   const p99 = sorted[Math.floor(n * 0.99)];
 
@@ -105,9 +108,14 @@ function tryGC(): void {
  */
 export async function bench(
   config: BenchConfig,
-  fn: () => void | Promise<void>
+  fn: () => void | Promise<void>,
 ): Promise<BenchResult> {
-  const { name, warmup = DEFAULT_CONFIG.warmup, iterations = DEFAULT_CONFIG.iterations, rounds = DEFAULT_CONFIG.rounds } = config;
+  const {
+    name,
+    warmup = DEFAULT_CONFIG.warmup,
+    iterations = DEFAULT_CONFIG.iterations,
+    rounds = DEFAULT_CONFIG.rounds,
+  } = config;
 
   // 预热阶段
   for (let i = 0; i < warmup; i++) {
@@ -167,11 +175,13 @@ export async function bench(
 /**
  * 同步版本的基准测试
  */
-export function benchSync(
-  config: BenchConfig,
-  fn: () => void
-): BenchResult {
-  const { name, warmup = DEFAULT_CONFIG.warmup, iterations = DEFAULT_CONFIG.iterations, rounds = DEFAULT_CONFIG.rounds } = config;
+export function benchSync(config: BenchConfig, fn: () => void): BenchResult {
+  const {
+    name,
+    warmup = DEFAULT_CONFIG.warmup,
+    iterations = DEFAULT_CONFIG.iterations,
+    rounds = DEFAULT_CONFIG.rounds,
+  } = config;
 
   // 预热阶段
   for (let i = 0; i < warmup; i++) {
@@ -262,24 +272,37 @@ export function formatNs(ns: number): string {
  */
 export function printResult(result: BenchResult): void {
   console.log(`\n📊 ${result.name}`);
-  console.log(`   迭代: ${formatNumber(result.iterations)} × ${result.rounds} 轮`);
+  console.log(
+    `   迭代: ${formatNumber(result.iterations)} × ${result.rounds} 轮`,
+  );
   console.log(`   ─────────────────────────────────────`);
-  console.log(`   ops/sec: ${formatNumber(result.opsPerSec.mean)} (±${((result.opsPerSec.stdDev / result.opsPerSec.mean) * 100).toFixed(1)}%)`);
-  console.log(`   min: ${formatNumber(result.opsPerSec.min)} | max: ${formatNumber(result.opsPerSec.max)}`);
-  console.log(`   p50: ${formatNumber(result.opsPerSec.median)} | p95: ${formatNumber(result.opsPerSec.p95)} | p99: ${formatNumber(result.opsPerSec.p99)}`);
+  console.log(
+    `   ops/sec: ${formatNumber(result.opsPerSec.mean)} (±${((result.opsPerSec.stdDev / result.opsPerSec.mean) * 100).toFixed(1)}%)`,
+  );
+  console.log(
+    `   min: ${formatNumber(result.opsPerSec.min)} | max: ${formatNumber(result.opsPerSec.max)}`,
+  );
+  console.log(
+    `   p50: ${formatNumber(result.opsPerSec.median)} | p95: ${formatNumber(result.opsPerSec.p95)} | p99: ${formatNumber(result.opsPerSec.p99)}`,
+  );
   console.log(`   ns/op: ${formatNs(result.nsPerOp.mean)}`);
 }
 
 /**
  * 打印对比结果
  */
-export function printComparison(baseline: BenchResult, target: BenchResult): void {
+export function printComparison(
+  baseline: BenchResult,
+  target: BenchResult,
+): void {
   const speedup = target.opsPerSec.mean / baseline.opsPerSec.mean;
   const direction = speedup > 1 ? "faster" : "slower";
   const emoji = speedup > 1.1 ? "🚀" : speedup < 0.9 ? "🐌" : "➡️";
 
   console.log(`\n${emoji} ${target.name} vs ${baseline.name}`);
-  console.log(`   ${formatNumber(target.opsPerSec.mean)} vs ${formatNumber(baseline.opsPerSec.mean)} ops/sec`);
+  console.log(
+    `   ${formatNumber(target.opsPerSec.mean)} vs ${formatNumber(baseline.opsPerSec.mean)} ops/sec`,
+  );
   console.log(`   ${speedup.toFixed(2)}x ${direction}`);
 }
 
@@ -297,7 +320,10 @@ export class BenchSuite {
   /**
    * 添加异步测试
    */
-  async add(config: BenchConfig, fn: () => void | Promise<void>): Promise<this> {
+  async add(
+    config: BenchConfig,
+    fn: () => void | Promise<void>,
+  ): Promise<this> {
     const result = await bench(config, fn);
     this.results.push(result);
     return this;
@@ -322,13 +348,16 @@ export class BenchSuite {
 
     // 按性能排序
     const sorted = [...this.results].sort(
-      (a, b) => b.opsPerSec.mean - a.opsPerSec.mean
+      (a, b) => b.opsPerSec.mean - a.opsPerSec.mean,
     );
 
     sorted.forEach((result, index) => {
-      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
+      const medal =
+        index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "  ";
       console.log(`\n${medal} #${index + 1} ${result.name}`);
-      console.log(`   ops/sec: ${formatNumber(result.opsPerSec.mean)} (±${((result.opsPerSec.stdDev / result.opsPerSec.mean) * 100).toFixed(1)}%)`);
+      console.log(
+        `   ops/sec: ${formatNumber(result.opsPerSec.mean)} (±${((result.opsPerSec.stdDev / result.opsPerSec.mean) * 100).toFixed(1)}%)`,
+      );
       console.log(`   ns/op: ${formatNs(result.nsPerOp.mean)}`);
     });
 
@@ -348,4 +377,3 @@ export class BenchSuite {
     return this.results;
   }
 }
-

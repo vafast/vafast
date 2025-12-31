@@ -11,7 +11,7 @@ const mockMiddleware = (name: string) => {
     const existing = response.headers.get("X-Middleware") || "";
     response.headers.set(
       "X-Middleware",
-      existing ? `${existing},${name}` : name
+      existing ? `${existing},${name}` : name,
     );
     return response;
   };

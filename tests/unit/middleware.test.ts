@@ -20,7 +20,7 @@ describe("中间件示例", () => {
         console.log(
           `[${new Date().toISOString()}] ${req.method} ${req.url} - ${
             response.status
-          } (${duration}ms)`
+          } (${duration}ms)`,
         );
 
         return response;
@@ -108,7 +108,7 @@ describe("中间件示例", () => {
           headers?: string[];
           credentials?: boolean;
           maxAge?: number;
-        } = {}
+        } = {},
       ): Middleware => {
         const {
           origin = "*",
@@ -143,7 +143,7 @@ describe("中间件示例", () => {
             if (isAllowedOrigin) {
               resHeaders.set(
                 "Access-Control-Allow-Origin",
-                origin === "*" ? "*" : reqOrigin
+                origin === "*" ? "*" : reqOrigin,
               );
               resHeaders.set("Access-Control-Allow-Methods", methods.join(","));
               resHeaders.set("Access-Control-Allow-Headers", headers.join(","));
@@ -156,7 +156,7 @@ describe("中间件示例", () => {
             // 调试信息
             console.log(
               "CORS OPTIONS response headers:",
-              Object.fromEntries(resHeaders.entries())
+              Object.fromEntries(resHeaders.entries()),
             );
 
             return new Response(null, { status: 204, headers: resHeaders });
@@ -166,7 +166,7 @@ describe("中间件示例", () => {
           if (isAllowedOrigin) {
             res.headers.set(
               "Access-Control-Allow-Origin",
-              origin === "*" ? "*" : reqOrigin
+              origin === "*" ? "*" : reqOrigin,
             );
             if (credentials)
               res.headers.set("Access-Control-Allow-Credentials", "true");
@@ -194,7 +194,7 @@ describe("中间件示例", () => {
               }),
               {
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             ),
         },
         {
@@ -209,7 +209,7 @@ describe("中间件示例", () => {
               }),
               {
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             );
           },
         },
@@ -234,19 +234,19 @@ describe("中间件示例", () => {
       console.log("Response status:", response.status);
       console.log(
         "Response headers:",
-        Object.fromEntries(response.headers.entries())
+        Object.fromEntries(response.headers.entries()),
       );
 
       // CORS中间件应该处理OPTIONS请求并返回204
       expect(response.status).toBe(204);
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
-        "https://example.com"
+        "https://example.com",
       );
       expect(response.headers.get("Access-Control-Allow-Methods")).toBe(
-        "GET,POST"
+        "GET,POST",
       );
       expect(response.headers.get("Access-Control-Allow-Credentials")).toBe(
-        "true"
+        "true",
       );
     });
 
@@ -260,10 +260,10 @@ describe("中间件示例", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get("Access-Control-Allow-Origin")).toBe(
-        "https://example.com"
+        "https://example.com",
       );
       expect(response.headers.get("Access-Control-Allow-Credentials")).toBe(
-        "true"
+        "true",
       );
     });
   });
@@ -303,7 +303,7 @@ describe("中间件示例", () => {
               {
                 status: 429,
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             );
           } else {
             clientData.count++;
@@ -334,7 +334,7 @@ describe("中间件示例", () => {
               }),
               {
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             ),
           middleware: [limiter],
         },
@@ -363,7 +363,7 @@ describe("中间件示例", () => {
           new Request("http://localhost/limited", {
             method: "GET",
             headers: { "X-Forwarded-For": "192.168.1.2" },
-          })
+          }),
         );
       }
 
@@ -427,7 +427,7 @@ describe("中间件示例", () => {
               {
                 status: 201,
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             );
           },
         },

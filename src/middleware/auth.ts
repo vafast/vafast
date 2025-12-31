@@ -69,7 +69,7 @@ export function createAuth(options: AuthOptions): Middleware {
           : [user.permissions];
 
         const hasPermission = permissions.some((permission) =>
-          userPermissions.includes(permission)
+          userPermissions.includes(permission),
         );
 
         if (!hasPermission) {
@@ -131,7 +131,7 @@ export function createAuth(options: AuthOptions): Middleware {
 
 // 可选认证中间件
 export function createOptionalAuth(
-  options: Omit<AuthOptions, "required">
+  options: Omit<AuthOptions, "required">,
 ): Middleware {
   return createAuth({ ...options, required: false });
 }
@@ -139,7 +139,7 @@ export function createOptionalAuth(
 // 角色验证中间件
 export function createRoleAuth(
   roles: string[],
-  options: Omit<AuthOptions, "roles">
+  options: Omit<AuthOptions, "roles">,
 ): Middleware {
   return createAuth({ ...options, roles });
 }
@@ -147,7 +147,7 @@ export function createRoleAuth(
 // 权限验证中间件
 export function createPermissionAuth(
   permissions: string[],
-  options: Omit<AuthOptions, "permissions">
+  options: Omit<AuthOptions, "permissions">,
 ): Middleware {
   return createAuth({ ...options, permissions });
 }

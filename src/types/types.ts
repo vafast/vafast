@@ -21,17 +21,17 @@ export type ResponseBody =
   | ArrayBuffer;
 
 /** Handler 返回值（支持同步/异步，任意类型） */
- 
+
 export type Handler = (
   req: Request,
   params?: Record<string, string>,
-  user?: Record<string, any>
+  user?: Record<string, any>,
 ) => ResponseBody | Promise<ResponseBody>;
 
 /** 中间件（返回值必须是 Response 或 Promise<Response>） */
 export type Middleware = (
   req: Request,
-  next: () => Promise<Response>
+  next: () => Promise<Response>,
 ) => Response | Promise<Response>;
 
 export interface Route {

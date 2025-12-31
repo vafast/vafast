@@ -53,7 +53,7 @@ export abstract class BaseServer {
         if (uniqueMethods.length === 1) {
           // 相同路径、相同方法 - 这是冲突！
           console.warn(
-            `⚠️  路由冲突: ${uniqueMethods[0]} ${path} 定义了 ${routeList.length} 次`
+            `⚠️  路由冲突: ${uniqueMethods[0]} ${path} 定义了 ${routeList.length} 次`,
           );
           routeList.forEach((route, index) => {
             console.warn(`   ${index + 1}. ${route.method} ${path}`);
@@ -91,7 +91,7 @@ export abstract class BaseServer {
           // 检查路径是否可能冲突
           if (this.pathsMayConflict(path1, path2)) {
             console.warn(
-              `⚠️  潜在路由冲突: ${method1} ${path1} 可能与 ${path2} 冲突`
+              `⚠️  潜在路由冲突: ${method1} ${path1} 可能与 ${path2} 冲突`,
             );
           }
         }
@@ -163,7 +163,7 @@ export abstract class BaseServer {
    */
   protected extractParams(
     pattern: string,
-    path: string
+    path: string,
   ): Record<string, string> {
     const params: Record<string, string> = {};
     const patternParts = pattern.split("/").filter(Boolean);

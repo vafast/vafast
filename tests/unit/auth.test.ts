@@ -31,7 +31,7 @@ describe("认证令牌模块", () => {
       expect(result.expiresAt).toBeGreaterThan(Date.now());
       expect(result.payload.exp).toBeGreaterThan(Math.floor(Date.now() / 1000));
       expect(result.payload.iat).toBeLessThanOrEqual(
-        Math.floor(Date.now() / 1000)
+        Math.floor(Date.now() / 1000),
       );
     });
 
@@ -76,7 +76,7 @@ describe("认证令牌模块", () => {
       const invalidToken = validToken.replace(/[a-zA-Z0-9_-]+$/, "invalid");
 
       await expect(verifyToken(invalidToken, secret)).rejects.toThrow(
-        TokenError
+        TokenError,
       );
     });
 
@@ -84,7 +84,7 @@ describe("认证令牌模块", () => {
       const malformedToken = "invalid-token-format";
 
       await expect(verifyToken(malformedToken, secret)).rejects.toThrow(
-        TokenError
+        TokenError,
       );
     });
 
@@ -92,7 +92,7 @@ describe("认证令牌模块", () => {
       const wrongSecret = "wrong-secret";
 
       await expect(verifyToken(validToken, wrongSecret)).rejects.toThrow(
-        TokenError
+        TokenError,
       );
     });
   });
@@ -141,15 +141,15 @@ describe("认证令牌模块", () => {
         encoder.encode(secret),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["sign"],
       );
       const signature = await crypto.subtle.sign(
         "HMAC",
         key,
-        encoder.encode(data)
+        encoder.encode(data),
       );
       const sig = btoa(
-        String.fromCharCode.apply(null, Array.from(new Uint8Array(signature)))
+        String.fromCharCode.apply(null, Array.from(new Uint8Array(signature))),
       );
       const expiredToken = `${data}.${sig}`;
 
@@ -192,15 +192,15 @@ describe("认证令牌模块", () => {
         encoder.encode(secret),
         { name: "HMAC", hash: "SHA-256" },
         false,
-        ["sign"]
+        ["sign"],
       );
       const signature = await crypto.subtle.sign(
         "HMAC",
         key,
-        encoder.encode(data)
+        encoder.encode(data),
       );
       const sig = btoa(
-        String.fromCharCode.apply(null, Array.from(new Uint8Array(signature)))
+        String.fromCharCode.apply(null, Array.from(new Uint8Array(signature))),
       );
       const expiredToken = `${data}.${sig}`;
 
@@ -259,7 +259,7 @@ describe("认证令牌模块", () => {
       expect(tokenPair.accessToken).toBeDefined();
       expect(tokenPair.refreshToken).toBeDefined();
       expect(tokenPair.accessToken.token).not.toBe(
-        tokenPair.refreshToken.token
+        tokenPair.refreshToken.token,
       );
 
       // 访问令牌应该较短

@@ -10,7 +10,7 @@ import type { Route, NestedRoute, Middleware } from "../../src/types";
  */
 export function createTestServer(
   routes: (Route | NestedRoute)[],
-  middleware: Middleware[] = []
+  middleware: Middleware[] = [],
 ): Server {
   const server = new Server(routes);
   middleware.forEach((mw) => server.use(mw));
@@ -27,7 +27,7 @@ export function createTestRequest(
     body?: unknown;
     headers?: Record<string, string>;
     params?: Record<string, string>;
-  } = {}
+  } = {},
 ): Request {
   const { method = "GET", body, headers = {}, params } = options;
 
@@ -58,7 +58,7 @@ export function createTestRequest(
 export function createJsonRequest(
   path: string,
   body: unknown,
-  method = "POST"
+  method = "POST",
 ): Request {
   return createTestRequest(path, { method, body });
 }
@@ -72,7 +72,7 @@ export function createAuthRequest(
   options: {
     method?: string;
     body?: unknown;
-  } = {}
+  } = {},
 ): Request {
   return createTestRequest(path, {
     ...options,
@@ -86,7 +86,7 @@ export function createAuthRequest(
  * 解析 JSON 响应
  */
 export async function parseJsonResponse<T = unknown>(
-  response: Response
+  response: Response,
 ): Promise<{ status: number; data: T; headers: Headers }> {
   const data = await response.json();
   return {
@@ -101,9 +101,7 @@ export async function parseJsonResponse<T = unknown>(
  */
 export function assertStatus(response: Response, expected: number): void {
   if (response.status !== expected) {
-    throw new Error(
-      `Expected status ${expected}, got ${response.status}`
-    );
+    throw new Error(`Expected status ${expected}, got ${response.status}`);
   }
 }
 
@@ -112,13 +110,13 @@ export function assertStatus(response: Response, expected: number): void {
  */
 export async function assertJsonResponse<T>(
   response: Response,
-  expected: Partial<T>
+  expected: Partial<T>,
 ): Promise<T> {
   const data = await response.json();
   for (const [key, value] of Object.entries(expected)) {
     if ((data as Record<string, unknown>)[key] !== value) {
       throw new Error(
-        `Expected ${key} to be ${value}, got ${(data as Record<string, unknown>)[key]}`
+        `Expected ${key} to be ${value}, got ${(data as Record<string, unknown>)[key]}`,
       );
     }
   }
@@ -137,7 +135,7 @@ export function delay(ms: number): Promise<void> {
  */
 export async function repeat(
   times: number,
-  fn: (i: number) => Promise<void>
+  fn: (i: number) => Promise<void>,
 ): Promise<void> {
   for (let i = 0; i < times; i++) {
     await fn(i);
@@ -149,18 +147,16 @@ export async function repeat(
  */
 export async function concurrent(
   times: number,
-  fn: (i: number) => Promise<void>
+  fn: (i: number) => Promise<void>,
 ): Promise<void> {
-  await Promise.all(
-    Array.from({ length: times }, (_, i) => fn(i))
-  );
+  await Promise.all(Array.from({ length: times }, (_, i) => fn(i)));
 }
 
 /**
  * 测量执行时间
  */
 export async function measureTime<T>(
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<{ result: T; duration: number }> {
   const start = performance.now();
   const result = await fn();
@@ -172,7 +168,7 @@ export async function measureTime<T>(
  * 创建简单的模拟数据库
  */
 export function createMockDb<T extends { id: number | string }>(
-  initialData: T[] = []
+  initialData: T[] = [],
 ): {
   data: T[];
   findAll: () => T[];

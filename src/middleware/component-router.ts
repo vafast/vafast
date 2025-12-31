@@ -9,17 +9,20 @@ import { vueRenderer, reactRenderer } from "./component-renderer";
  * 扁平化嵌套组件路由
  */
 export function flattenComponentRoutes(
-  routes: (ComponentRoute | NestedComponentRoute)[]
+  routes: (ComponentRoute | NestedComponentRoute)[],
 ): FlattenedComponentRoute[] {
   const flattened: FlattenedComponentRoute[] = [];
 
   function processRoute(
     route: ComponentRoute | NestedComponentRoute,
     parentPath: string = "",
-    parentMiddleware: any[] = []
+    parentMiddleware: any[] = [],
   ) {
     const currentPath = parentPath + route.path;
-    const currentMiddleware = [...parentMiddleware, ...(route.middleware || [])];
+    const currentMiddleware = [
+      ...parentMiddleware,
+      ...(route.middleware || []),
+    ];
 
     if ("component" in route) {
       // 这是一个组件路由

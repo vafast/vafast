@@ -22,6 +22,8 @@ export const defaultMonitoringConfig = {
 };
 
 // 创建监控配置
-export function createMonitoringConfig(config: Partial<typeof defaultMonitoringConfig> = {}) {
+export function createMonitoringConfig(
+  config: Partial<typeof defaultMonitoringConfig> = {},
+) {
   return { ...defaultMonitoringConfig, ...config };
 }

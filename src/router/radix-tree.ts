@@ -70,7 +70,7 @@ export class RadixRouter {
     method: Method,
     pattern: string,
     handler: Handler,
-    middleware: Middleware[] = []
+    middleware: Middleware[] = [],
   ): void {
     const segments = this.splitPath(pattern);
     let node = this.root;
@@ -89,7 +89,8 @@ export class RadixRouter {
         // 通配符节点
         if (!node.wildcardChild) {
           node.wildcardChild = this.createNode(segment);
-          node.wildcardChild.paramName = segment.length > 1 ? segment.substring(1) : "*";
+          node.wildcardChild.paramName =
+            segment.length > 1 ? segment.substring(1) : "*";
         }
         node = node.wildcardChild;
         break;
@@ -128,7 +129,7 @@ export class RadixRouter {
     node: RadixNode,
     segments: string[],
     index: number,
-    params: Record<string, string>
+    params: Record<string, string>,
   ): RadixNode | null {
     if (index === segments.length) {
       for (const method in node.handlers) {
@@ -152,7 +153,12 @@ export class RadixRouter {
       const oldValue = params[paramName];
 
       params[paramName] = segment;
-      const result = this.matchNode(node.paramChild, segments, index + 1, params);
+      const result = this.matchNode(
+        node.paramChild,
+        segments,
+        index + 1,
+        params,
+      );
 
       if (result) return result;
 
@@ -166,7 +172,9 @@ export class RadixRouter {
 
     // 3. 通配符
     if (node.wildcardChild) {
-      params[node.wildcardChild.paramName || "*"] = segments.slice(index).join("/");
+      params[node.wildcardChild.paramName || "*"] = segments
+        .slice(index)
+        .join("/");
       return node.wildcardChild;
     }
 
@@ -217,7 +225,7 @@ export class RadixRouter {
   private collectRoutes(
     node: RadixNode,
     prefix: string,
-    routes: Array<{ method: Method; path: string }>
+    routes: Array<{ method: Method; path: string }>,
   ): void {
     const currentPath = prefix + (node.path ? "/" + node.path : "");
 

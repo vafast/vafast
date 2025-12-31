@@ -56,7 +56,7 @@ export interface ValidationResult<T extends SchemaConfig> {
  */
 export async function parseRequest(
   request: Request,
-  params?: Record<string, string>
+  params?: Record<string, string>,
 ): Promise<RequestData> {
   const requestData: RequestData = {
     body: undefined,
@@ -82,7 +82,7 @@ export async function parseRequest(
  */
 export function validateRequest<T extends SchemaConfig>(
   config: T,
-  requestData: RequestData
+  requestData: RequestData,
 ): ValidationResult<T> {
   try {
     const validatedData = validateAllSchemasUltra(config, requestData);
@@ -114,7 +114,7 @@ export function validateRequest<T extends SchemaConfig>(
 export async function parseAndValidateRequest<T extends SchemaConfig>(
   request: Request,
   config: T,
-  params?: Record<string, string>
+  params?: Record<string, string>,
 ): Promise<ValidationResult<T>> {
   try {
     // 1. 解析请求

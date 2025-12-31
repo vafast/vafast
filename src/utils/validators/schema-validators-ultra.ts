@@ -122,7 +122,7 @@ function getSchemaFlags(config: SchemaConfig): number {
 export function validateSchemaUltra(
   schema: TSchema | undefined,
   data: any,
-  context: string
+  context: string,
 ): any {
   if (!schema) return data;
 
@@ -157,7 +157,7 @@ export function validateSchemaUltra(
     const message = getPooledString(
       `${context}验证失败: ${
         error instanceof Error ? error.message : "未知错误"
-      }`
+      }`,
     );
     throw getErrorFromPool(message);
   }
@@ -172,7 +172,7 @@ export function validateAllSchemasUltra(
     params: any;
     headers: any;
     cookies: any;
-  }
+  },
 ): any {
   // 使用位掩码快速检查，避免多次条件判断
   const flags = getSchemaFlags(config);
@@ -279,7 +279,7 @@ export function getCacheStats() {
   const totalSchemas = ultraSchemaCache.size;
   const totalHits = Array.from(schemaCacheHits.values()).reduce(
     (sum, hits) => sum + hits,
-    0
+    0,
   );
   const hitRate =
     totalHits > 0
@@ -328,7 +328,7 @@ export function clearUltraCache(): void {
 // 性能监控装饰器 - 使用高精度计时器
 export function withPerformanceMonitoring<T extends (...args: any[]) => any>(
   fn: T,
-  name: string
+  name: string,
 ): T {
   return ((...args: any[]) => {
     const start = performance.now();

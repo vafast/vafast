@@ -56,7 +56,7 @@ export interface SchemaValidationResult {
 function validateSingleSchema(
   schema: TSchema,
   data: unknown,
-  fieldName: keyof SchemaConfig
+  fieldName: keyof SchemaConfig,
 ): ValidationResult<unknown> {
   return validateSchema(schema, data);
 }
@@ -69,9 +69,12 @@ function validateSingleSchema(
  */
 export function validateSchemaConfig(
   config: SchemaConfig,
-  data: RequestData
+  data: RequestData,
 ): SchemaValidationResult {
-  const errors: Array<{ field: keyof SchemaConfig; error: ValidationResult<unknown> }> = [];
+  const errors: Array<{
+    field: keyof SchemaConfig;
+    error: ValidationResult<unknown>;
+  }> = [];
   const validatedData: RequestData = {};
 
   // 验证body
@@ -112,7 +115,11 @@ export function validateSchemaConfig(
 
   // 验证headers
   if (config.headers && data.headers !== undefined) {
-    const result = validateSingleSchema(config.headers, data.headers, "headers");
+    const result = validateSingleSchema(
+      config.headers,
+      data.headers,
+      "headers",
+    );
     if (result.success) {
       validatedData.headers = result.data;
     } else {
@@ -124,7 +131,11 @@ export function validateSchemaConfig(
 
   // 验证cookies
   if (config.cookies && data.cookies !== undefined) {
-    const result = validateSingleSchema(config.cookies, data.cookies, "cookies");
+    const result = validateSingleSchema(
+      config.cookies,
+      data.cookies,
+      "cookies",
+    );
     if (result.success) {
       validatedData.cookies = result.data;
     } else {
@@ -174,9 +185,12 @@ export function validateSchemaConfig(
  */
 export async function validateSchemaConfigAsync(
   config: SchemaConfig,
-  data: RequestData
+  data: RequestData,
 ): Promise<SchemaValidationResult> {
-  const errors: Array<{ field: keyof SchemaConfig; error: ValidationResult<unknown> }> = [];
+  const errors: Array<{
+    field: keyof SchemaConfig;
+    error: ValidationResult<unknown>;
+  }> = [];
   const validatedData: RequestData = {};
 
   // 并行验证所有Schema以提高性能
@@ -190,7 +204,7 @@ export async function validateSchemaConfigAsync(
       Promise.resolve({
         field: "body" as keyof SchemaConfig,
         result: validateSingleSchema(config.body, data.body, "body"),
-      })
+      }),
     );
   }
   if (config.query && data.query !== undefined) {
@@ -198,7 +212,7 @@ export async function validateSchemaConfigAsync(
       Promise.resolve({
         field: "query" as keyof SchemaConfig,
         result: validateSingleSchema(config.query, data.query, "query"),
-      })
+      }),
     );
   }
   if (config.params && data.params !== undefined) {
@@ -206,7 +220,7 @@ export async function validateSchemaConfigAsync(
       Promise.resolve({
         field: "params" as keyof SchemaConfig,
         result: validateSingleSchema(config.params, data.params, "params"),
-      })
+      }),
     );
   }
   if (config.headers && data.headers !== undefined) {
@@ -214,7 +228,7 @@ export async function validateSchemaConfigAsync(
       Promise.resolve({
         field: "headers" as keyof SchemaConfig,
         result: validateSingleSchema(config.headers, data.headers, "headers"),
-      })
+      }),
     );
   }
   if (config.cookies && data.cookies !== undefined) {
@@ -222,7 +236,7 @@ export async function validateSchemaConfigAsync(
       Promise.resolve({
         field: "cookies" as keyof SchemaConfig,
         result: validateSingleSchema(config.cookies, data.cookies, "cookies"),
-      })
+      }),
     );
   }
 
@@ -240,10 +254,14 @@ export async function validateSchemaConfigAsync(
 
   // 添加未验证但存在的数据
   if (data.body !== undefined && !config.body) validatedData.body = data.body;
-  if (data.query !== undefined && !config.query) validatedData.query = data.query;
-  if (data.params !== undefined && !config.params) validatedData.params = data.params;
-  if (data.headers !== undefined && !config.headers) validatedData.headers = data.headers;
-  if (data.cookies !== undefined && !config.cookies) validatedData.cookies = data.cookies;
+  if (data.query !== undefined && !config.query)
+    validatedData.query = data.query;
+  if (data.params !== undefined && !config.params)
+    validatedData.params = data.params;
+  if (data.headers !== undefined && !config.headers)
+    validatedData.headers = data.headers;
+  if (data.cookies !== undefined && !config.cookies)
+    validatedData.cookies = data.cookies;
 
   // 如果有错误，返回失败结果
   if (errors.length > 0) {

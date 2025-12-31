@@ -112,7 +112,7 @@ export const BatchProcessSchema = Type.Object({
       id: Type.Number(),
       value: Type.Number(),
       name: Type.String(),
-    })
+    }),
   ),
   operation: Type.Union([
     Type.Literal("sum"),
@@ -183,4 +183,3 @@ export const Schemas = {
   Address: AddressSchema,
   UserDetail: UserDetailSchema,
 };
-

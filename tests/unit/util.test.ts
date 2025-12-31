@@ -184,7 +184,7 @@ describe("工具函数测试", () => {
 
     it("应该处理复杂的查询参数", () => {
       const request = new Request(
-        "http://localhost/test?name=张三&age=25&hobbies[]=读书&hobbies[]=游泳&active=true"
+        "http://localhost/test?name=张三&age=25&hobbies[]=读书&hobbies[]=游泳&active=true",
       );
       const result = parseQuery(request);
 
@@ -197,7 +197,7 @@ describe("工具函数测试", () => {
 
     it("应该处理特殊字符", () => {
       const request = new Request(
-        "http://localhost/test?message=Hello%20World&symbol=%26%3D%3F"
+        "http://localhost/test?message=Hello%20World&symbol=%26%3D%3F",
       );
       const result = parseQuery(request);
 
@@ -207,7 +207,7 @@ describe("工具函数测试", () => {
 
     it("应该处理空值参数", () => {
       const request = new Request(
-        "http://localhost/test?empty=&null=null&undefined=undefined"
+        "http://localhost/test?empty=&null=null&undefined=undefined",
       );
       const result = parseQuery(request);
 
@@ -225,7 +225,7 @@ describe("工具函数测试", () => {
 
     it("应该处理重复的查询参数", () => {
       const request = new Request(
-        "http://localhost/test?name=张三&name=李四&name=王五"
+        "http://localhost/test?name=张三&name=李四&name=王五",
       );
       const result = parseQuery(request);
 
@@ -235,7 +235,7 @@ describe("工具函数测试", () => {
 
     it("应该处理嵌套对象查询参数", () => {
       const request = new Request(
-        "http://localhost/test?user[name]=张三&user[age]=25"
+        "http://localhost/test?user[name]=张三&user[age]=25",
       );
       const result = parseQuery(request);
 
@@ -246,7 +246,7 @@ describe("工具函数测试", () => {
 
     it("应该处理数组查询参数", () => {
       const request = new Request(
-        "http://localhost/test?colors[]=red&colors[]=green&colors[]=blue"
+        "http://localhost/test?colors[]=red&colors[]=green&colors[]=blue",
       );
       const result = parseQuery(request);
 

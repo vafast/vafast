@@ -60,7 +60,8 @@ async function main() {
       method: "GET",
       path: "/users/:id",
       handler: (req) => {
-        const params = (req as unknown as { params: Record<string, string> }).params;
+        const params = (req as unknown as { params: Record<string, string> })
+          .params;
         return new Response(JSON.stringify({ id: params.id }), {
           headers: { "Content-Type": "application/json" },
         });
@@ -83,7 +84,8 @@ async function main() {
       method: "GET",
       path: "/files/*filepath",
       handler: (req) => {
-        const params = (req as unknown as { params: Record<string, string> }).params;
+        const params = (req as unknown as { params: Record<string, string> })
+          .params;
         return new Response(params.filepath);
       },
     },
@@ -92,13 +94,10 @@ async function main() {
   const suite = new BenchSuite("Server.fetch 端到端性能");
 
   // 1. 简单静态路由
-  await suite.add(
-    { name: "GET / (静态路由)", iterations: 50000 },
-    async () => {
-      const req = new Request("http://localhost/");
-      await server.fetch(req);
-    }
-  );
+  await suite.add({ name: "GET / (静态路由)", iterations: 50000 }, async () => {
+    const req = new Request("http://localhost/");
+    await server.fetch(req);
+  });
 
   // 2. 带单个中间件
   await suite.add(
@@ -106,7 +105,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/with-middleware");
       await server.fetch(req);
-    }
+    },
   );
 
   // 3. 带多个中间件
@@ -117,7 +116,7 @@ async function main() {
         headers: { Authorization: "Bearer token" },
       });
       await server.fetch(req);
-    }
+    },
   );
 
   // 4. 动态参数
@@ -126,7 +125,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/users/12345");
       await server.fetch(req);
-    }
+    },
   );
 
   // 5. 带 Schema 验证
@@ -142,7 +141,7 @@ async function main() {
         }),
       });
       await server.fetch(req);
-    }
+    },
   );
 
   // 6. 通配符路由
@@ -151,7 +150,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/files/path/to/file.txt");
       await server.fetch(req);
-    }
+    },
   );
 
   // 7. 404 不存在
@@ -160,17 +159,14 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/nonexistent");
       await server.fetch(req);
-    }
+    },
   );
 
   // 8. 405 方法不允许
-  await suite.add(
-    { name: "POST / (405)", iterations: 50000 },
-    async () => {
-      const req = new Request("http://localhost/", { method: "POST" });
-      await server.fetch(req);
-    }
-  );
+  await suite.add({ name: "POST / (405)", iterations: 50000 }, async () => {
+    const req = new Request("http://localhost/", { method: "POST" });
+    await server.fetch(req);
+  });
 
   suite.print();
 
@@ -232,4 +228,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

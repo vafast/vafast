@@ -28,7 +28,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          400
+          400,
         );
       }
     },
@@ -53,7 +53,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          400
+          400,
         );
       }
     },
@@ -83,7 +83,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          400
+          400,
         );
       }
     },
@@ -108,7 +108,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          400
+          400,
         );
       }
     },
@@ -133,7 +133,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          400
+          400,
         );
       }
     },
@@ -157,7 +157,7 @@ const routes: Route[] = [
             success: false,
             error: error instanceof Error ? error.message : "未知错误",
           },
-          413
+          413,
         ); // Payload Too Large
       }
     },

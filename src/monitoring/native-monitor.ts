@@ -93,15 +93,15 @@ class NativeMonitor {
       console.log(
         `${status} ${metrics.method} ${metrics.path} - ${
           metrics.statusCode
-        } (${timeColor} ${metrics.totalTime.toFixed(2)}ms)`
+        } (${timeColor} ${metrics.totalTime.toFixed(2)}ms)`,
       );
 
       // 慢请求警告
       if (metrics.totalTime > this.config.slowThreshold!) {
         console.warn(
           `🐌 慢请求警告: ${metrics.path} 耗时 ${metrics.totalTime.toFixed(
-            2
-          )}ms`
+            2,
+          )}ms`,
         );
       }
     }
@@ -115,7 +115,7 @@ class NativeMonitor {
 
     const totalRequests = this.metrics.length;
     const successfulRequests = this.metrics.filter(
-      (m) => m.statusCode < 400
+      (m) => m.statusCode < 400,
     ).length;
     const failedRequests = totalRequests - successfulRequests;
     const avgResponseTime =
@@ -163,7 +163,7 @@ class NativeMonitor {
 // 纯函数：为 Server 添加监控能力
 export function withMonitoring(
   server: Server,
-  config: NativeMonitoringConfig = {}
+  config: NativeMonitoringConfig = {},
 ): MonitoredServer {
   const monitor = new NativeMonitor(config);
 
@@ -248,7 +248,7 @@ export function withMonitoring(
 // 便捷函数：创建带监控的 Server
 export function createMonitoredServer(
   routes: any[],
-  config?: NativeMonitoringConfig
+  config?: NativeMonitoringConfig,
 ): MonitoredServer {
   const { Server } = require("../server");
   const server = new Server(routes);

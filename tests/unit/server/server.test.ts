@@ -50,8 +50,9 @@ describe("Server", () => {
           method: "GET",
           path: "/users/:id",
           handler: (req) => {
-            const params = (req as unknown as { params: Record<string, string> })
-              .params;
+            const params = (
+              req as unknown as { params: Record<string, string> }
+            ).params;
             return new Response(JSON.stringify({ userId: params.id }), {
               headers: { "Content-Type": "application/json" },
             });
@@ -73,14 +74,15 @@ describe("Server", () => {
           method: "GET",
           path: "/posts/:postId/comments/:commentId",
           handler: (req) => {
-            const params = (req as unknown as { params: Record<string, string> })
-              .params;
+            const params = (
+              req as unknown as { params: Record<string, string> }
+            ).params;
             return new Response(
               JSON.stringify({
                 postId: params.postId,
                 commentId: params.commentId,
               }),
-              { headers: { "Content-Type": "application/json" } }
+              { headers: { "Content-Type": "application/json" } },
             );
           },
         },
@@ -100,8 +102,9 @@ describe("Server", () => {
           method: "GET",
           path: "/files/*",
           handler: (req) => {
-            const params = (req as unknown as { params: Record<string, string> })
-              .params;
+            const params = (
+              req as unknown as { params: Record<string, string> }
+            ).params;
             return new Response(JSON.stringify({ path: params["*"] }), {
               headers: { "Content-Type": "application/json" },
             });
@@ -239,7 +242,7 @@ describe("Server", () => {
 
       const middleware = async (
         req: Request,
-        next: () => Promise<Response>
+        next: () => Promise<Response>,
       ) => {
         logs.push("route middleware");
         return next();
@@ -323,6 +326,4 @@ describe("Server", () => {
       expect(routes.length).toBe(3);
     });
   });
-
 });
-

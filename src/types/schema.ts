@@ -65,7 +65,7 @@ export interface HandlerContext<T extends RouteSchema = RouteSchema> {
  */
 export type HandlerContextWithExtra<
   T extends RouteSchema = RouteSchema,
-  TExtra extends Record<string, unknown> = Record<string, never>
+  TExtra extends Record<string, unknown> = Record<string, never>,
 > = HandlerContext<T> & TExtra;
 
 /**
@@ -74,7 +74,7 @@ export type HandlerContextWithExtra<
 export type TypedHandler<
   T extends RouteSchema = RouteSchema,
   TExtra extends Record<string, unknown> = Record<string, never>,
-  TReturn = unknown
+  TReturn = unknown,
 > = (ctx: HandlerContextWithExtra<T, TExtra>) => TReturn | Promise<TReturn>;
 
 /**
@@ -97,4 +97,3 @@ export interface TypedRouteConfig<T extends RouteSchema = RouteSchema> {
   timeout?: number;
   maxBodySize?: string;
 }
-

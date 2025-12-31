@@ -97,7 +97,7 @@ describe("数据验证函数测试", () => {
           Type.Object({
             type: Type.Union([Type.Literal("email"), Type.Literal("phone")]),
             value: Type.String(),
-          })
+          }),
         ),
       });
 

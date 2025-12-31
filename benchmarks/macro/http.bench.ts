@@ -36,7 +36,7 @@ async function main() {
             ],
             total: 2,
           }),
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { "Content-Type": "application/json" } },
         ),
     },
 
@@ -77,14 +77,15 @@ async function main() {
       method: "GET",
       path: "/api/v1/organizations/:orgId/projects/:projectId/tasks/:taskId",
       handler: (req) => {
-        const params = (req as unknown as { params: Record<string, string> }).params;
+        const params = (req as unknown as { params: Record<string, string> })
+          .params;
         return new Response(
           JSON.stringify({
             orgId: params.orgId,
             projectId: params.projectId,
             taskId: params.taskId,
           }),
-          { headers: { "Content-Type": "application/json" } }
+          { headers: { "Content-Type": "application/json" } },
         );
       },
     },
@@ -94,7 +95,8 @@ async function main() {
       method: "GET",
       path: "/static/*filepath",
       handler: (req) => {
-        const params = (req as unknown as { params: Record<string, string> }).params;
+        const params = (req as unknown as { params: Record<string, string> })
+          .params;
         return new Response(`File: ${params.filepath}`, {
           headers: { "Content-Type": "text/plain" },
         });
@@ -111,19 +113,16 @@ async function main() {
   const suite = new BenchSuite("HTTP 请求处理");
 
   // 1. 健康检查 (最简场景)
-  await suite.add(
-    { name: "GET /health", iterations: 50000 },
-    async () => {
-      await server.fetch(new Request("http://localhost/health"));
-    }
-  );
+  await suite.add({ name: "GET /health", iterations: 50000 }, async () => {
+    await server.fetch(new Request("http://localhost/health"));
+  });
 
   // 2. JSON API (常见场景)
   await suite.add(
     { name: "GET /api/v1/users (JSON)", iterations: 50000 },
     async () => {
       await server.fetch(new Request("http://localhost/api/v1/users"));
-    }
+    },
   );
 
   // 3. 带参数 API (RESTful 场景)
@@ -131,7 +130,7 @@ async function main() {
     { name: "GET /api/v1/users/:id", iterations: 50000 },
     async () => {
       await server.fetch(new Request("http://localhost/api/v1/users/123"));
-    }
+    },
   );
 
   // 4. POST 创建 (写入场景)
@@ -146,9 +145,9 @@ async function main() {
             name: "New User",
             email: "newuser@example.com",
           }),
-        })
+        }),
       );
-    }
+    },
   );
 
   // 5. 复杂嵌套路由
@@ -157,10 +156,10 @@ async function main() {
     async () => {
       await server.fetch(
         new Request(
-          "http://localhost/api/v1/organizations/org1/projects/proj1/tasks/task1"
-        )
+          "http://localhost/api/v1/organizations/org1/projects/proj1/tasks/task1",
+        ),
       );
-    }
+    },
   );
 
   // 6. 通配符路由
@@ -168,9 +167,9 @@ async function main() {
     { name: "GET /static/*filepath", iterations: 50000 },
     async () => {
       await server.fetch(
-        new Request("http://localhost/static/assets/js/app.bundle.js")
+        new Request("http://localhost/static/assets/js/app.bundle.js"),
       );
-    }
+    },
   );
 
   suite.print();
@@ -201,7 +200,7 @@ async function main() {
     const rps = Math.round(totalRequests / (duration / 1000));
 
     console.log(
-      `\n并发 ${concurrency}: ${formatNumber(rps)} req/sec (${duration.toFixed(0)}ms)`
+      `\n并发 ${concurrency}: ${formatNumber(rps)} req/sec (${duration.toFixed(0)}ms)`,
     );
   }
 
@@ -242,4 +241,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

@@ -28,10 +28,14 @@ export function createCORS(options: CORSOptions = {}): Middleware {
       const resHeaders = new Headers();
 
       if (isAllowedOrigin) {
-        resHeaders.set("Access-Control-Allow-Origin", origin === "*" ? "*" : reqOrigin);
+        resHeaders.set(
+          "Access-Control-Allow-Origin",
+          origin === "*" ? "*" : reqOrigin,
+        );
         resHeaders.set("Access-Control-Allow-Methods", methods.join(","));
         resHeaders.set("Access-Control-Allow-Headers", headers.join(","));
-        if (credentials) resHeaders.set("Access-Control-Allow-Credentials", "true");
+        if (credentials)
+          resHeaders.set("Access-Control-Allow-Credentials", "true");
         if (maxAge) resHeaders.set("Access-Control-Max-Age", maxAge.toString());
       }
 
@@ -42,8 +46,12 @@ export function createCORS(options: CORSOptions = {}): Middleware {
     const res = await next();
 
     if (isAllowedOrigin) {
-      res.headers.set("Access-Control-Allow-Origin", origin === "*" ? "*" : reqOrigin);
-      if (credentials) res.headers.set("Access-Control-Allow-Credentials", "true");
+      res.headers.set(
+        "Access-Control-Allow-Origin",
+        origin === "*" ? "*" : reqOrigin,
+      );
+      if (credentials)
+        res.headers.set("Access-Control-Allow-Credentials", "true");
     }
 
     return res;

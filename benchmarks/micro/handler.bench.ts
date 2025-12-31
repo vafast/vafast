@@ -49,21 +49,15 @@ async function main() {
   const suite = new BenchSuite("处理器性能测试");
 
   // 1. 原生 Response
-  await suite.add(
-    { name: "原生 Response", iterations: 100000 },
-    () => {
-      rawHandler();
-    }
-  );
+  await suite.add({ name: "原生 Response", iterations: 100000 }, () => {
+    rawHandler();
+  });
 
   // 2. simpleHandler
-  await suite.add(
-    { name: "simpleHandler", iterations: 50000 },
-    async () => {
-      const req = new Request("http://localhost/");
-      await simpleH(req);
-    }
-  );
+  await suite.add({ name: "simpleHandler", iterations: 50000 }, async () => {
+    const req = new Request("http://localhost/");
+    await simpleH(req);
+  });
 
   // 3. createHandler 无 Schema
   await suite.add(
@@ -71,7 +65,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/");
       await noSchemaHandler(req);
-    }
+    },
   );
 
   // 4. createHandler 带 Query Schema
@@ -80,7 +74,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/?page=1&limit=10");
       await querySchemaHandler(req);
-    }
+    },
   );
 
   // 5. createHandler 带 Body Schema
@@ -97,7 +91,7 @@ async function main() {
         }),
       });
       await bodySchemaHandler(req);
-    }
+    },
   );
 
   suite.print();
@@ -120,7 +114,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/");
       await objectHandler(req);
-    }
+    },
   );
 
   // 字符串返回
@@ -131,7 +125,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/");
       await stringHandler(req);
-    }
+    },
   );
 
   // Response 直接返回
@@ -142,7 +136,7 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/");
       await responseHandler(req);
-    }
+    },
   );
 
   // { data, status, headers } 格式
@@ -157,11 +151,10 @@ async function main() {
     async () => {
       const req = new Request("http://localhost/");
       await customHandler(req);
-    }
+    },
   );
 
   responseSuite.print();
 }
 
 main().catch(console.error);
-

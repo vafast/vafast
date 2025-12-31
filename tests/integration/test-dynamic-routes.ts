@@ -149,7 +149,7 @@ const routes: Route[] = [
     handler: (req, params) => {
       console.log(
         "访问 /users/:userId/posts/:postId/comments/:commentId，参数:",
-        params
+        params,
       );
       return json({
         userId: params?.userId,
@@ -294,7 +294,7 @@ async function testDynamicRoutes() {
           console.log(
             `   ✅ 状态: ${response.status}, 响应:`,
             data,
-            ok ? "(优先级正确)" : "(优先级错误)"
+            ok ? "(优先级正确)" : "(优先级错误)",
           );
           if (ok) successCount++;
         } else {

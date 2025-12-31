@@ -14,7 +14,7 @@ const testValidationErrorHandler: ValidationErrorHandler = (
   error,
   field,
   value,
-  schema
+  schema,
 ) => {
   return json(
     {
@@ -25,7 +25,7 @@ const testValidationErrorHandler: ValidationErrorHandler = (
       message: `字段 ${field} 验证失败: ${error.message}`,
       timestamp: new Date().toISOString(),
     },
-    400
+    400,
   );
 };
 
@@ -45,7 +45,7 @@ const routes: Route[] = [
           message: "验证通过",
           data: body,
         });
-      }
+      },
     ),
   },
   {
@@ -62,7 +62,7 @@ const routes: Route[] = [
           message: "验证通过",
           data: body,
         });
-      }
+      },
     ),
   },
 ];
@@ -144,7 +144,7 @@ async function testCustomValidationErrors() {
   }
 
   console.log(
-    `🎉 自定义验证错误处理器测试完成! 成功: ${successCount}/${totalCount}`
+    `🎉 自定义验证错误处理器测试完成! 成功: ${successCount}/${totalCount}`,
   );
   console.log(`📊 成功率: ${((successCount / totalCount) * 100).toFixed(1)}%`);
 }

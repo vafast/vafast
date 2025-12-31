@@ -29,7 +29,7 @@ describe("高级示例", () => {
           `,
               {
                 headers: { "Content-Type": "text/html; charset=utf-8" },
-              }
+              },
             ),
         },
         {
@@ -63,7 +63,7 @@ describe("高级示例", () => {
                   headers: {
                     "Content-Type": "application/json; charset=utf-8",
                   },
-                }
+                },
               );
             } catch (error) {
               return new Response("上传失败", {
@@ -83,7 +83,7 @@ describe("高级示例", () => {
 
       expect(response.status).toBe(200);
       expect(response.headers.get("Content-Type")).toBe(
-        "text/html; charset=utf-8"
+        "text/html; charset=utf-8",
       );
       const html = await response.text();
       expect(html).toContain("文件上传示例");

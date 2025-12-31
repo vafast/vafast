@@ -28,7 +28,7 @@ describe("基础示例", () => {
       expect(response.status).toBe(200);
       expect(await response.text()).toBe("来自 Vafast 的 Hello World！");
       expect(response.headers.get("Content-Type")).toBe(
-        "text/plain; charset=utf-8"
+        "text/plain; charset=utf-8",
       );
     });
   });
@@ -89,7 +89,7 @@ describe("基础示例", () => {
               {
                 status: 201,
                 headers: { "Content-Type": "application/json" },
-              }
+              },
             );
           },
         },

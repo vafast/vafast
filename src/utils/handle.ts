@@ -15,7 +15,7 @@ export function setCookie(
     httpOnly?: boolean;
     maxAge?: number;
     secure?: boolean;
-  } = {}
+  } = {},
 ): string {
   let cookie = `${key}=${encodeURIComponent(value)}`;
 
@@ -30,7 +30,7 @@ export function setCookie(
 // 提供给中间件写入"局部上下文"的工具函数
 export function setLocals<T extends object>(req: Request, extras: T) {
   const target = req as unknown as Record<string, unknown>;
-  target.__locals = { ...(target.__locals as object ?? {}), ...extras };
+  target.__locals = { ...((target.__locals as object) ?? {}), ...extras };
 }
 
 // 获取中间件注入的局部上下文

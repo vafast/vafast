@@ -26,7 +26,7 @@ export class ServerFactory {
    * 创建组件服务器
    */
   createComponentServer(
-    routes: (ComponentRoute | NestedComponentRoute)[]
+    routes: (ComponentRoute | NestedComponentRoute)[],
   ): ComponentServer {
     const server = new ComponentServer(routes);
     this.servers.set("component", server);

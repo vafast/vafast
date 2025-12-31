@@ -52,7 +52,7 @@ export class Server extends BaseServer {
         route.method as Method,
         route.fullPath,
         route.handler,
-        route.middlewareChain || []
+        route.middlewareChain || [],
       );
     }
 
@@ -103,7 +103,7 @@ export class Server extends BaseServer {
           allowedMethods,
         },
         405,
-        { Allow: allowedMethods.join(", ") }
+        { Allow: allowedMethods.join(", ") },
       );
     }
 
@@ -123,7 +123,7 @@ export class Server extends BaseServer {
       route.method as Method,
       route.path,
       route.handler,
-      route.middleware || []
+      route.middleware || [],
     );
   }
 

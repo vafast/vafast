@@ -32,11 +32,7 @@ async function main() {
     "/api/v1/users/:userId/orders/:orderId",
   ];
 
-  const wildcardRoutes = [
-    "/files/*",
-    "/static/*filepath",
-    "/api/*rest",
-  ];
+  const wildcardRoutes = ["/files/*", "/static/*filepath", "/api/*rest"];
 
   // 注册所有路由
   staticRoutes.forEach((path) => router.register("GET", path, handler));
@@ -46,18 +42,15 @@ async function main() {
   const suite = new BenchSuite("RadixRouter 性能测试");
 
   // 1. 静态路由匹配
-  await suite.add(
-    { name: "静态路由匹配 (/users)", iterations: 100000 },
-    () => {
-      router.match("GET", "/users");
-    }
-  );
+  await suite.add({ name: "静态路由匹配 (/users)", iterations: 100000 }, () => {
+    router.match("GET", "/users");
+  });
 
   await suite.add(
     { name: "静态路由匹配 (深层 /api/v1/health)", iterations: 100000 },
     () => {
       router.match("GET", "/api/v1/health");
-    }
+    },
   );
 
   // 2. 动态参数匹配
@@ -65,55 +58,46 @@ async function main() {
     { name: "动态参数匹配 (/users/:id)", iterations: 100000 },
     () => {
       router.match("GET", "/users/12345");
-    }
+    },
   );
 
   await suite.add(
-    { name: "多参数匹配 (/posts/:postId/comments/:commentId)", iterations: 100000 },
+    {
+      name: "多参数匹配 (/posts/:postId/comments/:commentId)",
+      iterations: 100000,
+    },
     () => {
       router.match("GET", "/posts/100/comments/500");
-    }
+    },
   );
 
   // 3. 通配符匹配
-  await suite.add(
-    { name: "通配符匹配 (/files/*)", iterations: 100000 },
-    () => {
-      router.match("GET", "/files/path/to/deep/file.txt");
-    }
-  );
+  await suite.add({ name: "通配符匹配 (/files/*)", iterations: 100000 }, () => {
+    router.match("GET", "/files/path/to/deep/file.txt");
+  });
 
   await suite.add(
     { name: "命名通配符 (/static/*filepath)", iterations: 100000 },
     () => {
       router.match("GET", "/static/assets/css/style.css");
-    }
+    },
   );
 
   // 4. 404 不匹配
-  await suite.add(
-    { name: "404 不匹配", iterations: 100000 },
-    () => {
-      router.match("GET", "/nonexistent/path/here");
-    }
-  );
+  await suite.add({ name: "404 不匹配", iterations: 100000 }, () => {
+    router.match("GET", "/nonexistent/path/here");
+  });
 
   // 5. 方法不匹配 (405)
-  await suite.add(
-    { name: "方法不匹配 (405)", iterations: 100000 },
-    () => {
-      router.match("POST", "/users"); // 只注册了 GET
-    }
-  );
+  await suite.add({ name: "方法不匹配 (405)", iterations: 100000 }, () => {
+    router.match("POST", "/users"); // 只注册了 GET
+  });
 
   // 6. 路由注册性能
-  await suite.add(
-    { name: "路由注册", iterations: 10000 },
-    () => {
-      const testRouter = new RadixRouter();
-      testRouter.register("GET", "/api/v1/users/:id/orders/:orderId", handler);
-    }
-  );
+  await suite.add({ name: "路由注册", iterations: 10000 }, () => {
+    const testRouter = new RadixRouter();
+    testRouter.register("GET", "/api/v1/users/:id/orders/:orderId", handler);
+  });
 
   suite.print();
 
@@ -151,4 +135,3 @@ async function main() {
 }
 
 main().catch(console.error);
-

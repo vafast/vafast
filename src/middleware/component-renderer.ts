@@ -4,16 +4,21 @@
  */
 
 // Vue SSR 渲染
-const renderVueSSR = async (componentImport: () => Promise<any>, req: Request, preloadedDeps?: any) => {
+const renderVueSSR = async (
+  componentImport: () => Promise<any>,
+  req: Request,
+  preloadedDeps?: any,
+) => {
   try {
     // 使用预加载的依赖或动态导入
-    const { createSSRApp, renderToString } = preloadedDeps || await Promise.all([
-      import("vue"),
-      import("@vue/server-renderer")
-    ]).then(([vue, renderer]) => ({
-      createSSRApp: vue.createSSRApp,
-      renderToString: renderer.renderToString
-    }));
+    const { createSSRApp, renderToString } =
+      preloadedDeps ||
+      (await Promise.all([import("vue"), import("@vue/server-renderer")]).then(
+        ([vue, renderer]) => ({
+          createSSRApp: vue.createSSRApp,
+          renderToString: renderer.renderToString,
+        }),
+      ));
 
     const componentModule = await componentImport();
     const component = componentModule.default || componentModule;
@@ -52,7 +57,7 @@ const renderVueSSR = async (componentImport: () => Promise<any>, req: Request, p
     `,
       {
         headers: { "Content-Type": "text/html; charset=utf-8" },
-      }
+      },
     );
   } catch (error) {
     console.error("Vue SSR 渲染失败:", error);
@@ -67,22 +72,27 @@ const renderVueSSR = async (componentImport: () => Promise<any>, req: Request, p
         </body>
       </html>
     `,
-      { status: 500 }
+      { status: 500 },
     );
   }
 };
 
 // React SSR 渲染
-const renderReactSSR = async (componentImport: () => Promise<any>, req: Request, preloadedDeps?: any) => {
+const renderReactSSR = async (
+  componentImport: () => Promise<any>,
+  req: Request,
+  preloadedDeps?: any,
+) => {
   try {
     // 使用预加载的依赖或动态导入
-    const { createElement, renderToString } = preloadedDeps || await Promise.all([
-      import("react"),
-      import("react-dom/server")
-    ]).then(([react, renderer]) => ({
-      createElement: react.createElement,
-      renderToString: renderer.renderToString
-    }));
+    const { createElement, renderToString } =
+      preloadedDeps ||
+      (await Promise.all([import("react"), import("react-dom/server")]).then(
+        ([react, renderer]) => ({
+          createElement: react.createElement,
+          renderToString: renderer.renderToString,
+        }),
+      ));
 
     const componentModule = await componentImport();
     const Component = componentModule.default || componentModule;
@@ -118,7 +128,7 @@ const renderReactSSR = async (componentImport: () => Promise<any>, req: Request,
     `,
       {
         headers: { "Content-Type": "text/html; charset=utf-8" },
-      }
+      },
     );
   } catch (error) {
     console.error("React SSR 渲染失败:", error);
@@ -133,7 +143,7 @@ const renderReactSSR = async (componentImport: () => Promise<any>, req: Request,
         </body>
       </html>
     `,
-      { status: 500 }
+      { status: 500 },
     );
   }
 };

@@ -15,7 +15,10 @@ export class PathMatcher {
     }
 
     for (let i = 0; i < patternParts.length; i++) {
-      if (patternParts[i] !== pathParts[i] && !patternParts[i].startsWith(":")) {
+      if (
+        patternParts[i] !== pathParts[i] &&
+        !patternParts[i].startsWith(":")
+      ) {
         return false;
       }
     }
@@ -49,8 +52,10 @@ export class PathMatcher {
     const parts = path.split("/").filter(Boolean);
     let score = 0;
     for (const p of parts) {
-      if (p === "*") score += 1; // 最弱
-      else if (p.startsWith(":")) score += 2; // 中等
+      if (p === "*")
+        score += 1; // 最弱
+      else if (p.startsWith(":"))
+        score += 2; // 中等
       else score += 3; // 静态最强
     }
     // 更长的路径更具体，略微提升

@@ -262,4 +262,3 @@ describe("simpleHandler", () => {
     expect(data.url).toBe("http://localhost/test");
   });
 });
-

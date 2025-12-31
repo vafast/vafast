@@ -31,19 +31,22 @@ import type { Route, NestedRoute, FlattenedRoute, Middleware } from "./types";
  * ```
  */
 export function flattenNestedRoutes(
-  routes: (Route | NestedRoute)[]
+  routes: (Route | NestedRoute)[],
 ): FlattenedRoute[] {
   const flattened: FlattenedRoute[] = [];
 
   function processRoute(
     route: Route | NestedRoute,
     parentPath = "",
-    parentMiddleware: Middleware[] = []
+    parentMiddleware: Middleware[] = [],
   ): void {
     // 计算当前完整路径
     const currentPath = normalizePath(parentPath + route.path);
     // 合并中间件链
-    const currentMiddleware = [...parentMiddleware, ...(route.middleware || [])];
+    const currentMiddleware = [
+      ...parentMiddleware,
+      ...(route.middleware || []),
+    ];
 
     if ("method" in route && "handler" in route) {
       // 叶子路由（有处理函数）

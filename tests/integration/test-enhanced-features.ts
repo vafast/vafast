@@ -143,7 +143,7 @@ async function testEnhancedFeatures() {
 
   for (const testCase of testCases) {
     console.log(
-      `📡 测试: ${testCase.method} ${testCase.path} (${testCase.description})`
+      `📡 测试: ${testCase.method} ${testCase.path} (${testCase.description})`,
     );
 
     const req = new Request(`http://localhost${testCase.path}`, {
@@ -163,7 +163,7 @@ async function testEnhancedFeatures() {
         console.log(
           `   ✅ 405 Method Not Allowed (预期):`,
           data,
-          `Allow: ${allowHeader}`
+          `Allow: ${allowHeader}`,
         );
         if (testCase.expected === "405") successCount++;
       } else if (response.status === 204) {
@@ -175,14 +175,14 @@ async function testEnhancedFeatures() {
           const contentType = response.headers.get("Content-Type");
           const content = await response.text();
           console.log(
-            `   ✅ 状态: ${response.status}, Content-Type: ${contentType}, 内容: ${content}`
+            `   ✅ 状态: ${response.status}, Content-Type: ${contentType}, 内容: ${content}`,
           );
           if (contentType?.includes("text/plain")) successCount++;
         } else if (testCase.expected === "html") {
           const contentType = response.headers.get("Content-Type");
           const content = await response.text();
           console.log(
-            `   ✅ 状态: ${response.status}, Content-Type: ${contentType}, 内容: ${content}`
+            `   ✅ 状态: ${response.status}, Content-Type: ${contentType}, 内容: ${content}`,
           );
           if (contentType?.includes("text/html")) successCount++;
         } else {

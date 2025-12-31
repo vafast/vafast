@@ -230,7 +230,7 @@ describe("createHandler 功能测试", () => {
 
     // 模拟带有路径参数的请求
     const request = new Request(
-      "http://localhost:3000/users/123"
+      "http://localhost:3000/users/123",
     ) as unknown as Record<string, unknown>;
     request.params = { id: "123" };
 
@@ -243,17 +243,20 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析所有数据", async () => {
-    const factoryHandler = createHandler({})(
-      async ({ body, query, headers, cookies }) => {
-        return {
-          message: simpleMessage,
-          body,
-          query,
-          headers,
-          cookies,
-        };
-      }
-    );
+    const factoryHandler = createHandler({})(async ({
+      body,
+      query,
+      headers,
+      cookies,
+    }) => {
+      return {
+        message: simpleMessage,
+        body,
+        query,
+        headers,
+        cookies,
+      };
+    });
 
     const request = new Request("http://localhost:3000/?name=张三", {
       method: "POST",

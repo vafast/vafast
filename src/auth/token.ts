@@ -32,7 +32,7 @@ export class TokenError extends Error {
       | "EXPIRED_TOKEN"
       | "INVALID_SIGNATURE"
       | "MALFORMED_TOKEN"
-      | "INVALID_PAYLOAD"
+      | "INVALID_PAYLOAD",
   ) {
     super(message);
     this.name = "TokenError";
@@ -48,12 +48,12 @@ async function sign(data: string, secret: string): Promise<string> {
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"]
+    ["sign"],
   );
 
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(data));
   return btoa(
-    String.fromCharCode.apply(null, Array.from(new Uint8Array(signature)))
+    String.fromCharCode.apply(null, Array.from(new Uint8Array(signature))),
   );
 }
 
@@ -61,7 +61,7 @@ async function sign(data: string, secret: string): Promise<string> {
 export async function generateToken(
   payload: TokenPayload,
   secret: string,
-  options: TokenOptions = {}
+  options: TokenOptions = {},
 ): Promise<TokenResult> {
   const { expiresIn = 3600, issuer, audience, subject } = options;
 
@@ -92,7 +92,7 @@ export async function generateToken(
 /** 验证令牌 */
 export async function verifyToken(
   token: string,
-  secret: string
+  secret: string,
 ): Promise<TokenPayload | null> {
   try {
     const [data, sig] = token.split(".");
@@ -156,7 +156,7 @@ export function getTokenTimeRemaining(token: string): number {
 export async function refreshToken(
   token: string,
   secret: string,
-  options: TokenOptions = {}
+  options: TokenOptions = {},
 ): Promise<TokenResult | null> {
   try {
     const payload = await verifyToken(token, secret);
@@ -178,7 +178,7 @@ export async function refreshToken(
 export async function createTokenPair(
   payload: TokenPayload,
   secret: string,
-  options: TokenOptions = {}
+  options: TokenOptions = {},
 ): Promise<{
   accessToken: TokenResult;
   refreshToken: TokenResult;

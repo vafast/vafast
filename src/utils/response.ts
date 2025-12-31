@@ -4,7 +4,7 @@
 export function json(
   data: unknown,
   status = 200,
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Response {
   // 优化：只在有自定义 headers 时才创建 Headers 对象
   if (Object.keys(headers).length === 0) {
@@ -91,7 +91,7 @@ export function redirect(location: string, status: 301 | 302 = 302): Response {
 export function text(
   content: string,
   status = 200,
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Response {
   const h = new Headers({
     "Content-Type": "text/plain; charset=utf-8",
@@ -108,7 +108,7 @@ export function text(
 export function html(
   content: string,
   status = 200,
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Response {
   const h = new Headers({
     "Content-Type": "text/html; charset=utf-8",
@@ -133,7 +133,7 @@ export function empty(status = 204, headers: HeadersInit = {}): Response {
 export function stream(
   stream: ReadableStream,
   status = 200,
-  headers: HeadersInit = {}
+  headers: HeadersInit = {},
 ): Response {
   const h = new Headers({
     "Content-Type": "application/octet-stream",

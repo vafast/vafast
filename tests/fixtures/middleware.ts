@@ -7,9 +7,7 @@ import type { Middleware } from "../../src/types";
 /**
  * 日志中间件 - 记录请求和响应
  */
-export function createLoggerMiddleware(
-  logs: string[]
-): Middleware {
+export function createLoggerMiddleware(logs: string[]): Middleware {
   return async (req, next) => {
     const start = Date.now();
     logs.push(`[${req.method}] ${new URL(req.url).pathname} - start`);
@@ -18,7 +16,7 @@ export function createLoggerMiddleware(
 
     const duration = Date.now() - start;
     logs.push(
-      `[${req.method}] ${new URL(req.url).pathname} - ${response.status} (${duration}ms)`
+      `[${req.method}] ${new URL(req.url).pathname} - ${response.status} (${duration}ms)`,
     );
 
     return response;
@@ -29,7 +27,7 @@ export function createLoggerMiddleware(
  * 认证中间件 - 检查 Authorization 头
  */
 export function createAuthMiddleware(
-  validTokens: string[] = ["valid-token"]
+  validTokens: string[] = ["valid-token"],
 ): Middleware {
   return async (req, next) => {
     const authHeader = req.headers.get("Authorization");
@@ -40,7 +38,7 @@ export function createAuthMiddleware(
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -51,7 +49,7 @@ export function createAuthMiddleware(
         {
           status: 401,
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
     }
 
@@ -63,7 +61,7 @@ export function createAuthMiddleware(
  * CORS 中间件
  */
 export function createCorsMiddleware(
-  allowedOrigins: string[] = ["*"]
+  allowedOrigins: string[] = ["*"],
 ): Middleware {
   return async (req, next) => {
     const origin = req.headers.get("Origin") || "";
@@ -84,10 +82,7 @@ export function createCorsMiddleware(
     const response = await next();
 
     if (isAllowed) {
-      response.headers.set(
-        "Access-Control-Allow-Origin",
-        origin || "*"
-      );
+      response.headers.set("Access-Control-Allow-Origin", origin || "*");
     }
 
     return response;
@@ -116,18 +111,13 @@ export function createRateLimitMiddleware(options: {
     record.count++;
 
     if (record.count > options.max) {
-      return new Response(
-        JSON.stringify({ error: "Too Many Requests" }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "Retry-After": String(
-              Math.ceil((record.resetTime - now) / 1000)
-            ),
-          },
-        }
-      );
+      return new Response(JSON.stringify({ error: "Too Many Requests" }), {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil((record.resetTime - now) / 1000)),
+        },
+      });
     }
 
     return next();
@@ -138,7 +128,7 @@ export function createRateLimitMiddleware(options: {
  * 错误处理中间件
  */
 export function createErrorHandlerMiddleware(
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): Middleware {
   return async (req, next) => {
     try {
@@ -154,7 +144,7 @@ export function createErrorHandlerMiddleware(
           {
             status: 500,
             headers: { "Content-Type": "application/json" },
-          }
+          },
         );
       }
       throw error;
@@ -179,7 +169,7 @@ export function createTimingMiddleware(): Middleware {
  * 本地数据注入中间件
  */
 export function createLocalsMiddleware(
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
 ): Middleware {
   return async (req, next) => {
     (req as unknown as Record<string, unknown>).__locals = {
@@ -216,4 +206,3 @@ export function composeTestMiddleware(
     return dispatch(0);
   };
 }
-

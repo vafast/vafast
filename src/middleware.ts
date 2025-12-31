@@ -18,7 +18,7 @@ export class VafastError extends Error {
       type?: string;
       expose?: boolean;
       cause?: unknown;
-    } = {}
+    } = {},
   ) {
     super(message);
     this.name = "VafastError";
@@ -34,7 +34,7 @@ export class VafastError extends Error {
  */
 export function composeMiddleware(
   middleware: Middleware[],
-  finalHandler: Handler
+  finalHandler: Handler,
 ): (req: Request) => Promise<Response> {
   const all = [errorHandler, ...middleware];
 
@@ -49,9 +49,7 @@ export function composeMiddleware(
       // 中间件阶段
       if (index < all.length) {
         const mw = all[index];
-        return Promise.resolve(
-          mw(req, () => dispatch(index + 1))
-        );
+        return Promise.resolve(mw(req, () => dispatch(index + 1)));
       }
 
       // 最终 handler - 使用 mapResponse 转换返回值
@@ -75,7 +73,7 @@ const errorHandler: Middleware = async (req, next) => {
           error: err.type,
           message: err.expose ? err.message : "发生了一个错误",
         },
-        err.status
+        err.status,
       );
     }
 

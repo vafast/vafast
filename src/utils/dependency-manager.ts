@@ -19,10 +19,16 @@ export class DependencyManager {
       let deps;
       switch (framework) {
         case "vue":
-          deps = await Promise.all([import("vue"), import("@vue/server-renderer")]);
+          deps = await Promise.all([
+            import("vue"),
+            import("@vue/server-renderer"),
+          ]);
           break;
         case "react":
-          deps = await Promise.all([import("react"), import("react-dom/server")]);
+          deps = await Promise.all([
+            import("react"),
+            import("react-dom/server"),
+          ]);
           break;
         default:
           throw new Error(`不支持的框架: ${framework}`);

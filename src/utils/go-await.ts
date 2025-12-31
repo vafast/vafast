@@ -24,11 +24,12 @@
  * }
  * ```
  */
-export function goAwait<T>(promise: Promise<T>): Promise<[Error | null, T | undefined]> {
+export function goAwait<T>(
+  promise: Promise<T>,
+): Promise<[Error | null, T | undefined]> {
   return promise
     .then<[null, T]>((data) => [null, data])
-    .catch<[Error, undefined]>((err) => [
-      err instanceof Error ? err : new Error(String(err)),
-      undefined,
-    ]);
+    .catch<
+      [Error, undefined]
+    >((err) => [err instanceof Error ? err : new Error(String(err)), undefined]);
 }

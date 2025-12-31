@@ -9,7 +9,7 @@ export class HtmlRenderer {
   static generateBaseHtml(
     content: string,
     context: any,
-    clientScriptPath: string = "/client.js"
+    clientScriptPath: string = "/client.js",
   ): string {
     return `
       <!doctype html>
@@ -40,7 +40,7 @@ export class HtmlRenderer {
   static generateVueHtml(
     content: string,
     context: any,
-    clientScriptPath: string = "/client.js"
+    clientScriptPath: string = "/client.js",
   ): string {
     return this.generateBaseHtml(content, context, clientScriptPath);
   }
@@ -51,7 +51,7 @@ export class HtmlRenderer {
   static generateReactHtml(
     content: string,
     context: any,
-    clientScriptPath: string = "/client.js"
+    clientScriptPath: string = "/client.js",
   ): string {
     return `
       <!doctype html>

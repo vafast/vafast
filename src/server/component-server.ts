@@ -67,7 +67,7 @@ export class ComponentServer extends BaseServer {
       return await this.executeMiddlewareChain(
         matchedRoute.middlewareChain,
         context,
-        matchedRoute.component
+        matchedRoute.component,
       );
     } catch (error) {
       console.error("组件渲染失败:", error);
@@ -81,7 +81,7 @@ export class ComponentServer extends BaseServer {
   private async executeMiddlewareChain(
     middlewareChain: any[],
     context: any,
-    componentImport: () => Promise<any>
+    componentImport: () => Promise<any>,
   ): Promise<Response> {
     // 创建最终的渲染函数
     const renderComponent = async () => {
@@ -125,7 +125,7 @@ export class ComponentServer extends BaseServer {
   private async renderVueComponent(
     component: any,
     context: any,
-    deps: any
+    deps: any,
   ): Promise<Response> {
     try {
       const [vue, renderer] = deps;
@@ -156,7 +156,7 @@ export class ComponentServer extends BaseServer {
   private async renderReactComponent(
     component: any,
     context: any,
-    deps: any
+    deps: any,
   ): Promise<Response> {
     try {
       const [react, renderer] = deps;

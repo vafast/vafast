@@ -25,7 +25,9 @@ export interface ValidationSuccess<T> {
 }
 
 /** 验证结果联合类型 */
-export type ValidationResult<T = unknown> = ValidationSuccess<T> | ValidationFailure;
+export type ValidationResult<T = unknown> =
+  | ValidationSuccess<T>
+  | ValidationFailure;
 
 /**
  * 使用TypeBox Schema验证数据
@@ -35,7 +37,7 @@ export type ValidationResult<T = unknown> = ValidationSuccess<T> | ValidationFai
  */
 export function validateSchema<T extends TSchema>(
   schema: T,
-  data: unknown
+  data: unknown,
 ): ValidationResult<Static<T>> {
   try {
     // 使用TypeBox的TypeCompiler进行验证
@@ -74,7 +76,8 @@ export function validateSchema<T extends TSchema>(
       errors: [
         {
           path: "",
-          message: error instanceof Error ? error.message : "Unknown validation error",
+          message:
+            error instanceof Error ? error.message : "Unknown validation error",
           code: "VALIDATION_EXCEPTION",
           value: data,
         },
