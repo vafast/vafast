@@ -7,16 +7,32 @@ export type Method =
   | "OPTIONS"
   | "HEAD";
 
+/** 支持的响应类型 - 由 mapResponse 自动转换 */
+export type ResponseBody =
+  | Response
+  | string
+  | number
+  | boolean
+  | object
+  | null
+  | undefined
+  | ReadableStream
+  | Blob
+  | ArrayBuffer;
+
+/** Handler 返回值（支持同步/异步，任意类型） */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Handler = (
   req: Request,
   params?: Record<string, string>,
   user?: Record<string, any>
-) => Response | Promise<Response>;
+) => ResponseBody | Promise<ResponseBody>;
 
+/** 中间件（返回值必须是 Response 或 Promise<Response>） */
 export type Middleware = (
   req: Request,
   next: () => Promise<Response>
-) => Promise<Response>;
+) => Response | Promise<Response>;
 
 export interface Route {
   method: Method;

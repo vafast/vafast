@@ -85,7 +85,7 @@ export class Server extends BaseServer {
     if (match) {
       (req as unknown as Record<string, unknown>).params = match.params;
 
-      // 组合全局中间件 + 路由中间件
+      // 组合全局中间件 + 路由中间件（mapResponse 在 composeMiddleware 内部处理）
       const allMiddleware = [...this.globalMiddleware, ...match.middleware];
       const handler = composeMiddleware(allMiddleware, match.handler);
 

@@ -1,6 +1,6 @@
 // src/middleware.ts
 
-import { json } from "./utils/response";
+import { json, mapResponse } from "./utils/response";
 
 import type { Handler, Middleware } from "./types";
 /** 中间件类型：使用 next() 传递给下一个处理 */
@@ -35,7 +35,7 @@ export class VafastError extends Error {
 export function composeMiddleware(
   middleware: Middleware[],
   finalHandler: Handler
-): Handler {
+): (req: Request) => Promise<Response> {
   const all = [errorHandler, ...middleware];
 
   return function composedHandler(req: Request): Promise<Response> {
@@ -45,14 +45,17 @@ export function composeMiddleware(
       if (index <= i)
         return Promise.reject(new Error("next() called multiple times"));
       i = index;
-      const fn = index < all.length ? all[index] : finalHandler;
-      return Promise.resolve(
-        fn(req, (() => dispatch(index + 1)) as unknown as Record<
-          string,
-          string
-        > &
-          (() => Promise<Response>))
-      );
+
+      // 中间件阶段
+      if (index < all.length) {
+        const mw = all[index];
+        return Promise.resolve(
+          mw(req, () => dispatch(index + 1))
+        );
+      }
+
+      // 最终 handler - 使用 mapResponse 转换返回值
+      return Promise.resolve(finalHandler(req)).then(mapResponse);
     };
 
     return dispatch(0);
