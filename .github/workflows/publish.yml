@@ -9,58 +9,44 @@ defaults:
   run:
     shell: bash
 
-# OIDC 权限 - 用于 npm provenance 和 trusted publishing
+# OIDC 权限 - 用于 npm provenance + Trusted Publishing（OIDC 登录发布）
 permissions:
-  contents: read
   id-token: write
+
+env:
+  # 便于排查 trusted publishing/OIDC 注入问题（不会泄露 token）
+  ACTIONS_RUNNER_DEBUG: true
 
 jobs:
   publish-npm:
-    name: Publish to npm
+    name: 'Publish: npm Registry'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: 'Checkout'
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - name: 'Setup Bun'
+        uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.4.0
-        with:
-          node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
 
-      - name: Install dependencies
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install packages
         run: bun install
 
-      - name: Build
+      - name: Build code
         run: bun run build
 
-      - name: Run tests
+      - name: Test
         run: bun run test:run
 
-      # 先尝试 OIDC Trusted Publishing（无需 token）。如果 OIDC 未生效，则回退到 NPM_TOKEN（granular/automation token）。
-      - name: Publish to npm with provenance (OIDC)
-        id: publish_oidc
-        continue-on-error: true
-        env:
-          # 防止环境里存在旧 token 导致 npm 优先走 token（classic token 已被撤销会直接失败）
-          NODE_AUTH_TOKEN: ""
-        run: npm publish --provenance --access=public
-
-      - name: Publish to npm with provenance (token fallback)
-        if: steps.publish_oidc.outcome == 'failure' && secrets.NPM_TOKEN != ''
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access=public
-
-      - name: Fail if both OIDC and token are unavailable
-        if: steps.publish_oidc.outcome == 'failure' && secrets.NPM_TOKEN == ''
+      - name: 'Publish'
         run: |
-          echo "npm OIDC Trusted Publishing 未生效（ENEEDAUTH），且未配置 secrets.NPM_TOKEN。"
-          echo "请检查 npm 包 vafast 的 Trusted Publishing 绑定是否保存成功，或创建 granular/automation token 并添加到 GitHub Secrets: NPM_TOKEN。"
-          exit 1
+          # 强制禁用 token，避免旧 classic token 干扰；发布鉴权走 npm Trusted Publishing（OIDC）
+          NODE_AUTH_TOKEN="" npm publish --provenance --access=public
