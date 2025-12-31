@@ -1,4 +1,4 @@
-import { Route } from "./types";
+import { Route, ResponseBody } from "./types";
 
 // 定义中间件类型
 export interface Middleware {
@@ -9,7 +9,7 @@ export interface Middleware {
 export interface BaseRouteConfig {
   method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
   path: string;
-  handler: (req: Request) => Response | Promise<Response>;
+  handler: (req: Request) => ResponseBody | Promise<ResponseBody>;
 }
 
 // 扩展的路由配置 - 只保留Schema验证和中间件

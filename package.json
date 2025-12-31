@@ -14,17 +14,22 @@
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./mod": {
       "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "scripts": {
-    "build": "tsc --outDir dist --declaration",
+    "clean": "rimraf dist",
+    "build": "npm run clean && tsc --outDir dist --declaration",
     "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
     "dev": "bun --watch index.ts",
     "start": "bun run dist/index.js",

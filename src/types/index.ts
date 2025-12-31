@@ -1,6 +1,24 @@
-// 导出所有类型定义
-export * from "./route";
+// 核心类型优先导出（确保使用 types.ts 中的定义）
+export type {
+  Method,
+  Handler,
+  Route,
+  NestedRoute,
+  Middleware,
+  FlattenedRoute,
+  ResponseBody,
+} from "./types";
+
+// 导出扩展类型（不包含与 types.ts 冲突的类型）
+export type {
+  BaseRouteConfig,
+  ExtendedRouteConfig,
+  NestedRouteConfig,
+  TypedRoute,
+  CompatibleRoute,
+} from "./route";
+export { createTypedRoute, isTypedRoute } from "./route";
+
+// 组件路由和 Schema 类型
 export * from "./component-route";
 export * from "./schema";
-// 显式导出 types.ts 中的类型，避免与 route.ts 中的同名类型冲突
-export type { Method, Handler, Route, NestedRoute, Middleware, FlattenedRoute } from "./types";
