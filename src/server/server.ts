@@ -59,13 +59,28 @@ export class Server extends BaseServer {
 
   constructor(routes: (Route | NestedRoute)[] = []) {
     super();
-    this.router = new RadixRouter();
+
+    // 创建路由器并传入中间件组合函数
+    this.router = new RadixRouter({
+      composeMiddleware: (middleware, handler) => {
+        // 组合全局中间件 + 路由中间件
+        const allMiddleware = [...this.globalMiddleware, ...middleware];
+        return composeMiddleware(allMiddleware, handler);
+      },
+    });
     this.routes = [];
 
     // 初始化路由
     if (routes.length > 0) {
       this.registerRoutes(routes);
     }
+  }
+
+  /**
+   * 全局中间件变更时，使已编译的处理器失效
+   */
+  protected onMiddlewareChange(): void {
+    this.router.invalidateCompiledHandlers();
   }
 
   /**
@@ -76,7 +91,7 @@ export class Server extends BaseServer {
     const flattened = flattenNestedRoutes(routes);
     this.routes.push(...flattened);
 
-    // 注册到 Radix Tree
+    // 注册到 Radix Tree（中间件在注册时预编译）
     for (const route of flattened) {
       this.router.register(
         route.method as Method,
@@ -94,10 +109,34 @@ export class Server extends BaseServer {
   }
 
   /**
+   * 快速提取 pathname（避免 new URL() 开销）
+   */
+  private extractPathname(url: string): string {
+    // 跳过协议 "http://" 或 "https://"
+    let start = url.indexOf("://");
+    if (start === -1) {
+      start = 0;
+    } else {
+      start += 3;
+    }
+
+    // 找到 host 后的 "/" 开始位置
+    const pathStart = url.indexOf("/", start);
+    if (pathStart === -1) return "/";
+
+    // 找到 "?" 或 "#" 结束位置
+    let end = url.indexOf("?", pathStart);
+    if (end === -1) end = url.indexOf("#", pathStart);
+    if (end === -1) end = url.length;
+
+    return url.substring(pathStart, end) || "/";
+  }
+
+  /**
    * 处理请求
    */
   fetch = async (req: Request): Promise<Response> => {
-    const { pathname } = new URL(req.url);
+    const pathname = this.extractPathname(req.url);
     const method = req.method as Method;
 
     // O(k) 路由匹配
@@ -107,11 +146,8 @@ export class Server extends BaseServer {
       // 注入路径参数
       (req as unknown as Record<string, unknown>).params = match.params;
 
-      // 组合中间件链
-      const middlewareChain = [...this.globalMiddleware, ...match.middleware];
-      const composedHandler = composeMiddleware(middlewareChain, match.handler);
-
-      return composedHandler(req);
+      // 直接调用预编译的处理器（中间件已在注册时组合）
+      return match.composedHandler(req);
     }
 
     // 检查是否是方法不允许

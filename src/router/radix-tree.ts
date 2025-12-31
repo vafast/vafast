@@ -27,6 +27,8 @@ export const enum NodeType {
 interface RouteHandler {
   handler: Handler;
   middleware: Middleware[];
+  /** 预编译的组合处理器（包含中间件链），延迟编译 */
+  composedHandler?: Handler;
 }
 
 /** Radix Tree 节点 */
@@ -35,8 +37,8 @@ interface RadixNode {
   path: string;
   /** 节点类型 */
   type: NodeType;
-  /** 静态子节点 */
-  children: Map<string, RadixNode>;
+  /** 静态子节点（使用对象代替 Map，性能更好） */
+  children: Record<string, RadixNode>;
   /** 动态参数子节点 (:param) */
   paramChild?: RadixNode;
   /** 通配符子节点 (* 或 *name) */
@@ -44,13 +46,15 @@ interface RadixNode {
   /** 参数名 (用于动态参数和命名通配符) */
   paramName?: string;
   /** 各 HTTP 方法对应的处理器 */
-  handlers: Map<Method, RouteHandler>;
+  handlers: Record<Method, RouteHandler | undefined>;
 }
 
 /** 路由匹配结果 */
 export interface MatchResult {
   handler: Handler;
   middleware: Middleware[];
+  /** 预编译的组合处理器 */
+  composedHandler: Handler;
   params: Record<string, string>;
 }
 
@@ -80,13 +84,29 @@ export interface MatchResult {
  */
 export class RadixRouter {
   private root: RadixNode;
-  private pathCache: Map<string, string[]>;
+  private pathCache: Record<string, string[]>;
+  private pathCacheKeys: string[];
   private cacheMaxSize: number;
+  /** 中间件组合函数（由外部注入） */
+  private composeMiddleware: (middleware: Middleware[], handler: Handler) => Handler;
 
-  constructor(options: { cacheMaxSize?: number } = {}) {
+  constructor(options: {
+    cacheMaxSize?: number;
+    composeMiddleware?: (middleware: Middleware[], handler: Handler) => Handler;
+  } = {}) {
     this.root = this.createNode("");
-    this.pathCache = new Map();
+    this.pathCache = Object.create(null);
+    this.pathCacheKeys = [];
     this.cacheMaxSize = options.cacheMaxSize ?? 10000;
+    // 默认直接调用 handler
+    this.composeMiddleware = options.composeMiddleware || ((_, handler) => handler);
+  }
+
+  /**
+   * 设置中间件组合函数
+   */
+  setComposeMiddleware(fn: (middleware: Middleware[], handler: Handler) => Handler): void {
+    this.composeMiddleware = fn;
   }
 
   /**
@@ -99,47 +119,45 @@ export class RadixRouter {
     return {
       path,
       type,
-      children: new Map(),
-      handlers: new Map(),
+      children: Object.create(null),
+      handlers: Object.create(null),
     };
   }
 
   /**
-   * 分割并缓存路径
+   * 快速分割路径（避免 filter 开销）
    */
   private splitPath(path: string): string[] {
-    const cached = this.pathCache.get(path);
+    const cached = this.pathCache[path];
     if (cached) return cached;
 
-    const segments = path.split("/").filter(Boolean);
+    // 手动分割，避免 filter(Boolean) 的数组创建开销
+    const segments: string[] = [];
+    let start = 0;
+    const len = path.length;
 
-    // 限制缓存大小，防止内存泄漏
-    if (this.pathCache.size >= this.cacheMaxSize) {
-      // 清除一半缓存
-      const keys = Array.from(this.pathCache.keys());
-      for (let i = 0; i < keys.length / 2; i++) {
-        this.pathCache.delete(keys[i]);
+    for (let i = 0; i <= len; i++) {
+      if (i === len || path[i] === "/") {
+        if (i > start) {
+          segments.push(path.substring(start, i));
+        }
+        start = i + 1;
       }
     }
 
-    this.pathCache.set(path, segments);
-    return segments;
-  }
-
-  /**
-   * 解析通配符段，提取参数名
-   *
-   * @param segment 路径段 (如 "*" 或 "*filepath")
-   * @returns 参数名 (如 "*" 或 "filepath")
-   */
-  private parseWildcard(segment: string): string {
-    // "*" -> "*"
-    // "*filepath" -> "filepath"
-    // "*path" -> "path"
-    if (segment === "*") {
-      return "*";
+    // 限制缓存大小
+    if (this.pathCacheKeys.length >= this.cacheMaxSize) {
+      // 清除前半部分缓存
+      const half = this.pathCacheKeys.length >> 1;
+      for (let i = 0; i < half; i++) {
+        delete this.pathCache[this.pathCacheKeys[i]];
+      }
+      this.pathCacheKeys = this.pathCacheKeys.slice(half);
     }
-    return segment.slice(1); // 去掉开头的 *
+
+    this.pathCache[path] = segments;
+    this.pathCacheKeys.push(path);
+    return segments;
   }
 
   /**
@@ -161,38 +179,36 @@ export class RadixRouter {
 
     for (let i = 0; i < segments.length; i++) {
       const segment = segments[i];
+      const firstChar = segment[0];
 
-      if (segment.startsWith(":")) {
+      if (firstChar === ":") {
         // 动态参数节点
-        const paramName = segment.slice(1);
         if (!node.paramChild) {
           node.paramChild = this.createNode(segment, NodeType.PARAM);
-          node.paramChild.paramName = paramName;
+          node.paramChild.paramName = segment.substring(1);
         }
         node = node.paramChild;
-      } else if (segment.startsWith("*")) {
+      } else if (firstChar === "*") {
         // 通配符节点 (* 或 *name)
-        const wildcardName = this.parseWildcard(segment);
         if (!node.wildcardChild) {
           node.wildcardChild = this.createNode(segment, NodeType.WILDCARD);
-          node.wildcardChild.paramName = wildcardName;
+          node.wildcardChild.paramName = segment.length > 1 ? segment.substring(1) : "*";
         }
         node = node.wildcardChild;
-        // 通配符后面不再有路径
-        break;
+        break; // 通配符后面不再有路径
       } else {
         // 静态路径节点
-        let child = node.children.get(segment);
+        let child = node.children[segment];
         if (!child) {
           child = this.createNode(segment, NodeType.STATIC);
-          node.children.set(segment, child);
+          node.children[segment] = child;
         }
         node = child;
       }
     }
 
-    // 注册处理器
-    node.handlers.set(method, { handler, middleware });
+    // 注册处理器（延迟编译 composedHandler）
+    node.handlers[method] = { handler, middleware };
   }
 
   /**
@@ -204,45 +220,28 @@ export class RadixRouter {
    */
   match(method: Method, path: string): MatchResult | null {
     const segments = this.splitPath(path);
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = Object.create(null);
 
     const node = this.matchNode(this.root, segments, 0, params);
     if (!node) return null;
 
-    const routeHandler = node.handlers.get(method);
+    const routeHandler = node.handlers[method];
     if (!routeHandler) return null;
+
+    // 延迟编译：首次访问时编译并缓存
+    if (!routeHandler.composedHandler) {
+      routeHandler.composedHandler = this.composeMiddleware(
+        routeHandler.middleware,
+        routeHandler.handler
+      );
+    }
 
     return {
       handler: routeHandler.handler,
       middleware: routeHandler.middleware,
+      composedHandler: routeHandler.composedHandler,
       params,
     };
-  }
-
-  /**
-   * 获取路径允许的 HTTP 方法 (用于 405 响应)
-   *
-   * @param path 请求路径
-   * @returns 允许的方法数组
-   */
-  getAllowedMethods(path: string): Method[] {
-    const segments = this.splitPath(path);
-    const params: Record<string, string> = {};
-
-    const node = this.matchNode(this.root, segments, 0, params);
-    if (!node) return [];
-
-    return Array.from(node.handlers.keys());
-  }
-
-  /**
-   * 检查路径是否存在 (不关心方法)
-   */
-  hasPath(path: string): boolean {
-    const segments = this.splitPath(path);
-    const params: Record<string, string> = {};
-    const node = this.matchNode(this.root, segments, 0, params);
-    return node !== null && node.handlers.size > 0;
   }
 
   /**
@@ -258,13 +257,17 @@ export class RadixRouter {
   ): RadixNode | null {
     // 已匹配完所有路径段
     if (index === segments.length) {
-      return node.handlers.size > 0 ? node : null;
+      // 检查是否有处理器
+      for (const method in node.handlers) {
+        if (node.handlers[method as Method]) return node;
+      }
+      return null;
     }
 
     const segment = segments[index];
 
     // 1. 优先匹配静态路径 (最高优先级)
-    const staticChild = node.children.get(segment);
+    const staticChild = node.children[segment];
     if (staticChild) {
       const result = this.matchNode(staticChild, segments, index + 1, params);
       if (result) return result;
@@ -272,32 +275,98 @@ export class RadixRouter {
 
     // 2. 匹配动态参数
     if (node.paramChild) {
-      // 创建参数副本，避免失败匹配污染
-      const paramsCopy = { ...params };
-      paramsCopy[node.paramChild.paramName!] = segment;
+      const paramName = node.paramChild.paramName!;
+      const oldValue = params[paramName];
 
-      const result = this.matchNode(
-        node.paramChild,
-        segments,
-        index + 1,
-        paramsCopy
-      );
-      if (result) {
-        // 匹配成功，合并参数
-        Object.assign(params, paramsCopy);
-        return result;
+      params[paramName] = segment;
+      const result = this.matchNode(node.paramChild, segments, index + 1, params);
+
+      if (result) return result;
+
+      // 回溯：恢复原值
+      if (oldValue === undefined) {
+        delete params[paramName];
+      } else {
+        params[paramName] = oldValue;
       }
     }
 
     // 3. 匹配通配符 (最低优先级)
     if (node.wildcardChild) {
-      // 通配符匹配剩余所有路径
       const wildcardName = node.wildcardChild.paramName || "*";
       params[wildcardName] = segments.slice(index).join("/");
       return node.wildcardChild;
     }
 
     return null;
+  }
+
+  /**
+   * 获取路径允许的 HTTP 方法 (用于 405 响应)
+   *
+   * @param path 请求路径
+   * @returns 允许的方法数组
+   */
+  getAllowedMethods(path: string): Method[] {
+    const segments = this.splitPath(path);
+    const node = this.findNode(segments);
+    if (!node) return [];
+
+    const methods: Method[] = [];
+    for (const method in node.handlers) {
+      if (node.handlers[method as Method]) {
+        methods.push(method as Method);
+      }
+    }
+    return methods;
+  }
+
+  /**
+   * 检查路径是否存在 (不关心方法)
+   */
+  hasPath(path: string): boolean {
+    const segments = this.splitPath(path);
+    const node = this.findNode(segments);
+    if (!node) return false;
+
+    for (const method in node.handlers) {
+      if (node.handlers[method as Method]) return true;
+    }
+    return false;
+  }
+
+  /**
+   * 查找节点（简化版，不提取参数）
+   */
+  private findNode(segments: string[]): RadixNode | null {
+    let node = this.root;
+    const len = segments.length;
+
+    for (let i = 0; i < len; i++) {
+      const segment = segments[i];
+
+      // 静态路径
+      const staticChild = node.children[segment];
+      if (staticChild) {
+        node = staticChild;
+        continue;
+      }
+
+      // 动态参数
+      if (node.paramChild) {
+        node = node.paramChild;
+        continue;
+      }
+
+      // 通配符
+      if (node.wildcardChild) {
+        return node.wildcardChild;
+      }
+
+      return null;
+    }
+
+    return node;
   }
 
   /**
@@ -320,13 +389,15 @@ export class RadixRouter {
     const currentPath = prefix + (node.path ? "/" + node.path : "");
 
     // 收集当前节点的路由
-    for (const method of node.handlers.keys()) {
-      routes.push({ method, path: currentPath || "/" });
+    for (const method in node.handlers) {
+      if (node.handlers[method as Method]) {
+        routes.push({ method: method as Method, path: currentPath || "/" });
+      }
     }
 
     // 递归静态子节点
-    for (const child of node.children.values()) {
-      this.collectRoutes(child, currentPath, routes);
+    for (const key in node.children) {
+      this.collectRoutes(node.children[key], currentPath, routes);
     }
 
     // 递归参数子节点
@@ -344,7 +415,39 @@ export class RadixRouter {
    * 清除路径缓存
    */
   clearCache(): void {
-    this.pathCache.clear();
+    this.pathCache = Object.create(null);
+    this.pathCacheKeys = [];
+  }
+
+  /**
+   * 使所有已编译的处理器失效（当全局中间件变更时调用）
+   */
+  invalidateCompiledHandlers(): void {
+    this.invalidateNode(this.root);
+  }
+
+  /**
+   * 递归使节点的处理器失效
+   */
+  private invalidateNode(node: RadixNode): void {
+    // 清除当前节点的编译缓存
+    for (const method in node.handlers) {
+      const handler = node.handlers[method as Method];
+      if (handler) {
+        handler.composedHandler = undefined;
+      }
+    }
+
+    // 递归子节点
+    for (const key in node.children) {
+      this.invalidateNode(node.children[key]);
+    }
+    if (node.paramChild) {
+      this.invalidateNode(node.paramChild);
+    }
+    if (node.wildcardChild) {
+      this.invalidateNode(node.wildcardChild);
+    }
   }
 
   /**
@@ -352,7 +455,7 @@ export class RadixRouter {
    */
   getCacheStats(): { size: number; maxSize: number } {
     return {
-      size: this.pathCache.size,
+      size: this.pathCacheKeys.length,
       maxSize: this.cacheMaxSize,
     };
   }
