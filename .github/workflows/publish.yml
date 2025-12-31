@@ -19,14 +19,14 @@ env:
 
 jobs:
   publish-npm:
-    name: 'Publish: npm Registry'
+    name: "Publish: npm Registry"
     runs-on: ubuntu-latest
 
     steps:
-      - name: 'Checkout'
+      - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: 'Setup Bun'
+      - name: "Setup Bun"
         uses: oven-sh/setup-bun@v1
         with:
           bun-version: latest
@@ -34,8 +34,8 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: '24.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "24.x"
+          registry-url: "https://registry.npmjs.org"
 
       - name: Install packages
         run: bun install
@@ -46,7 +46,7 @@ jobs:
       - name: Test
         run: bun run test:run
 
-      - name: 'Publish'
+      - name: "Publish"
         run: |
           # 强制禁用 token，避免旧 classic token 干扰；发布鉴权走 npm Trusted Publishing（OIDC）
           NODE_AUTH_TOKEN="" npm publish --provenance --access=public
