@@ -117,21 +117,65 @@ export async function parseFile(req: Request): Promise<FileInfo> {
   return formData.files[fileKeys[0]];
 }
 
+/**
+ * 快速提取 query string（避免创建 URL 对象）
+ */
+function extractQueryString(url: string): string {
+  const qIndex = url.indexOf("?");
+  if (qIndex === -1) return "";
+
+  const hashIndex = url.indexOf("#", qIndex);
+  return hashIndex === -1
+    ? url.substring(qIndex + 1)
+    : url.substring(qIndex + 1, hashIndex);
+}
+
 /** 获取查询字符串，直接返回对象 */
-export function parseQuery(req: Request): Record<string, any> {
-  const url = new URL(req.url);
-  return qs.parse(url.search.slice(1)); // 去掉开头的 ?
+export function parseQuery(req: Request): Record<string, unknown> {
+  const queryString = extractQueryString(req.url);
+  if (!queryString) return {};
+  return qs.parse(queryString);
+}
+
+/**
+ * 快速解析简单查询字符串（不支持嵌套，但更快）
+ * 适用于简单的 key=value&key2=value2 场景
+ */
+export function parseQueryFast(req: Request): Record<string, string> {
+  const queryString = extractQueryString(req.url);
+  if (!queryString) return {};
+
+  const result: Record<string, string> = Object.create(null);
+  const pairs = queryString.split("&");
+
+  for (const pair of pairs) {
+    const eqIndex = pair.indexOf("=");
+    if (eqIndex === -1) {
+      result[decodeURIComponent(pair)] = "";
+    } else {
+      const key = decodeURIComponent(pair.substring(0, eqIndex));
+      const value = decodeURIComponent(pair.substring(eqIndex + 1));
+      result[key] = value;
+    }
+  }
+
+  return result;
 }
 
 /** 解析请求头，返回对象 */
 export function parseHeaders(req: Request): Record<string, string> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = Object.create(null);
   req.headers.forEach((value, key) => {
-    if (value !== undefined && value !== null) {
-      headers[key] = value;
-    }
+    headers[key] = value;
   });
   return headers;
+}
+
+/**
+ * 获取单个请求头（避免解析全部）
+ */
+export function getHeader(req: Request, name: string): string | null {
+  return req.headers.get(name);
 }
 
 /** 使用cookie库解析Cookie，保证可靠性 */
@@ -149,9 +193,57 @@ export function parseCookies(req: Request): Record<string, string> {
       }
     }
     return result;
-  } catch (error) {
-    console.error("Cookie解析失败:", error);
-    console.error("原始Cookie字符串:", cookieHeader);
+  } catch {
     return {};
   }
+}
+
+/**
+ * 快速解析 Cookie（简化版，不使用外部库）
+ * 适用于简单的 cookie 场景
+ */
+export function parseCookiesFast(req: Request): Record<string, string> {
+  const cookieHeader = req.headers.get("cookie");
+  if (!cookieHeader) return {};
+
+  const result: Record<string, string> = Object.create(null);
+  const pairs = cookieHeader.split(";");
+
+  for (const pair of pairs) {
+    const trimmed = pair.trim();
+    const eqIndex = trimmed.indexOf("=");
+    if (eqIndex > 0) {
+      const key = trimmed.substring(0, eqIndex).trim();
+      const value = trimmed.substring(eqIndex + 1).trim();
+      // 移除引号
+      result[key] = value.startsWith('"') && value.endsWith('"')
+        ? value.slice(1, -1)
+        : value;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 获取单个 Cookie 值（避免解析全部）
+ */
+export function getCookie(req: Request, name: string): string | null {
+  const cookieHeader = req.headers.get("cookie");
+  if (!cookieHeader) return null;
+
+  const prefix = `${name}=`;
+  const pairs = cookieHeader.split(";");
+
+  for (const pair of pairs) {
+    const trimmed = pair.trim();
+    if (trimmed.startsWith(prefix)) {
+      const value = trimmed.substring(prefix.length).trim();
+      return value.startsWith('"') && value.endsWith('"')
+        ? value.slice(1, -1)
+        : value;
+    }
+  }
+
+  return null;
 }

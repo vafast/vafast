@@ -26,12 +26,12 @@ npx tsx index.ts
 
 | 框架 | RPS | 相对性能 |
 |------|-----|----------|
-| Elysia | 119.9K | 100% |
-| **Vafast** | **100.9K** | **84%** |
-| Hono | 56.5K | 47% |
-| Express | 55.8K | 47% |
+| Elysia | 121.3K | 100% |
+| **Vafast** | **105.6K** | **87%** |
+| Express | 56.2K | 46% |
+| Hono | 54.8K | 45% |
 
-> **Vafast 比 Express/Hono 快约 1.8x！**  
+> **Vafast 比 Express/Hono 快约 1.9x！**  
 > 测试环境：Bun 1.2.20, macOS, wrk 基准测试 (4线程, 100连接, 30s)
 
 ## 📦 安装
@@ -48,6 +48,8 @@ bun add vafast
 
 - ⚡ **JIT 编译验证器** - Schema 验证器编译缓存，避免重复编译
 - 🚀 **JIT 编译序列化器** - 基于 Schema 的快速 JSON 序列化
+- 🔗 **中间件链预编译** - 路由注册时预编译处理链，运行时零开销
+- 🎯 **快速请求解析** - 优化的 Query/Cookie 解析，比标准方法快 2x
 - 🔒 **端到端类型安全** - 完整的 TypeScript 类型推断
 - 🧩 **灵活中间件系统** - 可组合的中间件架构
 - 📦 **零配置** - 开箱即用，无需复杂配置
@@ -171,6 +173,23 @@ precompileSchemas([UserSchema, PostSchema, CommentSchema]);
 性能提升效果：
 - 验证器：首次编译后，后续验证 **10000 次仅需 ~5ms**
 - 序列化器：基于 Schema 的序列化比通用 JSON.stringify 更快
+
+### 中间件预编译
+
+Vafast 自动在路由注册时预编译中间件链，消除运行时组合开销：
+
+```typescript
+const server = new Server(routes);
+
+// 添加全局中间件后，手动触发预编译
+server.use(authMiddleware);
+server.use(logMiddleware);
+server.compile(); // 预编译所有路由的处理链
+
+// 预编译后，每次请求直接执行编译好的处理链，无需运行时组合
+```
+
+**性能效果：1000 次请求仅需 ~4ms，平均每次 0.004ms**
 
 ## 🔧 运行时支持
 

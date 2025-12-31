@@ -11,10 +11,15 @@
 
 import type { Handler, Middleware, Method } from "../types";
 
+/** 预编译的处理器类型 */
+type CompiledHandler = (req: Request) => Promise<Response>;
+
 /** 路由处理信息 */
 interface RouteHandler {
   handler: Handler;
   middleware: Middleware[];
+  /** 预编译后的完整处理链（包含中间件） */
+  compiled?: CompiledHandler;
 }
 
 /** Radix Tree 节点 */
@@ -32,6 +37,8 @@ export interface MatchResult {
   handler: Handler;
   middleware: Middleware[];
   params: Record<string, string>;
+  /** 预编译后的完整处理链 */
+  compiled?: CompiledHandler;
 }
 
 /**
@@ -63,6 +70,14 @@ export class RadixRouter {
   /** 分割路径 */
   private splitPath(path: string): string[] {
     return path.split("/").filter(Boolean);
+  }
+
+  /** 编译器函数 - 用于预编译中间件链 */
+  private compiler?: (middleware: Middleware[], handler: Handler) => CompiledHandler;
+
+  /** 设置中间件编译器 */
+  setCompiler(compiler: (middleware: Middleware[], handler: Handler) => CompiledHandler): void {
+    this.compiler = compiler;
   }
 
   /** 注册路由 */
@@ -103,7 +118,42 @@ export class RadixRouter {
       }
     }
 
-    node.handlers[method] = { handler, middleware };
+    const routeHandler: RouteHandler = { handler, middleware };
+
+    // 如果没有全局中间件且设置了编译器，预编译处理链
+    if (this.compiler && middleware.length === 0) {
+      routeHandler.compiled = this.compiler([], handler);
+    }
+
+    node.handlers[method] = routeHandler;
+  }
+
+  /** 预编译所有路由（在添加全局中间件后调用） */
+  precompileAll(globalMiddleware: Middleware[]): void {
+    if (!this.compiler) return;
+    this.precompileNode(this.root, globalMiddleware);
+  }
+
+  private precompileNode(node: RadixNode, globalMiddleware: Middleware[]): void {
+    for (const method in node.handlers) {
+      const routeHandler = node.handlers[method as Method];
+      if (routeHandler) {
+        const allMiddleware = [...globalMiddleware, ...routeHandler.middleware];
+        routeHandler.compiled = this.compiler!(allMiddleware, routeHandler.handler);
+      }
+    }
+
+    for (const key in node.children) {
+      this.precompileNode(node.children[key], globalMiddleware);
+    }
+
+    if (node.paramChild) {
+      this.precompileNode(node.paramChild, globalMiddleware);
+    }
+
+    if (node.wildcardChild) {
+      this.precompileNode(node.wildcardChild, globalMiddleware);
+    }
   }
 
   /** 匹配路由 */
@@ -121,6 +171,7 @@ export class RadixRouter {
       handler: routeHandler.handler,
       middleware: routeHandler.middleware,
       params,
+      compiled: routeHandler.compiled,
     };
   }
 

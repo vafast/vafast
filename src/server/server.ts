@@ -6,7 +6,6 @@
  */
 
 import type {
-  Handler,
   Route,
   NestedRoute,
   FlattenedRoute,
@@ -32,15 +31,35 @@ import { RadixRouter } from "../router/radix-tree";
 export class Server extends BaseServer {
   private router: RadixRouter;
   private routes: FlattenedRoute[];
+  /** 是否已预编译 */
+  private isCompiled = false;
+  /** 预编译时的全局中间件数量 */
+  private compiledWithMiddlewareCount = 0;
 
   constructor(routes: (Route | NestedRoute)[] = []) {
     super();
     this.router = new RadixRouter();
     this.routes = [];
 
+    // 设置中间件编译器
+    this.router.setCompiler((middleware, handler) =>
+      composeMiddleware(middleware, handler)
+    );
+
     if (routes.length > 0) {
       this.registerRoutes(routes);
     }
+  }
+
+  /**
+   * 预编译所有路由处理链
+   * 在添加所有路由和全局中间件后调用，可提升运行时性能
+   */
+  compile(): this {
+    this.router.precompileAll(this.globalMiddleware);
+    this.isCompiled = true;
+    this.compiledWithMiddlewareCount = this.globalMiddleware.length;
+    return this;
   }
 
   private registerRoutes(routes: (Route | NestedRoute)[]): void {
@@ -58,6 +77,11 @@ export class Server extends BaseServer {
 
     this.detectRouteConflicts(flattened);
     this.logFlattenedRoutes(flattened);
+
+    // 自动预编译（如果没有全局中间件）
+    if (this.globalMiddleware.length === 0 && !this.isCompiled) {
+      this.compile();
+    }
   }
 
   /** 快速提取 pathname */
@@ -85,7 +109,12 @@ export class Server extends BaseServer {
     if (match) {
       (req as unknown as Record<string, unknown>).params = match.params;
 
-      // 组合全局中间件 + 路由中间件（mapResponse 在 composeMiddleware 内部处理）
+      // 优先使用预编译的处理链（仅当全局中间件未变化时）
+      if (match.compiled && this.globalMiddleware.length === this.compiledWithMiddlewareCount) {
+        return match.compiled(req);
+      }
+
+      // 回退：运行时组合中间件
       const allMiddleware = [...this.globalMiddleware, ...match.middleware];
       const handler = composeMiddleware(allMiddleware, match.handler);
 

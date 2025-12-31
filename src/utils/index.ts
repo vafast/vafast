@@ -10,7 +10,16 @@ export {
 } from "./create-handler";
 
 // 请求解析
-export { parseBody, parseQuery, parseHeaders, parseCookies } from "./parsers";
+export { 
+  parseBody, 
+  parseQuery, 
+  parseQueryFast,
+  parseHeaders, 
+  getHeader,
+  parseCookies,
+  parseCookiesFast,
+  getCookie,
+} from "./parsers";
 
 // 响应工具
 export { json, text, html, redirect, empty, stream } from "./response";
