@@ -46,7 +46,10 @@
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"benchmarks/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"benchmarks/**/*.ts\"",
     "type-check": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm run test"
+    "prepublishOnly": "npm run build && npm run test",
+    "release:patch": "npm version patch && npm run build && npm run test && npm publish --access=public && git push && git push --tags",
+    "release:minor": "npm version minor && npm run build && npm run test && npm publish --access=public && git push && git push --tags",
+    "release:major": "npm version major && npm run build && npm run test && npm publish --access=public && git push && git push --tags"
   },
   "keywords": [
     "bun",
