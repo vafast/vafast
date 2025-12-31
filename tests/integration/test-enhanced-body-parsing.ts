@@ -213,7 +213,7 @@ async function testEnhancedBodyParsing() {
   ];
 
   let successCount = 0;
-  let totalCount = testCases.length;
+  const totalCount = testCases.length;
 
   for (const testCase of testCases) {
     console.log(`📡 测试: ${testCase.name}`);

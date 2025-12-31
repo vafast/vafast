@@ -21,7 +21,7 @@ export type ResponseBody =
   | ArrayBuffer;
 
 /** Handler 返回值（支持同步/异步，任意类型） */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 export type Handler = (
   req: Request,
   params?: Record<string, string>,
