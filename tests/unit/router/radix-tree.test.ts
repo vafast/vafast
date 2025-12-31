@@ -302,44 +302,6 @@ describe("RadixRouter", () => {
     });
   });
 
-  describe("缓存管理", () => {
-    it("应该正确报告缓存统计", () => {
-      router.match("GET", "/path1");
-      router.match("GET", "/path2");
-      router.match("GET", "/path3");
-
-      const stats = router.getCacheStats();
-
-      expect(stats.size).toBeGreaterThanOrEqual(3);
-      expect(stats.maxSize).toBe(10000);
-    });
-
-    it("应该能清除缓存", () => {
-      router.match("GET", "/path1");
-      router.match("GET", "/path2");
-
-      router.clearCache();
-      const stats = router.getCacheStats();
-
-      expect(stats.size).toBe(0);
-    });
-
-    it("缓存达到上限时应该自动清理", () => {
-      const smallCacheRouter = new RadixRouter({ cacheMaxSize: 10 });
-
-      // 注册一个路由
-      smallCacheRouter.register("GET", "/test", () => new Response("test"));
-
-      // 访问足够多的不同路径来触发缓存清理
-      for (let i = 0; i < 20; i++) {
-        smallCacheRouter.match("GET", `/path${i}`);
-      }
-
-      const stats = smallCacheRouter.getCacheStats();
-      expect(stats.size).toBeLessThanOrEqual(stats.maxSize);
-    });
-  });
-
   describe("边界情况", () => {
     it("应该处理末尾斜杠", () => {
       router.register("GET", "/users", () => new Response("users"));

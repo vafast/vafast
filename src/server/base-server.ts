@@ -9,12 +9,7 @@ export abstract class BaseServer {
 
   use(mw: Middleware) {
     this.globalMiddleware.push(mw);
-    // 子类可以重写此方法以处理中间件变更
-    this.onMiddlewareChange?.();
   }
-
-  /** 中间件变更回调（子类实现） */
-  protected onMiddlewareChange?(): void;
 
   /**
    * 打印扁平化后的路由信息，用于调试

@@ -324,26 +324,5 @@ describe("Server", () => {
     });
   });
 
-  describe("缓存管理", () => {
-    it("应该支持获取缓存统计", () => {
-      const server = new Server([
-        { method: "GET", path: "/test", handler: () => new Response("") },
-      ]);
-
-      const stats = server.getCacheStats();
-      expect(stats).toHaveProperty("size");
-      expect(stats).toHaveProperty("maxSize");
-    });
-
-    it("应该支持清除缓存", () => {
-      const server = new Server([
-        { method: "GET", path: "/test", handler: () => new Response("") },
-      ]);
-
-      server.clearCache();
-      const stats = server.getCacheStats();
-      expect(stats.size).toBe(0);
-    });
-  });
 });
 
