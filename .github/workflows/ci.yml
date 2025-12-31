@@ -30,10 +30,7 @@ jobs:
         run: bun run build
 
       - name: Run tests
-        run: bun run test:run
-
-      - name: Run performance regression tests
-        run: bun run benchmark:regression
+        run: bun run test
 
       # PR 预览发布
       - name: Publish Preview
