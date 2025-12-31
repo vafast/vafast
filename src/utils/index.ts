@@ -10,11 +10,11 @@ export {
 } from "./create-handler";
 
 // 请求解析
-export { 
-  parseBody, 
-  parseQuery, 
+export {
+  parseBody,
+  parseQuery,
   parseQueryFast,
-  parseHeaders, 
+  parseHeaders,
   getHeader,
   parseCookies,
   parseCookiesFast,
@@ -56,12 +56,3 @@ export {
   getValidatorCacheStats,
 } from "./validators/validators";
 
-// 序列化器（JIT 编译）
-export {
-  getCompiledSerializer,
-  serializeWithSchema,
-  createSerializer,
-  precompileSerializers,
-  fastSerialize,
-  batchSerialize,
-} from "./serializers";

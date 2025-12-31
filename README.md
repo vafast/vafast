@@ -26,12 +26,12 @@ npx tsx index.ts
 
 | 框架 | RPS | 相对性能 |
 |------|-----|----------|
-| Elysia | 121.3K | 100% |
-| **Vafast** | **105.6K** | **87%** |
-| Express | 56.2K | 46% |
-| Hono | 54.8K | 45% |
+| Elysia | ~118K | 100% |
+| **Vafast** | **~101K** | **86%** |
+| Express | ~56K | 48% |
+| Hono | ~56K | 47% |
 
-> **Vafast 比 Express/Hono 快约 1.9x！**  
+> **Vafast 比 Express/Hono 快约 1.8x！**  
 > 测试环境：Bun 1.2.20, macOS, wrk 基准测试 (4线程, 100连接, 30s)
 
 ## 📦 安装
@@ -47,7 +47,6 @@ bun add vafast
 ## 🎯 核心功能
 
 - ⚡ **JIT 编译验证器** - Schema 验证器编译缓存，避免重复编译
-- 🚀 **JIT 编译序列化器** - 基于 Schema 的快速 JSON 序列化
 - 🔗 **中间件链预编译** - 路由注册时预编译处理链，运行时零开销
 - 🎯 **快速请求解析** - 优化的 Query/Cookie 解析，比标准方法快 2x
 - 🔒 **端到端类型安全** - 完整的 TypeScript 类型推断
@@ -132,21 +131,12 @@ const routes = defineRoutes([
 ]);
 ```
 
-### JIT 编译优化
+### JIT 编译验证器
 
-Vafast 内置 JIT 编译优化，自动缓存编译后的验证器和序列化器：
+Vafast 内置验证器 JIT 编译，自动缓存编译后的验证器：
 
 ```typescript
-import { 
-  createValidator, 
-  validateFast, 
-  precompileSchemas 
-} from 'vafast';
-import { 
-  createSerializer, 
-  serializeWithSchema, 
-  fastSerialize 
-} from 'vafast';
+import { createValidator, validateFast, precompileSchemas } from 'vafast';
 import { Type } from '@sinclair/typebox';
 
 const UserSchema = Type.Object({
@@ -162,17 +152,11 @@ const result = validateFast(UserSchema, data);
 const validateUser = createValidator(UserSchema);
 const isValid = validateUser(data);
 
-// 序列化优化
-const json = serializeWithSchema(UserSchema, data);  // Schema 感知
-const json2 = fastSerialize(data);                   // 快速路径
-
 // 启动时预编译（避免首次请求开销）
 precompileSchemas([UserSchema, PostSchema, CommentSchema]);
 ```
 
-性能提升效果：
-- 验证器：首次编译后，后续验证 **10000 次仅需 ~5ms**
-- 序列化器：基于 Schema 的序列化比通用 JSON.stringify 更快
+**性能效果：首次编译后，10000 次验证仅需 ~5ms**
 
 ### 中间件预编译
 
