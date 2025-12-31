@@ -42,6 +42,10 @@ jobs:
       - name: Run tests
         run: bun run test:run
 
-      # OIDC Trusted Publishing - 无需 token
+      # OIDC Trusted Publishing：发布鉴权走 GitHub OIDC（无需 npm token）。
+      # 重要：如果环境里存在 NODE_AUTH_TOKEN（例如老的 classic token / 组织级变量），npm 可能会优先使用它并导致 “token 已撤销/过期”。
       - name: Publish to npm with provenance
+        env:
+          # 强制禁用 token，确保走 OIDC Trusted Publishing
+          NODE_AUTH_TOKEN: ""
         run: npm publish --provenance --access=public
