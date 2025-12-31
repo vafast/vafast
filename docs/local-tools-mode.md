@@ -48,6 +48,166 @@
 
 ---
 
+## 为什么链式做不到？
+
+链式路由天然与 HTTP 绑定，难以实现本地工具模式。
+
+### 问题 1：Handler 依赖 Request 对象
+
+```typescript
+// 声明式 - handler 可以是纯函数
+const routes = [
+  {
+    name: 'calculate',
+    params: z.object({ a: z.number(), b: z.number() }),
+    handler: ({ a, b }) => a + b  // 纯函数，输入输出都是普通数据
+  }
+]
+
+// 本地调用，简单直接
+const result = execute('calculate', { a: 1, b: 2 })  // 返回 3
+```
+
+```typescript
+// 链式 - handler 依赖 Request/Response
+app.get('/calculate', (req) => {
+  const a = Number(req.query.get('a'))  // 依赖 Request
+  const b = Number(req.query.get('b'))
+  return Response.json(a + b)           // 返回 Response
+})
+
+// 本地调用？必须构造假的 Request
+const fakeReq = new Request('http://x/calculate?a=1&b=2')
+const response = await handler(fakeReq)
+const result = await response.json()  // 还要解析 Response
+
+// 太别扭了...
+```
+
+### 问题 2：Schema 藏在函数内部
+
+```typescript
+// 声明式 - Schema 是数据的一部分，外部可见
+{
+  name: 'createOrder',
+  body: z.object({
+    productId: z.string(),
+    quantity: z.number().min(1),
+  }),
+  handler: createOrder
+}
+
+// 转换为 AI Tools 时可以直接读取 Schema
+const tools = routesToTools(routes)  // ✅ 能拿到参数定义
+```
+
+```typescript
+// 链式 - Schema 在函数里，外部看不到
+app.post('/orders', (req) => {
+  const body = OrderSchema.parse(await req.json())  // Schema 在里面
+  // ...
+})
+
+// 转换为 AI Tools？拿不到参数定义
+// AI 不知道需要传什么参数
+```
+
+### 问题 3：描述信息无处可放
+
+```typescript
+// 声明式 - 描述是数据字段
+{
+  name: 'searchProducts',
+  description: '搜索商品，支持关键词和价格筛选',  // AI 能读到
+  params: z.object({ keyword: z.string() }),
+  handler: searchProducts
+}
+```
+
+```typescript
+// 链式 - 描述写在哪？
+app.get('/products', searchProducts)  // 没地方写 description
+
+// 加第三个参数？
+app.get('/products', searchProducts, { description: '...' })
+// 越来越像声明式了...
+```
+
+### 问题 4：无法序列化
+
+```typescript
+// 声明式 - 纯数据，可以存储、传输
+const routes = [
+  { name: 'getUser', path: '/users/:id', ... }
+]
+
+// 存到配置中心
+await configCenter.set('routes', JSON.stringify(routes))  // ✅
+
+// 热更新
+const newRoutes = await configCenter.get('routes')
+app.updateRoutes(JSON.parse(newRoutes))  // ✅
+```
+
+```typescript
+// 链式 - 包含函数引用，无法序列化
+const app = vafast().get('/users/:id', getUser)
+
+JSON.stringify(app.getRoutes())  
+// ❌ TypeError: Converting circular structure to JSON
+// 函数无法转成 JSON
+
+// 无法存到配置中心
+// 无法热更新
+// 无法跨进程传递
+```
+
+### 问题 5：静态分析困难
+
+```typescript
+// 声明式 - 不用运行就能分析
+const routes = [...] // 静态数据
+
+// 构建时检查
+checkRouteConflicts(routes)     // ✅ 不需要启动服务
+generateOpenAPI(routes)          // ✅ 不需要启动服务
+routesToTools(routes)            // ✅ 不需要启动服务
+```
+
+```typescript
+// 链式 - 必须执行代码才能获取路由
+const app = vafast()
+  .get('/users', listUsers)
+  .post('/users', createUser)
+
+// 要获取路由，必须先运行这段代码
+const routes = app.getRoutes()  // 需要执行
+
+// CI/CD 检查、文档生成都需要启动应用
+```
+
+### 对比总结
+
+| 能力 | 声明式 | 链式 |
+|------|--------|------|
+| Handler 类型 | 纯函数 | 依赖 Request |
+| Schema 位置 | 外部可见 | 藏在函数内 |
+| 描述信息 | 数据字段 | 无处可放 |
+| 序列化 | ✅ JSON | ❌ 含函数 |
+| 静态分析 | ✅ 不需运行 | ❌ 需执行代码 |
+| 本地执行 | ✅ 自然 | ❌ 别扭 |
+| 热更新 | ✅ 替换数据 | ❌ 需重启 |
+
+### 结论
+
+> **链式路由的设计假设是：路由 = HTTP 服务**
+>
+> **声明式路由的设计假设是：路由 = 能力描述**
+>
+> 本地工具模式需要「脱离 HTTP」，所以必须用声明式。
+
+---
+
 ## 本地工具模式
 
 ### 基本概念

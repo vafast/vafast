@@ -1236,6 +1236,142 @@ const response = await openai.chat.completions.create({
 
 ---
 
+### 链式能实现这些吗？
+
+理论上链式也能获取路由信息，但会遇到很多问题：
+
+#### 问题 1：必须执行代码才能获取路由
+
+```typescript
+// 声明式 - 静态数据，不需要执行
+const routes = [
+  { method: 'GET', path: '/users', handler: listUsers }
+]
+// 构建时、CI/CD 时都能直接读取分析
+
+// 链式 - 必须执行才能获取
+const app = vafast().get('/users', listUsers)
+const routes = app.getRoutes()  // 需要运行这段代码
+// 无法静态分析，CI/CD 工具难以检查
+```
+
+#### 问题 2：描述信息无处安放
+
+```typescript
+// 声明式 - 描述是数据的一部分
+{
+  name: 'getUser',
+  path: '/users/:id',
+  meta: { 
+    description: '获取用户信息',
+    aiEnabled: true
+  }
+}
+
+// 链式 - 描述写在哪？
+app.get('/users/:id', getUser)  // 没地方写 description
+
+// 硬要支持就变成这样...
+app.get('/users/:id', getUser, { 
+  name: 'getUser',
+  description: '获取用户信息',
+})
+// 第三个参数越来越像声明式了
+```
+
+#### 问题 3：Schema 无法关联
+
+```typescript
+// 声明式 - Schema 和路由天然在一起
+{
+  method: 'POST',
+  path: '/orders',
+  body: z.object({ productId: z.string() }),
+  handler: createOrder
+}
+
+// 链式 - Schema 藏在 handler 内部
+app.post('/orders', (req) => {
+  const body = OrderSchema.parse(req.body)  // Schema 在函数里
+  // 外部无法获取 Schema 信息
+})
+
+// 要暴露 Schema 又变成这样
+app.post('/orders', createOrder, { body: OrderSchema })
+// 本质上还是在写声明式
+```
+
+#### 问题 4：本地执行不自然
+
+```typescript
+// 声明式 - handler 可以是纯函数
+const routes = [
+  {
+    name: 'calculate',
+    params: z.object({ a: z.number(), b: z.number() }),
+    handler: ({ a, b }) => a + b  // 纯函数，直接调用
+  }
+]
+const result = execute('calculate', { a: 1, b: 2 })  // 简单
+
+// 链式 - handler 依赖 Request 对象
+app.get('/calculate', (req) => {
+  const { a, b } = req.query      // 依赖 Request
+  return Response.json(a + b)     // 返回 Response
+})
+// 本地调用需要构造假的 Request，很别扭
+const fakeReq = new Request('http://x/calculate?a=1&b=2')
+const res = await handler(fakeReq)
+const result = await res.json()
+```
+
+#### 问题 5：无法序列化
+
+```typescript
+// 声明式 - 可以存储、传输、版本控制
+const routes = [{ method: 'GET', path: '/users', description: '...' }]
+await saveToConfigCenter(JSON.stringify(routes))  // ✅
+
+// 链式 - 包含函数，无法序列化
+const app = vafast().get('/users', listUsers)
+JSON.stringify(app.getRoutes())  // ❌ 函数无法 JSON 化
+// 无法存到配置中心、无法热更新
+```
+
+#### 问题 6：动态加载困难
+
+```typescript
+// 声明式 - 从任何地方加载
+const routes = await fetch('/api/routes').then(r => r.json())
+app.addRoutes(routes)  // ✅
+
+// 链式 - 代码必须提前写好
+// 无法从配置中心加载
+// 无法运行时动态添加
+```
+
+#### 对比总结
+
+| 能力 | 声明式 | 链式 |
+|------|--------|------|
+| 静态分析 | ✅ 直接读取 | ❌ 需执行代码 |
+| 描述/元数据 | ✅ 数据字段 | ⚠️ 额外参数 |
+| Schema 关联 | ✅ 天然一体 | ⚠️ 需要额外传 |
+| 本地执行 | ✅ 纯函数 | ❌ 依赖 Request |
+| 序列化 | ✅ JSON | ❌ 含函数 |
+| 动态加载 | ✅ 配置中心 | ❌ 代码固定 |
+| 热更新 | ✅ 替换数据 | ❌ 需重启 |
+
+#### 结论
+
+> 链式硬要实现 AI 功能，会越改越像声明式。
+>
+> 与其用链式模拟声明式，不如直接用声明式。
+>
+> **链式适合写代码，声明式适合做平台。**
+
+---
+
 ## 作为网关的优势
 
 ### 核心能力对比
