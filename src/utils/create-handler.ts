@@ -1,15 +1,13 @@
 /**
  * 类型安全的路由处理器工厂
  *
- * 使用柯里化设计，确保 TypeScript 能够正确推导类型
- * schema 参数在前，handler 在后，让 TS 有足够信息进行类型推导
+ * 非柯里化设计，API 更简洁
  *
  * @author Framework Team
- * @version 2.0.0
+ * @version 3.0.0
  * @license MIT
  */
 
-import type { TSchema } from "@sinclair/typebox";
 import type {
   RouteSchema,
   HandlerContext,
@@ -119,40 +117,65 @@ function handleInternalError(error: unknown): Response {
   );
 }
 
+/** 空 schema 的上下文类型 */
+type EmptySchemaContext = {
+  req: Request;
+  body: unknown;
+  query: Record<string, string>;
+  params: Record<string, string>;
+  headers: Record<string, string>;
+  cookies: Record<string, string>;
+};
+
 /**
- * 创建类型安全的路由处理器 (柯里化版本)
- *
- * @param schema Schema 配置
- * @returns 返回一个接受 handler 的函数
+ * 判断是否为 handler 函数
+ */
+function isHandler(
+  value: unknown,
+): value is (...args: unknown[]) => unknown {
+  return typeof value === "function";
+}
+
+/**
+ * 创建类型安全的路由处理器
  *
  * @example
  * ```typescript
- * // 基础用法
- * const handler = createHandler({
- *   body: Type.Object({ name: Type.String() })
- * })(({ body }) => {
- *   // body 自动推导为 { name: string }
- *   return { hello: body.name };
- * });
+ * // 无 schema - 直接传入 handler
+ * createHandler(({ params }) => `User: ${params.id}`)
  *
- * // 在路由中使用
- * const routes = [
- *   {
- *     method: "POST",
- *     path: "/users",
- *     handler: createHandler({
- *       body: Type.Object({
- *         name: Type.String(),
- *         email: Type.String()
- *       })
- *     })(({ body }) => {
- *       return { id: 1, ...body };
- *     })
- *   }
- * ];
+ * // 有 schema - 传入 schema 和 handler
+ * createHandler(
+ *   { body: Type.Object({ name: Type.String() }) },
+ *   ({ body }) => ({ hello: body.name })
+ * )
  * ```
  */
-export function createHandler<const T extends RouteSchema>(schema: T) {
+// 重载 1: 无 schema
+export function createHandler<R>(
+  handler: (ctx: EmptySchemaContext) => R | Promise<R>,
+): (req: Request) => Promise<Response>;
+
+// 重载 2: 有 schema
+export function createHandler<const T extends RouteSchema, R>(
+  schema: T,
+  handler: (ctx: HandlerContext<T>) => R | Promise<R>,
+): (req: Request) => Promise<Response>;
+
+// 实现
+export function createHandler<const T extends RouteSchema, R>(
+  schemaOrHandler:
+    | T
+    | ((ctx: EmptySchemaContext) => R | Promise<R>),
+  maybeHandler?: (ctx: HandlerContext<T>) => R | Promise<R>,
+): (req: Request) => Promise<Response> {
+  // 判断调用方式
+  const hasSchema = !isHandler(schemaOrHandler);
+  const schema = hasSchema ? (schemaOrHandler as T) : ({} as T);
+  const handler = hasSchema
+    ? maybeHandler!
+    : (schemaOrHandler as (ctx: HandlerContext<T>) => R | Promise<R>);
+
   // 预编译 schema
   if (
     schema.body ||
@@ -164,58 +187,54 @@ export function createHandler<const T extends RouteSchema>(schema: T) {
     precompileSchemasUltra(schema);
   }
 
-  return <R>(
-    handler: (ctx: HandlerContext<T>) => R | Promise<R>,
-  ): ((req: Request) => Promise<Response>) => {
-    return async (req: Request): Promise<Response> => {
-      try {
-        // 解析请求数据
-        const query = parseQuery(req);
-        const headers = parseHeaders(req);
-        const cookies = parseCookies(req);
-        const params =
-          ((req as unknown as Record<string, unknown>).params as Record<
-            string,
-            string
-          >) || {};
+  return async (req: Request): Promise<Response> => {
+    try {
+      // 解析请求数据
+      const query = parseQuery(req);
+      const headers = parseHeaders(req);
+      const cookies = parseCookies(req);
+      const params =
+        ((req as unknown as Record<string, unknown>).params as Record<
+          string,
+          string
+        >) || {};
 
-        // 解析请求体
-        let body: unknown = undefined;
-        if (req.method !== "GET" && req.method !== "HEAD") {
-          const [, parsedBody] = await goAwait(parseBody(req));
-          body = parsedBody;
-        }
-
-        // 验证 schema
-        const data = { body, query, params, headers, cookies };
-        if (
-          schema.body ||
-          schema.query ||
-          schema.params ||
-          schema.headers ||
-          schema.cookies
-        ) {
-          validateAllSchemasUltra(schema, data);
-        }
-
-        // 调用 handler
-        const result = await handler({
-          req,
-          body: body as HandlerContext<T>["body"],
-          query: query as HandlerContext<T>["query"],
-          params: params as HandlerContext<T>["params"],
-          headers: headers as HandlerContext<T>["headers"],
-          cookies: cookies as HandlerContext<T>["cookies"],
-        });
-
-        return autoResponse(result);
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("验证失败")) {
-          return handleValidationError(error);
-        }
-        return handleInternalError(error);
+      // 解析请求体
+      let body: unknown = undefined;
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        const [, parsedBody] = await goAwait(parseBody(req));
+        body = parsedBody;
       }
-    };
+
+      // 验证 schema
+      const data = { body, query, params, headers, cookies };
+      if (
+        schema.body ||
+        schema.query ||
+        schema.params ||
+        schema.headers ||
+        schema.cookies
+      ) {
+        validateAllSchemasUltra(schema, data);
+      }
+
+      // 调用 handler
+      const result = await handler({
+        req,
+        body: body as HandlerContext<T>["body"],
+        query: query as HandlerContext<T>["query"],
+        params: params as HandlerContext<T>["params"],
+        headers: headers as HandlerContext<T>["headers"],
+        cookies: cookies as HandlerContext<T>["cookies"],
+      });
+
+      return autoResponse(result);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("验证失败")) {
+        return handleValidationError(error);
+      }
+      return handleInternalError(error);
+    }
   };
 }
 
@@ -227,104 +246,133 @@ export function createHandler<const T extends RouteSchema>(schema: T) {
  * @example
  * ```typescript
  * // 定义中间件注入的类型
- * type AuthContext = {
- *   user: { id: string; role: string };
- * };
+ * type AuthContext = { user: { id: string; role: string } };
  *
- * // 创建带类型的处理器
- * const handler = createHandlerWithExtra<AuthContext>()({
- *   body: Type.Object({ action: Type.String() })
- * })(({ body, user }) => {
- *   // body: { action: string }
- *   // user: { id: string; role: string }
- *   return { success: true, userId: user.id };
- * });
+ * // 无 schema
+ * createHandlerWithExtra<AuthContext>(({ user }) => {
+ *   return { userId: user.id };
+ * })
+ *
+ * // 有 schema
+ * createHandlerWithExtra<AuthContext>(
+ *   { body: Type.Object({ action: Type.String() }) },
+ *   ({ body, user }) => ({ success: true, userId: user.id })
+ * )
  * ```
  */
+// 重载 1: 无 schema
 export function createHandlerWithExtra<
   TExtra extends Record<string, unknown> = Record<string, never>,
->() {
-  return <const T extends RouteSchema>(schema: T) => {
-    // 预编译 schema
-    if (
-      schema.body ||
-      schema.query ||
-      schema.params ||
-      schema.headers ||
-      schema.cookies
-    ) {
-      precompileSchemasUltra(schema);
+  R = unknown,
+>(
+  handler: (ctx: EmptySchemaContext & TExtra) => R | Promise<R>,
+): (req: Request) => Promise<Response>;
+
+// 重载 2: 有 schema
+export function createHandlerWithExtra<
+  TExtra extends Record<string, unknown> = Record<string, never>,
+  const T extends RouteSchema = RouteSchema,
+  R = unknown,
+>(
+  schema: T,
+  handler: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>,
+): (req: Request) => Promise<Response>;
+
+// 实现
+export function createHandlerWithExtra<
+  TExtra extends Record<string, unknown> = Record<string, never>,
+  const T extends RouteSchema = RouteSchema,
+  R = unknown,
+>(
+  schemaOrHandler:
+    | T
+    | ((ctx: EmptySchemaContext & TExtra) => R | Promise<R>),
+  maybeHandler?: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>,
+): (req: Request) => Promise<Response> {
+  // 判断调用方式
+  const hasSchema = !isHandler(schemaOrHandler);
+  const schema = hasSchema ? (schemaOrHandler as T) : ({} as T);
+  const handler = hasSchema
+    ? maybeHandler!
+    : (schemaOrHandler as (
+        ctx: HandlerContextWithExtra<T, TExtra>,
+      ) => R | Promise<R>);
+
+  // 预编译 schema
+  if (
+    schema.body ||
+    schema.query ||
+    schema.params ||
+    schema.headers ||
+    schema.cookies
+  ) {
+    precompileSchemasUltra(schema);
+  }
+
+  return async (req: Request): Promise<Response> => {
+    try {
+      // 解析请求数据
+      const query = parseQuery(req);
+      const headers = parseHeaders(req);
+      const cookies = parseCookies(req);
+      const params =
+        ((req as unknown as Record<string, unknown>).params as Record<
+          string,
+          string
+        >) || {};
+
+      // 解析请求体
+      let body: unknown = undefined;
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        const [, parsedBody] = await goAwait(parseBody(req));
+        body = parsedBody;
+      }
+
+      // 验证 schema
+      const data = { body, query, params, headers, cookies };
+      if (
+        schema.body ||
+        schema.query ||
+        schema.params ||
+        schema.headers ||
+        schema.cookies
+      ) {
+        validateAllSchemasUltra(schema, data);
+      }
+
+      // 获取中间件注入的额外数据
+      const extras = ((req as unknown as Record<string, unknown>).__locals ??
+        {}) as TExtra;
+
+      // 调用 handler
+      const result = await handler({
+        req,
+        body: body as HandlerContext<T>["body"],
+        query: query as HandlerContext<T>["query"],
+        params: params as HandlerContext<T>["params"],
+        headers: headers as HandlerContext<T>["headers"],
+        cookies: cookies as HandlerContext<T>["cookies"],
+        ...extras,
+      } as HandlerContextWithExtra<T, TExtra>);
+
+      return autoResponse(result);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("验证失败")) {
+        return handleValidationError(error);
+      }
+      return handleInternalError(error);
     }
-
-    return <R>(
-      handler: (ctx: HandlerContextWithExtra<T, TExtra>) => R | Promise<R>,
-    ): ((req: Request) => Promise<Response>) => {
-      return async (req: Request): Promise<Response> => {
-        try {
-          // 解析请求数据
-          const query = parseQuery(req);
-          const headers = parseHeaders(req);
-          const cookies = parseCookies(req);
-          const params =
-            ((req as unknown as Record<string, unknown>).params as Record<
-              string,
-              string
-            >) || {};
-
-          // 解析请求体
-          let body: unknown = undefined;
-          if (req.method !== "GET" && req.method !== "HEAD") {
-            const [, parsedBody] = await goAwait(parseBody(req));
-            body = parsedBody;
-          }
-
-          // 验证 schema
-          const data = { body, query, params, headers, cookies };
-          if (
-            schema.body ||
-            schema.query ||
-            schema.params ||
-            schema.headers ||
-            schema.cookies
-          ) {
-            validateAllSchemasUltra(schema, data);
-          }
-
-          // 获取中间件注入的额外数据
-          const extras = ((req as unknown as Record<string, unknown>)
-            .__locals ?? {}) as TExtra;
-
-          // 调用 handler
-          const result = await handler({
-            req,
-            body: body as HandlerContext<T>["body"],
-            query: query as HandlerContext<T>["query"],
-            params: params as HandlerContext<T>["params"],
-            headers: headers as HandlerContext<T>["headers"],
-            cookies: cookies as HandlerContext<T>["cookies"],
-            ...extras,
-          } as HandlerContextWithExtra<T, TExtra>);
-
-          return autoResponse(result);
-        } catch (error) {
-          if (error instanceof Error && error.message.includes("验证失败")) {
-            return handleValidationError(error);
-          }
-          return handleInternalError(error);
-        }
-      };
-    };
   };
 }
 
 /**
- * 简单的路由处理器 (无 schema 验证)
+ * 简单的路由处理器 (无 schema 验证，只有 req)
  *
  * @example
  * ```typescript
- * const handler = simpleHandler(({ req }) => {
+ * simpleHandler(({ req }) => {
  *   return { message: "Hello World" };
- * });
+ * })
  * ```
  */
 export function simpleHandler<R>(

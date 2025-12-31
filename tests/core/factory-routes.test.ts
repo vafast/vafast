@@ -24,7 +24,7 @@ function createTestRequest() {
 
 describe("createHandler 功能测试", () => {
   it("应该正确处理无 schema 配置的处理器", async () => {
-    const factoryHandler = createHandler({})(async ({ body }) => {
+    const factoryHandler = createHandler(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -47,19 +47,22 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该正确处理有 body schema 配置的处理器", async () => {
-    const factoryHandler = createHandler({
-      body: Type.Object({
-        name: Type.String(),
-        age: Type.Number(),
-        email: Type.String(),
-      }),
-    })(async ({ body }) => {
-      return {
-        message: simpleMessage,
-        body: body,
-        hasBody: body !== undefined,
-      };
-    });
+    const factoryHandler = createHandler(
+      {
+        body: Type.Object({
+          name: Type.String(),
+          age: Type.Number(),
+          email: Type.String(),
+        }),
+      },
+      async ({ body }) => {
+        return {
+          message: simpleMessage,
+          body: body,
+          hasBody: body !== undefined,
+        };
+      },
+    );
 
     const request = createTestRequest();
     const response = await factoryHandler(request);
@@ -76,7 +79,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该正确处理空请求体", async () => {
-    const factoryHandler = createHandler({})(async ({ body }) => {
+    const factoryHandler = createHandler(async ({ body }) => {
       return {
         message: simpleMessage,
         body: body,
@@ -95,17 +98,20 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该支持 query 参数解析和验证", async () => {
-    const factoryHandler = createHandler({
-      query: Type.Object({
-        name: Type.String(),
-        age: Type.String(),
-      }),
-    })(async ({ query }) => {
-      return {
-        message: simpleMessage,
-        query,
-      };
-    });
+    const factoryHandler = createHandler(
+      {
+        query: Type.Object({
+          name: Type.String(),
+          age: Type.String(),
+        }),
+      },
+      async ({ query }) => {
+        return {
+          message: simpleMessage,
+          query,
+        };
+      },
+    );
 
     const request = new Request("http://localhost:3000/?name=张三&age=25");
     const response = await factoryHandler(request);
@@ -120,17 +126,20 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该支持 headers 参数解析", async () => {
-    const factoryHandler = createHandler({
-      headers: Type.Object({
-        "content-type": Type.String(),
-        "user-agent": Type.String(),
-      }),
-    })(async ({ headers }) => {
-      return {
-        message: simpleMessage,
-        headers,
-      };
-    });
+    const factoryHandler = createHandler(
+      {
+        headers: Type.Object({
+          "content-type": Type.String(),
+          "user-agent": Type.String(),
+        }),
+      },
+      async ({ headers }) => {
+        return {
+          message: simpleMessage,
+          headers,
+        };
+      },
+    );
 
     const request = new Request("http://localhost:3000/", {
       headers: {
@@ -149,7 +158,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析 query 参数", async () => {
-    const factoryHandler = createHandler({})(async ({ query }) => {
+    const factoryHandler = createHandler(async ({ query }) => {
       return {
         message: simpleMessage,
         query,
@@ -169,7 +178,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析 headers", async () => {
-    const factoryHandler = createHandler({})(async ({ headers }) => {
+    const factoryHandler = createHandler(async ({ headers }) => {
       return {
         message: simpleMessage,
         headers,
@@ -195,7 +204,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析 cookies", async () => {
-    const factoryHandler = createHandler({})(async ({ cookies }) => {
+    const factoryHandler = createHandler(async ({ cookies }) => {
       return {
         message: simpleMessage,
         cookies,
@@ -221,7 +230,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析 params", async () => {
-    const factoryHandler = createHandler({})(async ({ params }) => {
+    const factoryHandler = createHandler(async ({ params }) => {
       return {
         message: simpleMessage,
         params,
@@ -243,7 +252,7 @@ describe("createHandler 功能测试", () => {
   });
 
   it("应该默认解析所有数据", async () => {
-    const factoryHandler = createHandler({})(async ({
+    const factoryHandler = createHandler(async ({
       body,
       query,
       headers,

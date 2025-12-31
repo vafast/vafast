@@ -10,34 +10,38 @@ const TestBodySchema = Type.Object({
 });
 
 const routes = defineRoutes([
+  // 无 schema - 直接传 handler
   {
     method: "GET",
     path: "/",
-    handler: createHandler({})(() => "Hello world"),
+    handler: createHandler(() => "Hello world"),
   },
+  // 无 schema - 访问请求数据
   {
     method: "POST",
     path: "/echo",
-    handler: createHandler({})(async ({ req }) => await req.text()),
+    handler: createHandler(async ({ req }) => await req.text()),
   },
+  // 有 schema - 传入 schema 和 handler
   {
     method: "POST",
     path: "/test/body",
-    handler: createHandler({
-      body: TestBodySchema,
-    })(({ req, body }) => {
-      const userAgent = req.headers.get("user-agent");
+    handler: createHandler(
+      { body: TestBodySchema },
+      ({ req, body }) => {
+        const userAgent = req.headers.get("user-agent");
 
-      return {
-        success: true,
-        message: "Body Schema验证通过",
-        data: {
-          receivedBody: body,
-          userAgent,
-          timestamp: new Date().toISOString(),
-        },
-      };
-    }),
+        return {
+          success: true,
+          message: "Body Schema验证通过",
+          data: {
+            receivedBody: body,
+            userAgent,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      },
+    ),
   },
 ] as const satisfies Route[]);
 
