@@ -36,4 +36,3 @@ console.log("\n测试命令：");
 console.log("wrk -t4 -c100 -d10s http://localhost:3001/  # Bun.serve");
 console.log("wrk -t4 -c100 -d10s http://localhost:3002/  # node:http");
 console.log("\n按 Ctrl+C 退出");
-

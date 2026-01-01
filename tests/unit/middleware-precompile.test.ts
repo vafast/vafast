@@ -61,9 +61,7 @@ describe("中间件预编译优化测试", () => {
 
       const server = new Server(routes);
 
-      const res = await server.fetch(
-        new Request("http://localhost/protected"),
-      );
+      const res = await server.fetch(new Request("http://localhost/protected"));
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data).toEqual({ test: "middleware-ok" });
@@ -177,12 +175,21 @@ describe("中间件预编译优化测试", () => {
       const compiledTime = endCompiled - startCompiled;
 
       // 计算性能提升
-      const improvement = ((noCompileTime - compiledTime) / noCompileTime * 100).toFixed(1);
+      const improvement = (
+        ((noCompileTime - compiledTime) / noCompileTime) *
+        100
+      ).toFixed(1);
       const speedup = (noCompileTime / compiledTime).toFixed(2);
 
-      console.log(`\n========== 预编译性能对比 (${iterations} 次请求) ==========`);
-      console.log(`非预编译: ${noCompileTime.toFixed(2)}ms (${(noCompileTime / iterations).toFixed(3)}ms/次)`);
-      console.log(`预编译后: ${compiledTime.toFixed(2)}ms (${(compiledTime / iterations).toFixed(3)}ms/次)`);
+      console.log(
+        `\n========== 预编译性能对比 (${iterations} 次请求) ==========`,
+      );
+      console.log(
+        `非预编译: ${noCompileTime.toFixed(2)}ms (${(noCompileTime / iterations).toFixed(3)}ms/次)`,
+      );
+      console.log(
+        `预编译后: ${compiledTime.toFixed(2)}ms (${(compiledTime / iterations).toFixed(3)}ms/次)`,
+      );
       console.log(`性能提升: ${improvement}%, 快了 ${speedup}x`);
       console.log(`================================================\n`);
 
@@ -197,7 +204,9 @@ describe("中间件预编译优化测试", () => {
       const testCases = [0, 1, 3, 5, 10];
       const iterations = 2000;
 
-      console.log(`\n========== 中间件数量性能对比 (${iterations} 次请求) ==========`);
+      console.log(
+        `\n========== 中间件数量性能对比 (${iterations} 次请求) ==========`,
+      );
 
       for (const mwCount of testCases) {
         const middlewares = Array.from({ length: mwCount }, createMiddleware);
@@ -226,7 +235,9 @@ describe("中间件预编译优化测试", () => {
         }
         const end = performance.now();
 
-        console.log(`${mwCount} 个中间件: ${(end - start).toFixed(2)}ms (${((end - start) / iterations).toFixed(3)}ms/次)`);
+        console.log(
+          `${mwCount} 个中间件: ${(end - start).toFixed(2)}ms (${((end - start) / iterations).toFixed(3)}ms/次)`,
+        );
       }
 
       console.log(`====================================================\n`);
@@ -280,4 +291,3 @@ describe("中间件预编译优化测试", () => {
     });
   });
 });
-

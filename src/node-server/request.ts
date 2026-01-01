@@ -33,7 +33,9 @@ function parseHeaders(rawHeaders: string[]): Headers {
  * 将 Node.js ReadableStream 转换为 Web 标准 ReadableStream
  * Node.js 和 Web 标准的 ReadableStream 在运行时兼容，但 TypeScript 类型不同
  */
-function toWebStream(nodeStream: NodeReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+function toWebStream(
+  nodeStream: NodeReadableStream<Uint8Array>,
+): ReadableStream<Uint8Array> {
   // Node.js ReadableStream 和 Web ReadableStream 在运行时是兼容的
   // 这里使用类型断言是安全的，因为 Node.js >= 18 的 stream/web 完全实现了 WHATWG Streams 标准
   return nodeStream as unknown as ReadableStream<Uint8Array>;
@@ -62,7 +64,9 @@ function createRealRequest(proxy: ProxyRequestInternal): Request {
   // 只有非 GET/HEAD 请求才有 body
   if (method !== "GET" && method !== "HEAD") {
     // 使用 Node.js 原生流转换，避免收集 chunks
-    const nodeWebStream = Readable.toWeb(incoming) as NodeReadableStream<Uint8Array>;
+    const nodeWebStream = Readable.toWeb(
+      incoming,
+    ) as NodeReadableStream<Uint8Array>;
     init.body = toWebStream(nodeWebStream);
     init.duplex = "half";
   }
@@ -145,7 +149,14 @@ proxyGetters.forEach((key) => {
 });
 
 // 代理需要调用真实 Request 的方法
-const proxyMethods = ["arrayBuffer", "blob", "clone", "formData", "json", "text"];
+const proxyMethods = [
+  "arrayBuffer",
+  "blob",
+  "clone",
+  "formData",
+  "json",
+  "text",
+];
 
 proxyMethods.forEach((key) => {
   Object.defineProperty(requestPrototype, key, {
@@ -168,7 +179,7 @@ Object.setPrototypeOf(requestPrototype, Request.prototype);
  */
 export function createProxyRequest(
   incoming: IncomingMessage,
-  defaultHost: string
+  defaultHost: string,
 ): Request {
   const req = Object.create(requestPrototype) as ProxyRequestInternal;
   req[incomingKey] = incoming;

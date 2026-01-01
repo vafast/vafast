@@ -73,10 +73,15 @@ export class RadixRouter {
   }
 
   /** 编译器函数 - 用于预编译中间件链 */
-  private compiler?: (middleware: Middleware[], handler: Handler) => CompiledHandler;
+  private compiler?: (
+    middleware: Middleware[],
+    handler: Handler,
+  ) => CompiledHandler;
 
   /** 设置中间件编译器 */
-  setCompiler(compiler: (middleware: Middleware[], handler: Handler) => CompiledHandler): void {
+  setCompiler(
+    compiler: (middleware: Middleware[], handler: Handler) => CompiledHandler,
+  ): void {
     this.compiler = compiler;
   }
 
@@ -134,12 +139,18 @@ export class RadixRouter {
     this.precompileNode(this.root, globalMiddleware);
   }
 
-  private precompileNode(node: RadixNode, globalMiddleware: Middleware[]): void {
+  private precompileNode(
+    node: RadixNode,
+    globalMiddleware: Middleware[],
+  ): void {
     for (const method in node.handlers) {
       const routeHandler = node.handlers[method as Method];
       if (routeHandler) {
         const allMiddleware = [...globalMiddleware, ...routeHandler.middleware];
-        routeHandler.compiled = this.compiler!(allMiddleware, routeHandler.handler);
+        routeHandler.compiled = this.compiler!(
+          allMiddleware,
+          routeHandler.handler,
+        );
       }
     }
 

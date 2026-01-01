@@ -9,7 +9,9 @@ import type { ServerResponse } from "node:http";
  * 构建 Node.js 响应头
  * 处理 set-cookie 多值情况
  */
-function buildOutgoingHeaders(headers: Headers): Record<string, string | string[]> {
+function buildOutgoingHeaders(
+  headers: Headers,
+): Record<string, string | string[]> {
   const result: Record<string, string | string[]> = {};
   const cookies: string[] = [];
 
@@ -34,7 +36,7 @@ function buildOutgoingHeaders(headers: Headers): Record<string, string | string[
  */
 async function writeBodyStream(
   body: ReadableStream<Uint8Array>,
-  outgoing: ServerResponse
+  outgoing: ServerResponse,
 ): Promise<void> {
   const reader = body.getReader();
 
@@ -65,7 +67,7 @@ async function writeBodyStream(
  */
 export async function writeResponse(
   response: Response,
-  outgoing: ServerResponse
+  outgoing: ServerResponse,
 ): Promise<void> {
   // 设置状态码
   outgoing.statusCode = response.status;
@@ -91,7 +93,9 @@ export async function writeResponse(
   } catch (error) {
     // 处理客户端提前断开等情况
     if (!outgoing.destroyed) {
-      outgoing.destroy(error instanceof Error ? error : new Error(String(error)));
+      outgoing.destroy(
+        error instanceof Error ? error : new Error(String(error)),
+      );
     }
   }
 }
@@ -102,7 +106,7 @@ export async function writeResponse(
  */
 export async function writeResponseSimple(
   response: Response,
-  outgoing: ServerResponse
+  outgoing: ServerResponse,
 ): Promise<void> {
   outgoing.statusCode = response.status;
 
@@ -121,4 +125,3 @@ export async function writeResponseSimple(
   const buffer = await response.arrayBuffer();
   outgoing.end(Buffer.from(buffer));
 }
-

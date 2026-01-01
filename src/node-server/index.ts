@@ -21,4 +21,3 @@ export { serve, createAdaptorServer } from "./serve";
 export type { ServeOptions, ServeResult, FetchHandler } from "./serve";
 export { createProxyRequest } from "./request";
 export { writeResponse, writeResponseSimple } from "./response";
-

@@ -36,7 +36,9 @@ describe("请求解析器优化测试", () => {
     });
 
     it("应该支持嵌套查询参数（qs 功能）", () => {
-      const req = new Request("http://localhost/test?user[name]=john&user[age]=30");
+      const req = new Request(
+        "http://localhost/test?user[name]=john&user[age]=30",
+      );
       const query = parseQuery(req);
       expect(query.user).toEqual({ name: "john", age: "30" });
     });
@@ -51,7 +53,9 @@ describe("请求解析器优化测试", () => {
     });
 
     it("应该处理 URL 编码", () => {
-      const req = new Request("http://localhost/test?name=%E5%BC%A0%E4%B8%89&city=%E5%8C%97%E4%BA%AC");
+      const req = new Request(
+        "http://localhost/test?name=%E5%BC%A0%E4%B8%89&city=%E5%8C%97%E4%BA%AC",
+      );
       const query = parseQueryFast(req);
       expect(query.name).toBe("张三");
       expect(query.city).toBe("北京");
@@ -70,7 +74,7 @@ describe("请求解析器优化测试", () => {
       const req = new Request("http://localhost/test", {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer token123",
+          Authorization: "Bearer token123",
         },
       });
       const headers = parseHeaders(req);
@@ -152,7 +156,8 @@ describe("请求解析器优化测试", () => {
   describe("性能对比测试", () => {
     it("parseQuery vs parseQueryFast 性能对比", () => {
       const iterations = 10000;
-      const url = "http://localhost/test?name=john&age=30&city=beijing&active=true";
+      const url =
+        "http://localhost/test?name=john&age=30&city=beijing&active=true";
 
       // parseQuery 测试
       const start1 = performance.now();
@@ -174,9 +179,15 @@ describe("请求解析器优化测试", () => {
       const time2 = end2 - start2;
       const speedup = (time1 / time2).toFixed(2);
 
-      console.log(`\n========== Query 解析性能对比 (${iterations} 次) ==========`);
-      console.log(`parseQuery:     ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`);
-      console.log(`parseQueryFast: ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`);
+      console.log(
+        `\n========== Query 解析性能对比 (${iterations} 次) ==========`,
+      );
+      console.log(
+        `parseQuery:     ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`,
+      );
+      console.log(
+        `parseQueryFast: ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`,
+      );
       console.log(`快了 ${speedup}x`);
       console.log(`================================================\n`);
 
@@ -185,7 +196,8 @@ describe("请求解析器优化测试", () => {
 
     it("parseCookies vs parseCookiesFast 性能对比", () => {
       const iterations = 10000;
-      const cookieHeader = "session=abc123; user=john; token=xyz789; lang=zh-CN; theme=dark";
+      const cookieHeader =
+        "session=abc123; user=john; token=xyz789; lang=zh-CN; theme=dark";
 
       // parseCookies 测试
       const start1 = performance.now();
@@ -211,9 +223,15 @@ describe("请求解析器优化测试", () => {
       const time2 = end2 - start2;
       const speedup = (time1 / time2).toFixed(2);
 
-      console.log(`\n========== Cookie 解析性能对比 (${iterations} 次) ==========`);
-      console.log(`parseCookies:     ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`);
-      console.log(`parseCookiesFast: ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`);
+      console.log(
+        `\n========== Cookie 解析性能对比 (${iterations} 次) ==========`,
+      );
+      console.log(
+        `parseCookies:     ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`,
+      );
+      console.log(
+        `parseCookiesFast: ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`,
+      );
       console.log(`快了 ${speedup}x`);
       console.log(`================================================\n`);
 
@@ -222,7 +240,8 @@ describe("请求解析器优化测试", () => {
 
     it("getCookie vs parseCookies 单值获取性能对比", () => {
       const iterations = 10000;
-      const cookieHeader = "session=abc123; user=john; token=xyz789; lang=zh-CN; theme=dark";
+      const cookieHeader =
+        "session=abc123; user=john; token=xyz789; lang=zh-CN; theme=dark";
 
       // parseCookies + 取值 测试
       const start1 = performance.now();
@@ -249,9 +268,15 @@ describe("请求解析器优化测试", () => {
       const time2 = end2 - start2;
       const speedup = (time1 / time2).toFixed(2);
 
-      console.log(`\n========== 单个 Cookie 获取性能对比 (${iterations} 次) ==========`);
-      console.log(`parseCookies + 取值: ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`);
-      console.log(`getCookie:           ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`);
+      console.log(
+        `\n========== 单个 Cookie 获取性能对比 (${iterations} 次) ==========`,
+      );
+      console.log(
+        `parseCookies + 取值: ${time1.toFixed(2)}ms (${(time1 / iterations).toFixed(3)}ms/次)`,
+      );
+      console.log(
+        `getCookie:           ${time2.toFixed(2)}ms (${(time2 / iterations).toFixed(3)}ms/次)`,
+      );
       console.log(`快了 ${speedup}x`);
       console.log(`================================================\n`);
 
@@ -259,4 +284,3 @@ describe("请求解析器优化测试", () => {
     });
   });
 });
-

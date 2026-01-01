@@ -10,4 +10,8 @@
  */
 
 export { serve, createAdaptorServer } from "./node-server/serve";
-export type { ServeOptions, ServeResult, FetchHandler } from "./node-server/serve";
+export type {
+  ServeOptions,
+  ServeResult,
+  FetchHandler,
+} from "./node-server/serve";

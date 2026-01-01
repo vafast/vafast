@@ -3,7 +3,12 @@
  * 提供类似 Bun.serve 的 API
  */
 
-import { createServer, type Server as HttpServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type Server as HttpServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { createProxyRequest } from "./request";
 import { writeResponse } from "./response";
 
@@ -40,7 +45,7 @@ export interface ServeResult {
 function createRequestHandler(
   fetch: FetchHandler,
   defaultHost: string,
-  onError?: (error: Error) => Response | Promise<Response>
+  onError?: (error: Error) => Response | Promise<Response>,
 ) {
   return async (incoming: IncomingMessage, outgoing: ServerResponse) => {
     try {
@@ -95,14 +100,9 @@ function createRequestHandler(
  */
 export function serve(
   options: ServeOptions,
-  callback?: () => void
+  callback?: () => void,
 ): ServeResult {
-  const {
-    fetch,
-    port = 3000,
-    hostname = "0.0.0.0",
-    onError,
-  } = options;
+  const { fetch, port = 3000, hostname = "0.0.0.0", onError } = options;
 
   const defaultHost = `${hostname === "0.0.0.0" ? "localhost" : hostname}:${port}`;
   const handler = createRequestHandler(fetch, defaultHost, onError);
@@ -116,12 +116,13 @@ export function serve(
     server,
     port,
     hostname,
-    stop: () => new Promise<void>((resolve, reject) => {
-      server.close((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    }),
+    stop: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      }),
   };
 }
 
@@ -131,9 +132,8 @@ export function serve(
  */
 export function createAdaptorServer(
   fetch: FetchHandler,
-  onError?: (error: Error) => Response | Promise<Response>
+  onError?: (error: Error) => Response | Promise<Response>,
 ): HttpServer {
   const handler = createRequestHandler(fetch, "localhost", onError);
   return createServer(handler);
 }
-

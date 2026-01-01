@@ -216,9 +216,10 @@ export function parseCookiesFast(req: Request): Record<string, string> {
       const key = trimmed.substring(0, eqIndex).trim();
       const value = trimmed.substring(eqIndex + 1).trim();
       // 移除引号
-      result[key] = value.startsWith('"') && value.endsWith('"')
-        ? value.slice(1, -1)
-        : value;
+      result[key] =
+        value.startsWith('"') && value.endsWith('"')
+          ? value.slice(1, -1)
+          : value;
     }
   }
 

@@ -5,12 +5,7 @@
  * 时间复杂度: O(k)，k 为路径段数
  */
 
-import type {
-  Route,
-  NestedRoute,
-  FlattenedRoute,
-  Method,
-} from "../types";
+import type { Route, NestedRoute, FlattenedRoute, Method } from "../types";
 import { flattenNestedRoutes } from "../router";
 import { composeMiddleware } from "../middleware";
 import { json } from "../utils/response";
@@ -43,7 +38,7 @@ export class Server extends BaseServer {
 
     // 设置中间件编译器
     this.router.setCompiler((middleware, handler) =>
-      composeMiddleware(middleware, handler)
+      composeMiddleware(middleware, handler),
     );
 
     if (routes.length > 0) {
@@ -110,7 +105,10 @@ export class Server extends BaseServer {
       (req as unknown as Record<string, unknown>).params = match.params;
 
       // 优先使用预编译的处理链（仅当全局中间件未变化时）
-      if (match.compiled && this.globalMiddleware.length === this.compiledWithMiddlewareCount) {
+      if (
+        match.compiled &&
+        this.globalMiddleware.length === this.compiledWithMiddlewareCount
+      ) {
         return match.compiled(req);
       }
 
