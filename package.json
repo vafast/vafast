@@ -1,7 +1,7 @@
 {
   "name": "vafast",
   "version": "0.2.4",
-  "description": "专为Bun构建的极简结构化Web框架。Go风格，函数优先。",
+  "description": "极简结构化Web框架，支持 Bun 和 Node.js。Go风格，函数优先。",
   "type": "module",
   "repository": {
     "type": "git",
@@ -23,6 +23,12 @@
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./node-server": {
+      "import": "./dist/node-server/index.js",
+      "require": "./dist/node-server/index.js",
+      "types": "./dist/node-server/index.d.ts",
+      "default": "./dist/node-server/index.js"
     }
   },
   "types": "./dist/index.d.ts",
@@ -53,6 +59,7 @@
   },
   "keywords": [
     "bun",
+    "node",
     "framework",
     "minimal",
     "router",
