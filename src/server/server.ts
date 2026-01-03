@@ -143,15 +143,19 @@ export class Server extends BaseServer {
       const allowedMethods = this.router.getAllowedMethods(pathname);
       if (allowedMethods.length > 0) {
         // 尝试获取该路径任意方法的路由中间件
-        const anyMatch = this.router.match(allowedMethods[0] as Method, pathname);
+        const anyMatch = this.router.match(
+          allowedMethods[0] as Method,
+          pathname,
+        );
         const routeMiddleware = anyMatch?.middleware || [];
         const allMiddleware = [...this.globalMiddleware, ...routeMiddleware];
 
         // OPTIONS 请求默认返回 204（中间件如 CORS 可能会提前响应）
-        const optionsHandler = () => new Response(null, {
-          status: 204,
-          headers: { Allow: allowedMethods.join(", ") }
-        });
+        const optionsHandler = () =>
+          new Response(null, {
+            status: 204,
+            headers: { Allow: allowedMethods.join(", ") },
+          });
 
         const handler = composeMiddleware(allMiddleware, optionsHandler);
         return handler(req);
@@ -160,9 +164,8 @@ export class Server extends BaseServer {
 
     // 未匹配路由时，仍执行全局中间件（如 CORS 处理 OPTIONS 预检）
     if (this.globalMiddleware.length > 0) {
-      const handler = composeMiddleware(
-        this.globalMiddleware,
-        () => this.createErrorResponse(method, pathname),
+      const handler = composeMiddleware(this.globalMiddleware, () =>
+        this.createErrorResponse(method, pathname),
       );
       return handler(req);
     }
