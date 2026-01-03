@@ -94,6 +94,24 @@ export class Server extends BaseServer {
     return url.substring(pathStart, end) || "/";
   }
 
+  /** 生成 404/405 响应 */
+  private createErrorResponse(method: string, pathname: string): Response {
+    const allowedMethods = this.router.getAllowedMethods(pathname);
+    if (allowedMethods.length > 0) {
+      return json(
+        {
+          success: false,
+          error: "Method Not Allowed",
+          message: `Method ${method} not allowed for this endpoint`,
+          allowedMethods,
+        },
+        405,
+        { Allow: allowedMethods.join(", ") },
+      );
+    }
+    return json({ success: false, error: "Not Found" }, 404);
+  }
+
   /** 处理请求 */
   fetch = async (req: Request): Promise<Response> => {
     const pathname = this.extractPathname(req.url);
@@ -119,23 +137,37 @@ export class Server extends BaseServer {
       return handler(req);
     }
 
-    // 405 Method Not Allowed
-    const allowedMethods = this.router.getAllowedMethods(pathname);
-    if (allowedMethods.length > 0) {
-      return json(
-        {
-          success: false,
-          error: "Method Not Allowed",
-          message: `Method ${method} not allowed for this endpoint`,
-          allowedMethods,
-        },
-        405,
-        { Allow: allowedMethods.join(", ") },
-      );
+    // OPTIONS 预检请求特殊处理：查找同路径其他方法的路由，使用其中间件
+    // 这允许路由级 CORS 中间件正常工作
+    if (method === "OPTIONS") {
+      const allowedMethods = this.router.getAllowedMethods(pathname);
+      if (allowedMethods.length > 0) {
+        // 尝试获取该路径任意方法的路由中间件
+        const anyMatch = this.router.match(allowedMethods[0] as Method, pathname);
+        const routeMiddleware = anyMatch?.middleware || [];
+        const allMiddleware = [...this.globalMiddleware, ...routeMiddleware];
+
+        // OPTIONS 请求默认返回 204（中间件如 CORS 可能会提前响应）
+        const optionsHandler = () => new Response(null, {
+          status: 204,
+          headers: { Allow: allowedMethods.join(", ") }
+        });
+
+        const handler = composeMiddleware(allMiddleware, optionsHandler);
+        return handler(req);
+      }
     }
 
-    // 404 Not Found
-    return json({ success: false, error: "Not Found" }, 404);
+    // 未匹配路由时，仍执行全局中间件（如 CORS 处理 OPTIONS 预检）
+    if (this.globalMiddleware.length > 0) {
+      const handler = composeMiddleware(
+        this.globalMiddleware,
+        () => this.createErrorResponse(method, pathname),
+      );
+      return handler(req);
+    }
+
+    return this.createErrorResponse(method, pathname);
   };
 
   addRoute(route: Route): void {
