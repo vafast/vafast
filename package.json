@@ -37,7 +37,7 @@
     "build": "tsup",
     "dev": "npx tsx watch example/index.ts",
     "test": "vitest run",
-    "release": "npx np --no-tests"
+    "release": "npm run build && npm run test && npx bumpp && npm publish --access=public"
   },
   "keywords": [
     "bun",
