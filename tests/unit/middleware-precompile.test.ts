@@ -116,53 +116,6 @@ describe("中间件预编译优化测试", () => {
     });
   });
 
-  describe("性能测试", () => {
-    it("不同中间件数量的性能对比", async () => {
-      const createMiddleware = (): Middleware => async (req, next) => next(req);
-
-      const testCases = [0, 1, 3, 5, 10];
-      const iterations = 2000;
-
-      console.log(
-        `\n========== 中间件数量性能对比 (${iterations} 次请求) ==========`,
-      );
-
-      for (const mwCount of testCases) {
-        const middlewares = Array.from({ length: mwCount }, createMiddleware);
-
-        const routes = defineRoutes([
-          {
-            method: "GET",
-            path: `/mw-${mwCount}`,
-            middleware: middlewares,
-            handler: createHandler(() => ({ count: mwCount })),
-          },
-        ]);
-
-        const server = new Server(routes);
-        server.compile();
-
-        // 预热
-        for (let i = 0; i < 50; i++) {
-          await server.fetch(new Request(`http://localhost/mw-${mwCount}`));
-        }
-
-        // 性能测试
-        const start = performance.now();
-        for (let i = 0; i < iterations; i++) {
-          await server.fetch(new Request(`http://localhost/mw-${mwCount}`));
-        }
-        const end = performance.now();
-
-        console.log(
-          `${mwCount} 个中间件: ${(end - start).toFixed(2)}ms (${((end - start) / iterations).toFixed(3)}ms/次)`,
-        );
-      }
-
-      console.log(`====================================================\n`);
-    });
-  });
-
   describe("边界情况测试", () => {
     it("404 路由应该正常返回", async () => {
       const server = new Server([]);
