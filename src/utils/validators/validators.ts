@@ -1,16 +1,29 @@
-// src/utils/validators.ts
 /**
- * 高性能 Schema 验证器
+ * Schema 验证器 - 简洁版
  *
- * 使用 TypeBox TypeCompiler 进行 JIT 编译
- * 编译后的验证器会被缓存，避免重复编译开销
+ * 特点：
+ * - WeakMap 缓存避免内存泄漏
+ * - TypeCompiler JIT 编译，性能最佳
+ * - 支持 FormatRegistry（需确保同一实例）
  *
- * @version 2.0.0 - 添加预编译缓存
+ * @version 7.0.0
  */
 
 import { Type } from "@sinclair/typebox";
 import type { Static, TSchema } from "@sinclair/typebox";
 import { TypeCompiler, type TypeCheck } from "@sinclair/typebox/compiler";
+import { Value } from "@sinclair/typebox/value";
+
+// ============== 类型定义 ==============
+
+/** Schema 配置接口 */
+export interface SchemaConfig {
+  body?: TSchema;
+  query?: TSchema;
+  params?: TSchema;
+  headers?: TSchema;
+  cookies?: TSchema;
+}
 
 /** 验证错误接口 */
 export interface ValidationError {
@@ -18,36 +31,22 @@ export interface ValidationError {
   message: string;
   code: string;
   value?: unknown;
-  schema?: unknown;
 }
 
-/** 验证失败结果接口 */
-export interface ValidationFailure {
-  success: false;
-  errors: ValidationError[];
-}
-
-/** 验证成功结果接口 */
-export interface ValidationSuccess<T> {
-  success: true;
-  data: T;
-}
-
-/** 验证结果联合类型 */
+/** 验证结果 */
 export type ValidationResult<T = unknown> =
-  | ValidationSuccess<T>
-  | ValidationFailure;
+  | { success: true; data: T }
+  | { success: false; errors: ValidationError[] };
 
-/**
- * 编译器缓存
- * 使用 WeakMap 避免内存泄漏（Schema 对象被垃圾回收时，缓存也会自动清理）
- */
+// ============== 缓存 ==============
+
+/** 编译器缓存 - WeakMap 避免内存泄漏 */
 const compilerCache = new WeakMap<TSchema, TypeCheck<TSchema>>();
+
+// ============== 核心函数 ==============
 
 /**
  * 获取或创建编译后的验证器
- * @param schema TypeBox Schema
- * @returns 编译后的验证器
  */
 function getCompiledValidator<T extends TSchema>(schema: T): TypeCheck<T> {
   let compiler = compilerCache.get(schema);
@@ -59,88 +58,20 @@ function getCompiledValidator<T extends TSchema>(schema: T): TypeCheck<T> {
 }
 
 /**
- * 预编译 Schema（在启动时调用，避免首次请求的编译开销）
- * @param schemas 要预编译的 Schema 数组
- */
-export function precompileSchemas(schemas: TSchema[]): void {
-  for (const schema of schemas) {
-    getCompiledValidator(schema);
-  }
-}
-
-/**
- * 使用TypeBox Schema验证数据（带缓存优化）
- * @param schema TypeBox Schema
- * @param data 要验证的数据
- * @returns 验证结果，包含类型安全的数据或详细错误信息
+ * 验证单个 Schema（返回结果对象）
  */
 export function validateSchema<T extends TSchema>(
   schema: T,
   data: unknown,
 ): ValidationResult<Static<T>> {
   try {
-    // 从缓存获取或编译验证器
     const compiler = getCompiledValidator(schema);
 
-    if (compiler.Check(data)) {
-      return {
-        success: true,
-        data: data as Static<T>,
-      };
-    }
-
-    // 验证失败时，使用Errors函数生成详细的错误信息
-    const errors: ValidationError[] = [];
-    const errorIterator = compiler.Errors(data);
-
-    // 收集所有错误（可以根据需要限制数量）
-    for (const error of errorIterator) {
-      errors.push({
-        path: error.path,
-        message: error.message,
-        code: "VALIDATION_FAILED",
-        value: error.value,
-        schema: error.schema,
-      });
-    }
-
-    return {
-      success: false,
-      errors,
-    };
-  } catch (error) {
-    // 处理验证过程中的异常
-    return {
-      success: false,
-      errors: [
-        {
-          path: "",
-          message:
-            error instanceof Error ? error.message : "Unknown validation error",
-          code: "VALIDATION_EXCEPTION",
-          value: data,
-        },
-      ],
-    };
-  }
-}
-
-/**
- * 创建类型特化的验证器（最高性能）
- * 适用于频繁验证同一 Schema 的场景
- * @param schema TypeBox Schema
- * @returns 类型安全的验证函数
- */
-export function createValidator<T extends TSchema>(
-  schema: T,
-): (data: unknown) => ValidationResult<Static<T>> {
-  const compiler = getCompiledValidator(schema);
-
-  return (data: unknown): ValidationResult<Static<T>> => {
     if (compiler.Check(data)) {
       return { success: true, data: data as Static<T> };
     }
 
+    // 收集错误
     const errors: ValidationError[] = [];
     for (const error of compiler.Errors(data)) {
       errors.push({
@@ -148,19 +79,42 @@ export function createValidator<T extends TSchema>(
         message: error.message,
         code: "VALIDATION_FAILED",
         value: error.value,
-        schema: error.schema,
       });
     }
     return { success: false, errors };
-  };
+  } catch (error) {
+    return {
+      success: false,
+      errors: [
+        {
+          path: "",
+          message: error instanceof Error ? error.message : "验证异常",
+          code: "VALIDATION_EXCEPTION",
+        },
+      ],
+    };
+  }
 }
 
 /**
- * 快速验证（只返回布尔值，不收集错误）
- * 适用于只需要知道验证结果的场景
- * @param schema TypeBox Schema
- * @param data 要验证的数据
- * @returns 验证是否通过
+ * 验证 Schema（抛出异常版本，用于框架内部）
+ */
+export function validateSchemaOrThrow<T extends TSchema>(
+  schema: T,
+  data: unknown,
+  context: string,
+): Static<T> {
+  const compiler = getCompiledValidator(schema);
+
+  if (!compiler.Check(data)) {
+    throw new Error(`${context}验证失败`);
+  }
+
+  return data as Static<T>;
+}
+
+/**
+ * 快速验证（只返回布尔值）
  */
 export function validateFast<T extends TSchema>(
   schema: T,
@@ -171,14 +125,65 @@ export function validateFast<T extends TSchema>(
 }
 
 /**
- * 获取缓存统计信息（用于调试）
+ * 批量验证所有 Schema（用于请求验证）
+ */
+export function validateAllSchemas(
+  config: SchemaConfig,
+  data: {
+    body: unknown;
+    query: unknown;
+    params: unknown;
+    headers: unknown;
+    cookies: unknown;
+  },
+): typeof data {
+  if (config.body) {
+    validateSchemaOrThrow(config.body, data.body, "请求体");
+  }
+  if (config.query) {
+    validateSchemaOrThrow(config.query, data.query, "Query参数");
+  }
+  if (config.params) {
+    validateSchemaOrThrow(config.params, data.params, "路径参数");
+  }
+  if (config.headers) {
+    validateSchemaOrThrow(config.headers, data.headers, "请求头");
+  }
+  if (config.cookies) {
+    validateSchemaOrThrow(config.cookies, data.cookies, "Cookie");
+  }
+  return data;
+}
+
+/**
+ * 预编译 Schema（启动时调用，避免首次请求开销）
+ */
+export function precompileSchemas(config: SchemaConfig): void {
+  if (config.body) getCompiledValidator(config.body);
+  if (config.query) getCompiledValidator(config.query);
+  if (config.params) getCompiledValidator(config.params);
+  if (config.headers) getCompiledValidator(config.headers);
+  if (config.cookies) getCompiledValidator(config.cookies);
+}
+
+/**
+ * 创建类型特化的验证器（高频使用场景）
+ */
+export function createValidator<T extends TSchema>(
+  schema: T,
+): (data: unknown) => ValidationResult<Static<T>> {
+  return (data: unknown) => validateSchema(schema, data);
+}
+
+/**
+ * 获取缓存统计（调试用）
  */
 export function getValidatorCacheStats(): { cacheType: string; note: string } {
   return {
     cacheType: "WeakMap",
-    note: "WeakMap 不支持 size 属性，缓存会随 Schema 对象自动清理",
+    note: "WeakMap 缓存会随 Schema 对象自动清理，无内存泄漏风险",
   };
 }
 
-// 导出常用的TypeBox类型，方便使用
+// 导出 TypeBox 类型
 export { Type, Static, TSchema };

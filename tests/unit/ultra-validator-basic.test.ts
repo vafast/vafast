@@ -1,19 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { Type } from "@sinclair/typebox";
-import {
-  validateSchemaUltra,
-  clearUltraCache,
-} from "../../src/utils/validators/schema-validators-ultra";
+import { validateSchemaOrThrow } from "../../src/utils/validators/validators";
 
-describe("超高性能验证器基础功能测试", () => {
-  beforeEach(() => {
-    clearUltraCache();
-  });
-
-  afterEach(() => {
-    clearUltraCache();
-  });
-
+describe("Schema 验证器基础功能测试", () => {
   it("应该验证简单的用户Schema", () => {
     const userSchema = Type.Object({
       id: Type.Number(),
@@ -31,7 +20,7 @@ describe("超高性能验证器基础功能测试", () => {
       isActive: true,
     };
 
-    const result = validateSchemaUltra(userSchema, validUser, "用户数据");
+    const result = validateSchemaOrThrow(userSchema, validUser, "用户数据");
     expect(result).toEqual(validUser);
   });
 
@@ -46,14 +35,8 @@ describe("超高性能验证器基础功能测试", () => {
       limit: 20,
     };
 
-    const result = validateSchemaUltra(querySchema, validQuery, "查询参数");
+    const result = validateSchemaOrThrow(querySchema, validQuery, "查询参数");
     expect(result).toEqual(validQuery);
-  });
-
-  it("应该跳过未定义的Schema", () => {
-    const data = { test: "data" };
-    const result = validateSchemaUltra(undefined, data, "测试");
-    expect(result).toEqual(data);
   });
 
   it("应该抛出验证错误", () => {
@@ -68,7 +51,7 @@ describe("超高性能验证器基础功能测试", () => {
     };
 
     expect(() => {
-      validateSchemaUltra(userSchema, invalidUser, "用户数据");
+      validateSchemaOrThrow(userSchema, invalidUser, "用户数据");
     }).toThrow("用户数据验证失败");
   });
 });

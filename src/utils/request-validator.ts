@@ -12,9 +12,9 @@
 import type { TSchema } from "@sinclair/typebox";
 import type { Static } from "@sinclair/typebox";
 import {
-  validateAllSchemasUltra,
+  validateAllSchemas,
   type SchemaConfig,
-} from "./validators/schema-validators-ultra";
+} from "./validators/validators";
 import { parseBody, parseQuery, parseHeaders, parseCookies } from "./parsers";
 
 // 请求数据结构
@@ -85,7 +85,7 @@ export function validateRequest<T extends SchemaConfig>(
   requestData: RequestData,
 ): ValidationResult<T> {
   try {
-    const validatedData = validateAllSchemasUltra(config, requestData);
+    const validatedData = validateAllSchemas(config, requestData);
 
     return {
       success: true,

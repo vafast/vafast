@@ -47,11 +47,24 @@ export { HtmlRenderer } from "./html-renderer";
 // 依赖管理
 export { DependencyManager } from "./dependency-manager";
 
-// 验证器（JIT 编译）
+// 验证器（JIT 编译 + Format 支持）
 export {
   validateSchema,
-  createValidator,
+  validateSchemaOrThrow,
   validateFast,
+  validateAllSchemas,
   precompileSchemas,
+  createValidator,
   getValidatorCacheStats,
+  type SchemaConfig,
+  type ValidationError,
+  type ValidationResult,
 } from "./validators/validators";
+
+// Format 验证器（内置常用 format）
+export {
+  registerFormats,
+  registerFormat,
+  hasFormat,
+  Patterns,
+} from "./formats";

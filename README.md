@@ -445,6 +445,51 @@ precompileSchemas([UserSchema, PostSchema, CommentSchema]);
 
 **性能效果：首次编译后，10000 次验证仅需 ~5ms**
 
+### 内置 Format 验证器
+
+Vafast 内置 30+ 常用 format 验证器，**导入框架时自动注册**，对标 Zod 的内置验证：
+
+```typescript
+import { Type, createHandler } from 'vafast';
+
+// 直接使用内置 format，无需手动注册
+const UserSchema = Type.Object({
+  email: Type.String({ format: 'email' }),
+  phone: Type.String({ format: 'phone' }),       // 中国手机号
+  website: Type.String({ format: 'url' }),
+  avatar: Type.String({ format: 'uuid' }),
+  createdAt: Type.String({ format: 'date-time' }),
+});
+
+const handler = createHandler({ body: UserSchema }, ({ body }) => {
+  return { success: true, user: body };
+});
+```
+
+**支持的 Format 列表：**
+
+| 分类 | Format | 说明 |
+|------|--------|------|
+| **标识符** | `email`, `uuid`, `cuid`, `cuid2`, `ulid`, `nanoid`, `objectid`, `slug` | 各种 ID 格式 |
+| **网络** | `url`, `uri`, `ipv4`, `ipv6`, `ip`, `cidr`, `hostname` | 网络地址 |
+| **日期时间** | `date`, `time`, `date-time`, `datetime`, `duration` | ISO 8601 格式 |
+| **手机号** | `phone` (中国), `phone-cn`, `phone-e164` (国际) | 电话号码 |
+| **编码** | `base64`, `base64url`, `jwt` | 编码格式 |
+| **颜色** | `hex-color`, `rgb-color`, `color` | 颜色值 |
+| **其他** | `emoji`, `semver`, `credit-card` | 特殊格式 |
+
+**自定义 Format：**
+
+```typescript
+import { registerFormat, Patterns } from 'vafast';
+
+// 注册自定义 format
+registerFormat('order-id', (v) => /^ORD-\d{8}$/.test(v));
+
+// 使用内置正则（供外部使用）
+const isEmail = Patterns.EMAIL.test('test@example.com');
+```
+
 ### 中间件预编译
 
 Vafast 自动在路由注册时预编译中间件链，消除运行时组合开销：

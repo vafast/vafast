@@ -14,5 +14,9 @@ export * from "./types";
 export { serve } from "./serve";
 export type { ServeOptions, ServeResult, FetchHandler } from "./serve";
 
-// 重新导出 Type 以便用户使用
-export { Type } from "@sinclair/typebox";
+// 重新导出 TypeBox 类型
+export { Type, FormatRegistry } from "@sinclair/typebox";
+
+// 自动注册内置 format 验证器
+import { registerFormats } from "./utils/formats";
+registerFormats();

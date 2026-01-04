@@ -17,9 +17,9 @@ import { parseBody, parseQuery, parseHeaders, parseCookies } from "./parsers";
 import { goAwait } from "./go-await";
 import { json } from "./response";
 import {
-  validateAllSchemasUltra,
-  precompileSchemasUltra,
-} from "./validators/schema-validators-ultra";
+  validateAllSchemas,
+  precompileSchemas,
+} from "./validators/validators";
 
 /**
  * 自动响应转换
@@ -180,7 +180,7 @@ export function createHandler<const T extends RouteSchema, R>(
     schema.headers ||
     schema.cookies
   ) {
-    precompileSchemasUltra(schema);
+    precompileSchemas(schema);
   }
 
   return async (req: Request): Promise<Response> => {
@@ -211,7 +211,7 @@ export function createHandler<const T extends RouteSchema, R>(
         schema.headers ||
         schema.cookies
       ) {
-        validateAllSchemasUltra(schema, data);
+        validateAllSchemas(schema, data);
       }
 
       // 调用 handler
@@ -300,7 +300,7 @@ export function createHandlerWithExtra<
     schema.headers ||
     schema.cookies
   ) {
-    precompileSchemasUltra(schema);
+    precompileSchemas(schema);
   }
 
   return async (req: Request): Promise<Response> => {
@@ -331,7 +331,7 @@ export function createHandlerWithExtra<
         schema.headers ||
         schema.cookies
       ) {
-        validateAllSchemasUltra(schema, data);
+        validateAllSchemas(schema, data);
       }
 
       // 获取中间件注入的额外数据
