@@ -13,21 +13,21 @@
   },
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./mod": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.js",
-      "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
     "./node-server": {
+      "types": "./dist/node-server/index.d.ts",
       "import": "./dist/node-server/index.js",
       "require": "./dist/node-server/index.js",
-      "types": "./dist/node-server/index.d.ts",
       "default": "./dist/node-server/index.js"
     }
   },
