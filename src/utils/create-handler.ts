@@ -149,22 +149,33 @@ function isHandler(value: unknown): value is (...args: unknown[]) => unknown {
  * )
  * ```
  */
+/**
+ * 带类型推断的 Handler - 保留返回类型信息用于客户端类型推断
+ */
+export type InferableHandler<TReturn, TSchema extends RouteSchema = RouteSchema> = ((req: Request) => Promise<Response>) & {
+  /** 返回类型标记（仅用于类型推断，运行时不存在） */
+  __returnType: TReturn;
+  /** Schema 类型标记 */
+  __schema: TSchema;
+};
+
+
 // 重载 1: 无 schema
 export function createHandler<R>(
   handler: (ctx: EmptySchemaContext) => R | Promise<R>,
-): (req: Request) => Promise<Response>;
+): InferableHandler<R>;
 
 // 重载 2: 有 schema
 export function createHandler<const T extends RouteSchema, R>(
   schema: T,
   handler: (ctx: HandlerContext<T>) => R | Promise<R>,
-): (req: Request) => Promise<Response>;
+): InferableHandler<R, T>;
 
 // 实现
 export function createHandler<const T extends RouteSchema, R>(
   schemaOrHandler: T | ((ctx: EmptySchemaContext) => R | Promise<R>),
   maybeHandler?: (ctx: HandlerContext<T>) => R | Promise<R>,
-): (req: Request) => Promise<Response> {
+): InferableHandler<R, T> {
   // 判断调用方式
   const hasSchema = !isHandler(schemaOrHandler);
   const schema = hasSchema ? (schemaOrHandler as T) : ({} as T);
@@ -183,7 +194,7 @@ export function createHandler<const T extends RouteSchema, R>(
     precompileSchemas(schema);
   }
 
-  return async (req: Request): Promise<Response> => {
+  const handlerFn = async (req: Request): Promise<Response> => {
     try {
       // 解析请求数据
       const query = parseQuery(req);
@@ -232,6 +243,9 @@ export function createHandler<const T extends RouteSchema, R>(
       return handleInternalError(error);
     }
   };
+
+  // 类型断言：这些属性只在编译时用于类型推断，运行时不存在
+  return handlerFn as InferableHandler<R, T>;
 }
 
 /**

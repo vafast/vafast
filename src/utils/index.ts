@@ -7,6 +7,7 @@ export {
   createHandler,
   createHandlerWithExtra,
   simpleHandler,
+  type InferableHandler,
 } from "./create-handler";
 
 // 请求解析
