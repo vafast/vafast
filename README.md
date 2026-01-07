@@ -507,6 +507,67 @@ server.compile(); // 预编译所有路由的处理链
 
 **性能效果：1000 次请求仅需 ~4ms，平均每次 0.004ms**
 
+### 路由注册表 (RouteRegistry)
+
+Vafast 提供 `RouteRegistry` 用于路由元信息的收集和查询，适用于 API 文档生成、Webhook 事件注册、权限检查等场景：
+
+```typescript
+import { Server, createRouteRegistry } from 'vafast';
+import type { Route } from 'vafast';
+
+// 定义带扩展字段的路由
+const routes: Route[] = [
+  {
+    method: 'POST',
+    path: '/auth/signIn',
+    handler: signInHandler,
+    name: '用户登录',                    // 扩展字段
+    description: '用户通过邮箱密码登录',   // 扩展字段
+    webhook: { eventKey: 'auth.signIn' }, // 自定义扩展
+  },
+  {
+    method: 'GET',
+    path: '/users',
+    handler: getUsersHandler,
+    permission: 'users.read',            // 自定义扩展
+  },
+];
+
+const server = new Server(routes);
+
+// 创建路由注册表
+const registry = createRouteRegistry(server.getRoutesWithMeta());
+
+// 查询路由
+const route = registry.get('POST', '/auth/signIn');
+console.log(route?.name);  // '用户登录'
+
+// 按分类获取
+const authRoutes = registry.getByCategory('auth');
+
+// 筛选有特定字段的路由
+const webhookRoutes = registry.filter('webhook');
+const permissionRoutes = registry.filter('permission');
+
+// 获取所有分类
+const categories = registry.getCategories();  // ['auth', 'users']
+```
+
+**完整 API：**
+
+| 方法 | 说明 |
+|------|------|
+| `getAll()` | 获取所有路由元信息 |
+| `get(method, path)` | 按 method+path 查询 |
+| `has(method, path)` | 检查路由是否存在 |
+| `getByCategory(category)` | 按分类获取路由 |
+| `getCategories()` | 获取所有分类 |
+| `filter(field)` | 筛选有特定字段的路由 |
+| `filterBy(predicate)` | 自定义条件筛选 |
+| `forEach(callback)` | 遍历所有路由 |
+| `map(callback)` | 映射所有路由 |
+| `size` | 路由数量 |
+
 ## 🔧 运行时支持
 
 ### Bun

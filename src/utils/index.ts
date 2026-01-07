@@ -77,3 +77,10 @@ export {
   type SSEHandler,
   type SSEMarker,
 } from "./sse";
+
+// 路由注册表
+export {
+  RouteRegistry,
+  createRouteRegistry,
+  type RouteMeta,
+} from "./route-registry";

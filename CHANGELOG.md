@@ -5,6 +5,11 @@
 ## [未发布]
 
 ### 新增
+- 🆕 **RouteRegistry 路由注册表** - 路由元信息收集与查询工具
+  - `createRouteRegistry()` - 创建路由注册表
+  - `server.getRoutesWithMeta()` - 获取完整路由元信息
+  - 支持按 method+path 查询、按分类筛选、自定义字段筛选
+  - 适用于 API 文档生成、Webhook 事件注册、权限检查等场景
 - 新增超优化验证器系统
 - 新增组件渲染支持 (Vue/React SSR)
 - 新增嵌套路由系统

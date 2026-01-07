@@ -46,6 +46,12 @@ export interface Route {
   path: string;
   handler: Handler;
   middleware?: Middleware[];
+  /** 路由名称（用于文档、事件等） */
+  name?: string;
+  /** 路由描述 */
+  description?: string;
+  /** 允许任意扩展（支持 Webhook、权限等插件） */
+  [key: string]: unknown;
 }
 
 // 嵌套路由配置
@@ -53,6 +59,12 @@ export interface NestedRoute {
   path: string;
   middleware?: Middleware[];
   children?: (NestedRoute | Route)[];
+  /** 路由组名称 */
+  name?: string;
+  /** 路由组描述 */
+  description?: string;
+  /** 允许任意扩展 */
+  [key: string]: unknown;
 }
 
 // 扁平化后的路由，包含完整的中间件链

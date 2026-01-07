@@ -196,4 +196,21 @@ export class Server extends BaseServer {
   getRoutes(): Array<{ method: Method; path: string }> {
     return this.router.getRoutes();
   }
+
+  /**
+   * 获取完整的路由元信息（不含 handler 和 middleware）
+   *
+   * 用于 API 文档生成、Webhook 事件注册、权限检查等场景
+   *
+   * @example
+   * ```typescript
+   * const routes = server.getRoutesWithMeta()
+   * for (const route of routes) {
+   *   console.log(route.fullPath, route.name, route.description)
+   * }
+   * ```
+   */
+  getRoutesWithMeta(): FlattenedRoute[] {
+    return this.routes;
+  }
 }

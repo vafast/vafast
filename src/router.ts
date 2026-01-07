@@ -50,8 +50,9 @@ export function flattenNestedRoutes(
 
     if ("method" in route && "handler" in route) {
       // 叶子路由（有处理函数）
+      const leafRoute = route as Route;
       flattened.push({
-        ...route,
+        ...leafRoute,
         fullPath: currentPath,
         middlewareChain: currentMiddleware,
       });
