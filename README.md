@@ -274,8 +274,7 @@ export default { fetch: server.fetch };
 
 **Node.js 完整示例：**
 ```typescript
-import { Server, createHandler } from 'vafast';
-import { serve } from '@vafast/node-server';
+import { Server, createHandler, serve } from 'vafast';
 
 const server = new Server([
   { method: 'GET', path: '/', handler: createHandler(() => 'Hello Node!') }
@@ -579,7 +578,7 @@ export default { port: 3000, fetch: server.fetch };
 ### Node.js
 
 ```typescript
-import { serve } from '@vafast/node-server';
+import { serve } from 'vafast';
 serve({ fetch: server.fetch, port: 3000 });
 ```
 
