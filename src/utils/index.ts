@@ -82,5 +82,10 @@ export {
 export {
   RouteRegistry,
   createRouteRegistry,
+  // 全局访问函数（Server 创建后可在任意位置使用）
+  getRouteRegistry,
+  getRoute,
+  getAllRoutes,
+  filterRoutes,
   type RouteMeta,
 } from "./route-registry";

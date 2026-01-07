@@ -11,6 +11,7 @@ import { composeMiddleware } from "../middleware";
 import { json } from "../utils/response";
 import { BaseServer } from "./base-server";
 import { RadixRouter } from "../router/radix-tree";
+import { RouteRegistry, setGlobalRegistry } from "../utils/route-registry";
 
 /**
  * Vafast 服务器
@@ -77,6 +78,9 @@ export class Server extends BaseServer {
     if (this.globalMiddleware.length === 0 && !this.isCompiled) {
       this.compile();
     }
+
+    // 自动设置全局 RouteRegistry（支持在任意位置通过 getRouteRegistry() 访问）
+    setGlobalRegistry(new RouteRegistry(this.routes));
   }
 
   /** 快速提取 pathname */

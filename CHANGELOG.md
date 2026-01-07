@@ -10,6 +10,11 @@
   - `server.getRoutesWithMeta()` - 获取完整路由元信息
   - 支持按 method+path 查询、按分类筛选、自定义字段筛选
   - 适用于 API 文档生成、Webhook 事件注册、权限检查等场景
+- 🆕 **全局路由访问函数** - Server 创建后可在任意位置访问路由信息
+  - `getRouteRegistry()` - 获取全局 RouteRegistry 实例
+  - `getRoute(method, path)` - 快速查询单个路由
+  - `getAllRoutes()` - 获取所有路由
+  - `filterRoutes(field)` - 筛选有特定字段的路由
 - 新增超优化验证器系统
 - 新增组件渲染支持 (Vue/React SSR)
 - 新增嵌套路由系统

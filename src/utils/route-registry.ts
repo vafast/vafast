@@ -209,3 +209,92 @@ export function createRouteRegistry<T extends Record<string, unknown> = Record<s
   return new RouteRegistry<T>(routes)
 }
 
+// ============================================
+// 全局 Registry（单例模式）
+// ============================================
+
+/** 全局 registry 实例 */
+let globalRegistry: RouteRegistry | null = null
+
+/**
+ * 设置全局 registry（框架内部使用）
+ * @internal
+ */
+export function setGlobalRegistry(registry: RouteRegistry): void {
+  globalRegistry = registry
+}
+
+/**
+ * 获取全局路由注册表
+ *
+ * @example
+ * ```typescript
+ * // 在任意文件中
+ * import { getRouteRegistry } from 'vafast'
+ *
+ * const registry = getRouteRegistry()
+ * const webhookRoutes = registry.filter('webhook')
+ * ```
+ *
+ * @throws 如果 Server 尚未创建
+ */
+export function getRouteRegistry<T extends Record<string, unknown> = Record<string, unknown>>(): RouteRegistry<T> {
+  if (!globalRegistry) {
+    throw new Error('RouteRegistry not initialized. Make sure Server is created first.')
+  }
+  return globalRegistry as RouteRegistry<T>
+}
+
+/**
+ * 按 method + path 获取单个路由
+ *
+ * 便捷函数，无需先获取 registry
+ *
+ * @example
+ * ```typescript
+ * // 在中间件或接口中
+ * import { getRoute } from 'vafast'
+ *
+ * const route = getRoute('POST', '/auth/signIn')
+ * if (route?.webhook) {
+ *   console.log('This route has webhook:', route.webhook)
+ * }
+ * ```
+ */
+export function getRoute<T extends Record<string, unknown> = Record<string, unknown>>(
+  method: string,
+  path: string
+): (RouteMeta & T) | undefined {
+  return getRouteRegistry<T>().get(method, path)
+}
+
+/**
+ * 获取所有路由
+ *
+ * @example
+ * ```typescript
+ * import { getAllRoutes } from 'vafast'
+ *
+ * const routes = getAllRoutes()
+ * console.log(`Total ${routes.length} routes`)
+ * ```
+ */
+export function getAllRoutes(): RouteMeta[] {
+  return getRouteRegistry().getAll()
+}
+
+/**
+ * 筛选有特定字段的路由
+ *
+ * @example
+ * ```typescript
+ * import { filterRoutes } from 'vafast'
+ *
+ * // 获取所有配置了 webhook 的路由
+ * const webhookRoutes = filterRoutes('webhook')
+ * ```
+ */
+export function filterRoutes<K extends string>(field: K): (RouteMeta & Record<K, unknown>)[] {
+  return getRouteRegistry().filter(field)
+}
+
