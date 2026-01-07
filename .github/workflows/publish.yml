@@ -36,6 +36,9 @@ jobs:
       - name: Install packages
         run: npm ci
 
+      - name: Type check
+        run: npm run type-check
+
       - name: Build code
         run: npm run build
 
