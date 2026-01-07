@@ -569,20 +569,17 @@ const categories = registry.getCategories();  // ['auth', 'users']
 
 ## 🔧 运行时支持
 
-### Bun
-
-```typescript
-export default { port: 3000, fetch: server.fetch };
-```
-
-### Node.js
-
 ```typescript
 import { serve } from 'vafast';
 serve({ fetch: server.fetch, port: 3000 });
 ```
 
-> 💡 两种运行时使用相同的 API，代码可无缝迁移
+> 💡 `serve` 函数兼容 Bun 和 Node.js，代码无需修改即可跨运行时
+
+**Bun 原生写法（仅限 Bun）：**
+```typescript
+export default { port: 3000, fetch: server.fetch };
+```
 
 ## 📚 文档
 
