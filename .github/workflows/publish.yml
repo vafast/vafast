@@ -34,7 +34,7 @@ jobs:
           cache: "npm"
 
       - name: Install packages
-        run: npm ci
+        run: npm install
 
       - name: Type check
         run: npm run type-check
