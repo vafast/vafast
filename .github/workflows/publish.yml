@@ -26,25 +26,21 @@ jobs:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Setup Bun"
-        uses: oven-sh/setup-bun@v1
+      - name: "Setup Node.js"
+        uses: actions/setup-node@v4
         with:
-          bun-version: latest
+          node-version: "20"
           registry-url: "https://registry.npmjs.org"
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24.x"
-          registry-url: "https://registry.npmjs.org"
+          cache: "npm"
 
       - name: Install packages
-        run: bun install
+        run: npm ci
 
       - name: Build code
-        run: bun run build
+        run: npm run build
 
       - name: Test
-        run: bun run test:run
+        run: npm run test
 
       - name: "Publish"
         run: |
