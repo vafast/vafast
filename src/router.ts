@@ -39,6 +39,7 @@ export function flattenNestedRoutes(
     route: Route | NestedRoute,
     parentPath = "",
     parentMiddleware: Middleware[] = [],
+    parentName?: string,
   ): void {
     // 计算当前完整路径
     const currentPath = normalizePath(parentPath + route.path);
@@ -47,6 +48,8 @@ export function flattenNestedRoutes(
       ...parentMiddleware,
       ...(route.middleware || []),
     ];
+    // 当前路由的 name（用于传递给子路由）
+    const currentName = route.name || parentName;
 
     if ("method" in route && "handler" in route) {
       // 叶子路由（有处理函数）
@@ -55,11 +58,12 @@ export function flattenNestedRoutes(
         ...leafRoute,
         fullPath: currentPath,
         middlewareChain: currentMiddleware,
+        parentName: parentName, // 保存父级名称
       });
     } else if ("children" in route && route.children) {
       // 分组路由，递归处理子路由
       for (const child of route.children) {
-        processRoute(child, currentPath, currentMiddleware);
+        processRoute(child, currentPath, currentMiddleware, currentName);
       }
     }
   }

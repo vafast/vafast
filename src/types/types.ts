@@ -71,4 +71,6 @@ export interface NestedRoute {
 export interface FlattenedRoute extends Route {
   fullPath: string;
   middlewareChain: Middleware[];
+  /** 父级路由的名称（用于分类显示） */
+  parentName?: string;
 }
