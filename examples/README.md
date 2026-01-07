@@ -34,21 +34,24 @@ const routes = [
   {
     method: "GET",
     path: "/",
-    handler: () => new Response("Hello World"),
+    handler: createHandler(() => "Hello World"),
   },
   {
     method: "POST",
     path: "/users",
-    handler: createHandler({
-      body: Type.Object({
-        name: Type.String(),
-        email: Type.String(),
-      }),
-    })(({ body }) => ({
-      id: 1,
-      name: body.name,
-      email: body.email,
-    })),
+    handler: createHandler(
+      {
+        body: Type.Object({
+          name: Type.String(),
+          email: Type.String(),
+        }),
+      },
+      ({ body }) => ({
+        id: 1,
+        name: body.name,
+        email: body.email,
+      })
+    ),
   },
 ];
 
@@ -74,12 +77,13 @@ const CreateUserSchema = Type.Object({
 });
 
 // 创建处理器 - body 自动获得完整类型推导
-const handler = createHandler({
-  body: CreateUserSchema,
-})(({ body }) => {
-  // body 类型: { name: string; email: string; age?: number }
-  return { success: true, user: body };
-});
+const handler = createHandler(
+  { body: CreateUserSchema },
+  ({ body }) => {
+    // body 类型: { name: string; email: string; age?: number }
+    return { success: true, user: body };
+  }
+);
 ```
 
 ### 2. 动态路由参数
@@ -92,12 +96,13 @@ const routes = [
   {
     method: "GET",
     path: "/users/:id",
-    handler: createHandler({
-      params: Type.Object({ id: Type.String() }),
-    })(({ params }) => {
-      // params.id 是 string 类型
-      return { userId: params.id };
-    }),
+    handler: createHandler(
+      { params: Type.Object({ id: Type.String() }) },
+      ({ params }) => {
+        // params.id 是 string 类型
+        return { userId: params.id };
+      }
+    ),
   },
 ];
 ```
@@ -105,29 +110,27 @@ const routes = [
 ### 3. 通配符路由
 
 ```typescript
-import { Server } from "vafast";
+import { Server, createHandler } from "vafast";
 
 const routes = [
   // 默认通配符 - 参数名为 "*"
   {
     method: "GET",
     path: "/files/*",
-    handler: (req) => {
-      const params = (req as any).params;
+    handler: createHandler(({ params }) => {
       // params["*"] = "path/to/file.txt"
-      return new Response(params["*"]);
-    },
+      return { filepath: params["*"] };
+    }),
   },
 
   // 命名通配符 - 自定义参数名
   {
     method: "GET",
     path: "/static/*filepath",
-    handler: (req) => {
-      const params = (req as any).params;
+    handler: createHandler(({ params }) => {
       // params.filepath = "assets/css/style.css"
-      return new Response(params.filepath);
-    },
+      return { filepath: params.filepath };
+    }),
   },
 ];
 ```
@@ -135,7 +138,8 @@ const routes = [
 ### 4. 中间件注入类型化数据
 
 ```typescript
-import { createHandlerWithExtra, setLocals } from "vafast";
+import { createHandlerWithExtra, setLocals, json } from "vafast";
+import { Type } from "@sinclair/typebox";
 
 // 定义中间件注入的类型
 type AuthContext = {
@@ -146,7 +150,7 @@ type AuthContext = {
 const authMiddleware = async (req: Request, next: () => Promise<Response>) => {
   const token = req.headers.get("Authorization");
   if (!token) {
-    return new Response("Unauthorized", { status: 401 });
+    return json({ error: "Unauthorized" }, 401);
   }
 
   // 注入类型化数据
@@ -158,13 +162,14 @@ const authMiddleware = async (req: Request, next: () => Promise<Response>) => {
 };
 
 // 创建带额外上下文的处理器
-const handler = createHandlerWithExtra<AuthContext>()({
-  body: Type.Object({ action: Type.String() }),
-})(({ body, user }) => {
-  // body: { action: string }
-  // user: { id: number; role: "admin" | "user" }
-  return { success: true, operator: user.id };
-});
+const handler = createHandlerWithExtra<AuthContext>(
+  { body: Type.Object({ action: Type.String() }) },
+  ({ body, user }) => {
+    // body: { action: string }
+    // user: { id: number; role: "admin" | "user" }
+    return { success: true, operator: user.id };
+  }
+);
 ```
 
 ## 运行示例
