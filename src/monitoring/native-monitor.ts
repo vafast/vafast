@@ -254,7 +254,7 @@ export function withMonitoring(
  */
 export function createMonitoredServer(
   ServerClass: typeof Server,
-  routes: Parameters<typeof Server>[0],
+  routes: ConstructorParameters<typeof Server>[0],
   config?: MonitoringConfig
 ): MonitoredServer {
   const server = new ServerClass(routes);
