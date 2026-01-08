@@ -11,11 +11,8 @@ defaults:
     shell: bash
 
 permissions:
-  id-token: write # npm provenance + Trusted Publishing
-  contents: write # 创建 GitHub Release
-
-env:
-  ACTIONS_RUNNER_DEBUG: true
+  id-token: write   # OIDC token for npm Trusted Publishing
+  contents: write   # Create GitHub Release
 
 jobs:
   release:
@@ -54,6 +51,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: "Publish to npm"
-        run: |
-          NODE_AUTH_TOKEN="" npm publish --provenance --access=public
+      - name: "Publish to npm (Trusted Publishing)"
+        run: npm publish --provenance --access=public
