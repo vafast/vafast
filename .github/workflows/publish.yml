@@ -9,7 +9,7 @@ defaults:
   run:
     shell: bash
 
-# OIDC 权限 - 用于 npm provenance + Trusted Publishing
+# OIDC 权限 - 用于 npm Trusted Publishing
 permissions:
   id-token: write
 
@@ -30,6 +30,13 @@ jobs:
           node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
 
+      # npm Trusted Publishing 需要 npm >= 11.5.1
+      - name: "Upgrade npm"
+        run: npm install -g npm@latest
+
+      - name: "Check npm version"
+        run: npm --version
+
       - name: Install packages
         run: npm ci
 
@@ -42,5 +49,6 @@ jobs:
       - name: Test
         run: npm run test
 
+      # Trusted Publishing 自动添加 provenance，不需要 --provenance 标志
       - name: "Publish"
-        run: npm publish --provenance --access=public
+        run: npm publish --access=public
