@@ -26,6 +26,11 @@
       "types": "./dist/node-server/index.d.mts",
       "import": "./dist/node-server/index.mjs",
       "default": "./dist/node-server/index.mjs"
+    },
+    "./monitoring": {
+      "types": "./dist/monitoring/index.d.mts",
+      "import": "./dist/monitoring/index.mjs",
+      "default": "./dist/monitoring/index.mjs"
     }
   },
   "types": "./dist/index.d.mts",
