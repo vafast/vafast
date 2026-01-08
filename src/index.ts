@@ -2,8 +2,6 @@ export * from "./server";
 export * from "./middleware";
 export * from "./utils";
 export * from "./router";
-export * from "./middleware/authMiddleware";
-export * from "./middleware/rateLimit";
 export * from "./auth/token";
 export * from "./middleware/auth";
 export * from "./defineRoute";
