@@ -1,5 +1,7 @@
 // src/response.ts
 
+import { VafastError } from "../middleware";
+
 /** 生成 JSON 响应 */
 export function json(
   data: unknown,
@@ -147,3 +149,55 @@ export function stream(
     headers: h,
   });
 }
+
+// ==================== 错误响应工具 ====================
+
+/**
+ * 创建错误响应
+ *
+ * @example
+ * ```typescript
+ * // 自定义错误
+ * throw err('用户不存在', 404, 'NOT_FOUND')
+ *
+ * // 预定义错误
+ * throw err.notFound('用户不存在')
+ * throw err.badRequest('参数错误')
+ * throw err.unauthorized('请先登录')
+ * ```
+ */
+export function err(message: string, status = 500, type = "ERROR") {
+  return new VafastError(message, { status, type, expose: true });
+}
+
+/** 400 Bad Request */
+err.badRequest = (message = "请求参数错误") =>
+  err(message, 400, "BAD_REQUEST");
+
+/** 401 Unauthorized */
+err.unauthorized = (message = "未授权") =>
+  err(message, 401, "UNAUTHORIZED");
+
+/** 403 Forbidden */
+err.forbidden = (message = "禁止访问") =>
+  err(message, 403, "FORBIDDEN");
+
+/** 404 Not Found */
+err.notFound = (message = "资源不存在") =>
+  err(message, 404, "NOT_FOUND");
+
+/** 409 Conflict */
+err.conflict = (message = "资源冲突") =>
+  err(message, 409, "CONFLICT");
+
+/** 422 Unprocessable Entity */
+err.unprocessable = (message = "无法处理的实体") =>
+  err(message, 422, "UNPROCESSABLE_ENTITY");
+
+/** 429 Too Many Requests */
+err.tooMany = (message = "请求过于频繁") =>
+  err(message, 429, "TOO_MANY_REQUESTS");
+
+/** 500 Internal Server Error */
+err.internal = (message = "服务器内部错误") =>
+  err(message, 500, "INTERNAL_ERROR");

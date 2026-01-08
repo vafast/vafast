@@ -23,7 +23,7 @@ export {
 } from "./parsers";
 
 // 响应工具
-export { json, text, html, redirect, empty, stream } from "./response";
+export { json, text, html, redirect, empty, stream, err } from "./response";
 
 // Go 风格错误处理
 export { goAwait } from "./go-await";
