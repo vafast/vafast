@@ -1,19 +1,22 @@
-name: Publish Package
+name: Release & Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
-  id-token: write # Required for OIDC
-  contents: read
+  id-token: write   # npm OIDC
+  contents: write   # 创建 Release
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # changelogithub 需要完整 git 历史
 
       - uses: actions/setup-node@v4
         with:
@@ -21,7 +24,15 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - run: npm install
+
       - run: npm run type-check
       - run: npm run build
       - run: npm run test
+
+      # 自动生成 changelog 并创建 GitHub Release
+      - run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 发布到 npm
       - run: npm publish
