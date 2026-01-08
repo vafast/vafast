@@ -11,4 +11,6 @@ export {
   type MonitoredServer,
   type MemoryInfo,
   type PathStats,
+  type TimeWindowStats,
+  type StatusCodeDistribution,
 } from "./native-monitor";

@@ -417,4 +417,121 @@ describe("Monitoring 模块", () => {
       expect(stats).toBeUndefined();
     });
   });
+
+  describe("时间窗口统计", () => {
+    it("应该返回时间窗口统计", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.timeWindows.last1min.requests).toBe(2);
+      expect(status.timeWindows.last5min.requests).toBe(2);
+      expect(status.timeWindows.last1hour.requests).toBe(2);
+    });
+
+    it("getTimeWindowStats 应该支持自定义时间窗口", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const stats = monitored.getTimeWindowStats(30000); // 30秒
+      expect(stats.requests).toBe(1);
+      expect(stats.avgTime).toBeGreaterThan(0);
+    });
+
+    it("时间窗口应该包含 RPS", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.timeWindows.last1min.rps).toBeDefined();
+      expect(typeof status.timeWindows.last1min.rps).toBe("number");
+    });
+  });
+
+  describe("RPS 计算", () => {
+    it("getRPS 应该返回当前 RPS", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const rps = monitored.getRPS();
+      expect(typeof rps).toBe("number");
+      expect(rps).toBeGreaterThanOrEqual(0);
+    });
+
+    it("状态中应该包含 RPS", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.rps).toBeDefined();
+      expect(typeof status.rps).toBe("number");
+    });
+  });
+
+  describe("状态码分布", () => {
+    it("应该统计状态码分布", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      // 2xx
+      await monitored.fetch(new Request("http://localhost/"));
+      await monitored.fetch(new Request("http://localhost/"));
+      // 4xx
+      await monitored.fetch(new Request("http://localhost/not-found"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.statusCodes["2xx"]).toBe(2);
+      expect(status.statusCodes["4xx"]).toBe(1);
+    });
+
+    it("应该包含详细状态码统计", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+      await monitored.fetch(new Request("http://localhost/not-found"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.statusCodes.detail[200]).toBe(1);
+      expect(status.statusCodes.detail[404]).toBe(1);
+    });
+
+    it("getStatusCodeDistribution 应该单独返回分布", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const dist = monitored.getStatusCodeDistribution();
+      expect(dist["2xx"]).toBe(1);
+      expect(dist.detail[200]).toBe(1);
+    });
+  });
+
+  describe("运行时间", () => {
+    it("应该返回 uptime", async () => {
+      const server = new Server(createTestRoutes());
+      const monitored = withMonitoring(server, { console: false });
+
+      // 等待一小段时间确保 uptime > 0
+      await new Promise((r) => setTimeout(r, 10));
+      await monitored.fetch(new Request("http://localhost/"));
+
+      const status = monitored.getMonitoringStatus();
+      expect(status.uptime).toBeGreaterThanOrEqual(0);
+      expect(typeof status.uptime).toBe("number");
+    });
+  });
 });
