@@ -1,17 +1,17 @@
 // tests/unit/middleware-precompile.test.ts
 /**
- * 中间件预编译优化测试
+ * 中间件功能测试
  *
- * 测试中间件链在路由注册时预编译的功能
+ * 测试中间件链的正常工作
  */
 
 import { describe, it, expect } from "vitest";
 import { Server, defineRoutes, createHandler } from "../../src";
 import type { Middleware } from "../../src/types";
 
-describe("中间件预编译优化测试", () => {
+describe("中间件功能测试", () => {
   describe("基础功能测试", () => {
-    it("无中间件路由应该自动预编译", async () => {
+    it("无中间件路由应该正常工作", async () => {
       const routes = defineRoutes([
         {
           method: "GET",
@@ -67,27 +67,7 @@ describe("中间件预编译优化测试", () => {
       expect(data).toEqual({ test: "middleware-ok" });
     });
 
-    it("手动调用 compile() 应该预编译所有路由", async () => {
-      const routes = defineRoutes([
-        {
-          method: "GET",
-          path: "/test",
-          handler: createHandler(() => ({ compiled: true })),
-        },
-      ]);
-
-      const server = new Server(routes);
-
-      // 手动编译
-      server.compile();
-
-      const res = await server.fetch(new Request("http://localhost/test"));
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data).toEqual({ compiled: true });
-    });
-
-    it("带全局中间件时需要手动编译", async () => {
+    it("带全局中间件应该正常工作", async () => {
       const globalMiddleware: Middleware = async (req, next) => {
         (req as unknown as Record<string, unknown>).__global = "global-ok";
         return next(req);
@@ -105,7 +85,6 @@ describe("中间件预编译优化测试", () => {
 
       const server = new Server(routes);
       server.use(globalMiddleware);
-      server.compile(); // 添加全局中间件后需要重新编译
 
       const res = await server.fetch(
         new Request("http://localhost/with-global"),
