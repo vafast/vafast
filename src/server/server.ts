@@ -32,7 +32,7 @@ export class Server extends BaseServer {
   /** 预编译时的全局中间件数量 */
   private compiledWithMiddlewareCount = 0;
 
-  constructor(routes: (Route | NestedRoute)[] = []) {
+  constructor(routes: readonly (Route | NestedRoute)[] = []) {
     super();
     this.router = new RadixRouter();
     this.routes = [];
@@ -43,7 +43,7 @@ export class Server extends BaseServer {
     );
 
     if (routes.length > 0) {
-      this.registerRoutes(routes);
+      this.registerRoutes([...routes]);
     }
   }
 
@@ -193,8 +193,8 @@ export class Server extends BaseServer {
     );
   }
 
-  addRoutes(routes: (Route | NestedRoute)[]): void {
-    this.registerRoutes(routes);
+  addRoutes(routes: readonly (Route | NestedRoute)[]): void {
+    this.registerRoutes([...routes]);
   }
 
   getRoutes(): Array<{ method: Method; path: string }> {

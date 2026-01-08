@@ -13,26 +13,23 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     },
     "./mod": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     },
     "./node-server": {
-      "types": "./dist/node-server/index.d.ts",
-      "import": "./dist/node-server/index.js",
-      "require": "./dist/node-server/index.js",
-      "default": "./dist/node-server/index.js"
+      "types": "./dist/node-server/index.d.mts",
+      "import": "./dist/node-server/index.mjs",
+      "default": "./dist/node-server/index.mjs"
     }
   },
-  "types": "./dist/index.d.ts",
-  "main": "./dist/index.js",
+  "types": "./dist/index.d.mts",
+  "main": "./dist/index.mjs",
   "scripts": {
     "build": "tsdown",
     "dev": "npx tsx watch example/index.ts",
