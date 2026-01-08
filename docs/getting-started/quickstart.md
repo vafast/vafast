@@ -12,7 +12,7 @@ npm install vafast
 yarn add vafast
 
 # 使用 bun (推荐)
-bun add vafast
+npm install vafast
 ```
 
 ## 📝 第一个应用
@@ -60,7 +60,7 @@ server.listen(3000, () => {
 
 ```bash
 # 使用 bun (推荐)
-bun run app.ts
+npm run app.ts
 
 # 使用 ts-node
 npx ts-node app.ts

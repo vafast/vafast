@@ -176,10 +176,10 @@ const handler = createHandlerWithExtra<AuthContext>(
 
 ```bash
 # 运行特定示例
-bun run examples/routing/dynamic-params.ts
+npm run examples/routing/dynamic-params.ts
 
 # 运行高级示例
-bun run examples/advanced/schema.ts
+npm run examples/advanced/schema.ts
 ```
 
 ## 示例说明

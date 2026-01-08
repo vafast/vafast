@@ -14,19 +14,19 @@
 ```bash
 git clone https://github.com/vafast/vafast.git
 cd vafast
-bun install
+npm install
 ```
 
 ### 常用命令
 
 ```bash
-bun run dev          # 开发模式
-bun run build        # 构建
-bun run test         # 运行测试
-bun run test:watch   # 监听模式测试
-bun run lint         # 代码检查
-bun run format       # 格式化代码
-bun run type-check   # 类型检查
+npm run dev          # 开发模式
+npm run build        # 构建
+npm run test         # 运行测试
+npm run test:watch   # 监听模式测试
+npm run lint         # 代码检查
+npm run format       # 格式化代码
+npm run type-check   # 类型检查
 ```
 
 ## 分支策略
@@ -74,9 +74,9 @@ docs: update README with new API
 3. 开发并提交
 4. 确保通过所有检查：
    ```bash
-   bun run lint
-   bun run test
-   bun run build
+   npm run lint
+   npm run test
+   npm run build
    ```
 5. 推送分支：`git push origin feature/xxx`
 6. 创建 Pull Request

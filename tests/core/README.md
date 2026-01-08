@@ -25,11 +25,11 @@
 
 ```bash
 # 运行所有核心测试
-bun run tests/core/parsers.test.ts
-bun run tests/core/factory-routes.test.ts
+npm run tests/core/parsers.test.ts
+npm run tests/core/factory-routes.test.ts
 
 # 或者使用 vitest 运行
-bun test tests/core/
+npm test tests/core/
 ```
 
 ## 测试原则

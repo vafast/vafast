@@ -38,7 +38,7 @@ git fetch upstream
 ### 1. 安装依赖
 ```bash
 # 使用 bun (推荐)
-bun install
+npm install
 
 # 使用 npm
 npm install
@@ -83,28 +83,28 @@ docker exec -it vafast-postgres psql -U postgres -c "CREATE DATABASE vafast_test
 ### 1. 单元测试
 ```bash
 # 运行所有测试
-bun test
+npm test
 
 # 运行特定测试
-bun test tests/unit/
+npm test tests/unit/
 
 # 运行测试并生成覆盖率报告
-bun test --coverage
+npm test --coverage
 ```
 
 ### 2. 基准测试
 ```bash
 # 运行所有基准测试
-bun run benchmark
+npm run benchmark
 
 # 运行特定基准测试
-bun run benchmarks/quick-benchmark.ts
+npm run benchmarks/quick-benchmark.ts
 ```
 
 ### 3. 类型检查
 ```bash
 # TypeScript 类型检查
-bun run build
+npm run build
 
 # 或者使用 tsc
 npx tsc --noEmit
@@ -125,17 +125,17 @@ git checkout -b feature/your-feature-name
 ### 2. 开发过程
 ```bash
 # 安装依赖 (如果需要)
-bun install
+npm install
 
 # 启动开发服务器
-bun run dev
+npm run dev
 
 # 运行测试
-bun test
+npm test
 
 # 检查代码质量
-bun run lint
-bun run format
+npm run lint
+npm run format
 ```
 
 ### 3. 提交代码
@@ -204,22 +204,22 @@ git push origin feature/your-feature-name
 ### 1. 代码风格
 ```bash
 # 格式化代码
-bun run format
+npm run format
 
 # 检查代码风格
-bun run lint
+npm run lint
 
 # 自动修复
-bun run lint:fix
+npm run lint:fix
 ```
 
 ### 2. 类型检查
 ```bash
 # 严格类型检查
-bun run type-check
+npm run type-check
 
 # 生成类型声明文件
-bun run build:types
+npm run build:types
 ```
 
 ## 🐛 故障排除
@@ -234,16 +234,16 @@ npm cache clean --force
 
 # 删除 node_modules 重新安装
 rm -rf node_modules
-bun install
+npm install
 ```
 
 #### 2. 测试失败
 ```bash
 # 检查测试环境
-bun test --verbose
+npm test --verbose
 
 # 运行单个测试
-bun test tests/unit/specific.test.ts
+npm test tests/unit/specific.test.ts
 ```
 
 #### 3. 类型错误
@@ -252,7 +252,7 @@ bun test tests/unit/specific.test.ts
 npx tsc --showConfig
 
 # 重新生成类型
-bun run build:types
+npm run build:types
 ```
 
 ## 📚 相关资源

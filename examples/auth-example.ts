@@ -261,7 +261,7 @@ const server = new Server([
 
 // 启动服务器
 // 注意：这个示例需要在 Bun 环境中运行
-// 使用命令: bun run examples/auth-example.ts
+// 使用命令: npx tsx examples/auth-example.ts
 console.log("🚀 认证示例服务器");
 console.log("\n📋 可用路由:");
 console.log("POST /login - 用户登录");
@@ -277,7 +277,7 @@ console.log("user/user123 - 普通用户");
 console.log("guest/guest123 - 访客");
 
 console.log("\n💡 使用方法:");
-console.log("1. 启动服务器: bun run examples/auth-example.ts");
+console.log("1. 启动服务器: npx tsx examples/auth-example.ts");
 console.log("2. 测试 API 端点");
 console.log("3. 使用 Postman 或 curl 测试认证流程");
 

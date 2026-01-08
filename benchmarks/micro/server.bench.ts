@@ -71,13 +71,14 @@ async function main() {
     {
       method: "POST",
       path: "/users",
-      handler: createHandler({
-        body: UserSchema,
-      })(({ body }) => ({
-        id: 1,
-        name: body.name,
-        email: body.email,
-      })),
+      handler: createHandler(
+        { body: UserSchema },
+        ({ body }) => ({
+          id: 1,
+          name: body.name,
+          email: body.email,
+        }),
+      ),
     },
     // 通配符路由
     {

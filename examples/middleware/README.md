@@ -31,16 +31,16 @@ CORS 中间件示例，展示如何处理跨域请求。
 
 ```bash
 # 运行基础中间件示例
-bun run example/middleware/basic-middleware.ts
+npm run example/middleware/basic-middleware.ts
 
 # 运行速率限制示例
-bun run example/middleware/vafast-rate-limit.ts
+npm run example/middleware/vafast-rate-limit.ts
 
 # 运行 CORS 示例
-bun run example/middleware/cors.ts
+npm run example/middleware/cors.ts
 
 # 运行错误处理示例
-bun run example/middleware/error-handling.ts
+npm run example/middleware/error-handling.ts
 ```
 
 ## 学习要点

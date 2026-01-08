@@ -192,7 +192,7 @@ function createRingBuffer<T>(capacity: number) {
       const arr = this.toArray();
       return arr.slice(-n);
     },
-  };
+    };
 }
 
 // ========== 工具函数 ==========
@@ -211,7 +211,7 @@ function getMemoryInfo(): MemoryInfo {
 
 function formatMemory(bytes: number): string {
   return (bytes / 1024 / 1024).toFixed(2) + "MB";
-}
+    }
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -226,7 +226,7 @@ function shouldExclude(path: string, excludePaths: string[]): boolean {
       path.startsWith(p + "/") ||
       (p.endsWith("*") && path.startsWith(p.slice(0, -1)))
   );
-}
+    }
 
 function getStatusCodeCategory(code: number): "2xx" | "3xx" | "4xx" | "5xx" {
   if (code >= 200 && code < 300) return "2xx";
@@ -442,7 +442,7 @@ function logRequest(
   console.log(
     `${status} ${metrics.method} ${metrics.path} - ${metrics.statusCode} (${speed} ${metrics.totalTime.toFixed(2)}ms)`
   );
-}
+    }
 
 // ========== 主函数 ==========
 

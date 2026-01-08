@@ -20,7 +20,6 @@ export default { port: 3000, fetch: server.fetch };
 
 ```bash
 # 启动服务器
-bun run index.ts   # 或
 npx tsx index.ts
 ```
 
@@ -39,11 +38,7 @@ npx tsx index.ts
 ## 📦 安装
 
 ```bash
-# npm
 npm install vafast
-
-# bun
-bun add vafast
 ```
 
 ## 💡 设计哲学
@@ -504,13 +499,15 @@ const handler = createHandler({ body: UserSchema }, ({ body }) => {
 
 | 分类 | Format | 说明 |
 |------|--------|------|
-| **标识符** | `email`, `uuid`, `cuid`, `cuid2`, `ulid`, `nanoid`, `objectid`, `slug` | 各种 ID 格式 |
+| **标识符** | `email`, `uuid`, `uuid-any`, `cuid`, `cuid2`, `ulid`, `nanoid`, `objectid`, `slug` | 各种 ID 格式 |
 | **网络** | `url`, `uri`, `ipv4`, `ipv6`, `ip`, `cidr`, `hostname` | 网络地址 |
 | **日期时间** | `date`, `time`, `date-time`, `datetime`, `duration` | ISO 8601 格式 |
 | **手机号** | `phone` (中国), `phone-cn`, `phone-e164` (国际) | 电话号码 |
 | **编码** | `base64`, `base64url`, `jwt` | 编码格式 |
 | **颜色** | `hex-color`, `rgb-color`, `color` | 颜色值 |
 | **其他** | `emoji`, `semver`, `credit-card` | 特殊格式 |
+
+> **源码位置：** `src/utils/formats.ts` - 框架启动时自动注册所有 format 验证器
 
 **自定义 Format：**
 
@@ -666,8 +663,8 @@ export default { port: 3000, fetch: server.fetch };
 ```bash
 git clone https://github.com/vafast/vafast.git
 cd vafast
-npm install  # 或 bun install
-npm test     # 或 bun test
+npm install
+npm test
 ```
 
 ## 🚀 发布流程

@@ -36,16 +36,16 @@ tests/
 
 ```bash
 # 运行所有测试
-bun test
+npm test
 
 # 运行特定测试文件
-bun test tests/unit/server/server.test.ts
+npm test tests/unit/server/server.test.ts
 
 # 运行匹配模式的测试
-bun test --match "Server"
+npm test --match "Server"
 
 # 监听模式
-bun test --watch
+npm test --watch
 ```
 
 ## 测试规范
@@ -121,12 +121,15 @@ describe("API 测试", () => {
 import { UserSchema, PaginationSchema } from "../fixtures/schemas";
 import { createHandler } from "../../src/utils/create-handler";
 
-const handler = createHandler({
-  body: UserSchema,
-  query: PaginationSchema,
-})(({ body, query }) => {
-  // ...
-});
+const handler = createHandler(
+  {
+    body: UserSchema,
+    query: PaginationSchema,
+  },
+  ({ body, query }) => {
+    // ...
+  },
+);
 ```
 
 ## 测试覆盖

@@ -29,22 +29,24 @@ async function main() {
 
   const simpleH = simpleHandler(() => ({ message: "OK" }));
 
-  const noSchemaHandler = createHandler({})(() => ({ message: "OK" }));
+  const noSchemaHandler = createHandler(() => ({ message: "OK" }));
 
-  const querySchemaHandler = createHandler({
-    query: QuerySchema,
-  })(({ query }) => ({
-    page: query.page || "1",
-    limit: query.limit || "10",
-  }));
+  const querySchemaHandler = createHandler(
+    { query: QuerySchema },
+    ({ query }) => ({
+      page: query.page || "1",
+      limit: query.limit || "10",
+    }),
+  );
 
-  const bodySchemaHandler = createHandler({
-    body: UserSchema,
-  })(({ body }) => ({
-    id: 1,
-    name: body.name,
-    email: body.email,
-  }));
+  const bodySchemaHandler = createHandler(
+    { body: UserSchema },
+    ({ body }) => ({
+      id: 1,
+      name: body.name,
+      email: body.email,
+    }),
+  );
 
   const suite = new BenchSuite("处理器性能测试");
 
@@ -104,7 +106,7 @@ async function main() {
   const responseSuite = new BenchSuite("响应转换性能");
 
   // 对象返回
-  const objectHandler = createHandler({})(() => ({
+  const objectHandler = createHandler(() => ({
     success: true,
     data: { id: 1, name: "test" },
   }));
@@ -118,7 +120,7 @@ async function main() {
   );
 
   // 字符串返回
-  const stringHandler = createHandler({})(() => "Hello World");
+  const stringHandler = createHandler(() => "Hello World");
 
   await responseSuite.add(
     { name: "字符串 -> Text Response", iterations: 50000 },
@@ -129,7 +131,7 @@ async function main() {
   );
 
   // Response 直接返回
-  const responseHandler = createHandler({})(() => new Response("OK"));
+  const responseHandler = createHandler(() => new Response("OK"));
 
   await responseSuite.add(
     { name: "Response 直传", iterations: 50000 },
@@ -140,7 +142,7 @@ async function main() {
   );
 
   // { data, status, headers } 格式
-  const customHandler = createHandler({})(() => ({
+  const customHandler = createHandler(() => ({
     data: { id: 1 },
     status: 201,
     headers: { "X-Custom": "value" },

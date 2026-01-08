@@ -44,32 +44,36 @@ async function main() {
     {
       method: "GET",
       path: "/api/v1/users/:id",
-      handler: createHandler({
-        params: Type.Object({ id: Type.String() }),
-      })(({ params }) => ({
-        id: parseInt(params.id),
-        name: `User ${params.id}`,
-        email: `user${params.id}@example.com`,
-      })),
+      handler: createHandler(
+        { params: Type.Object({ id: Type.String() }) },
+        ({ params }) => ({
+          id: parseInt(params.id),
+          name: `User ${params.id}`,
+          email: `user${params.id}@example.com`,
+        }),
+      ),
     },
 
     // 创建资源
     {
       method: "POST",
       path: "/api/v1/users",
-      handler: createHandler({
-        body: Type.Object({
-          name: Type.String(),
-          email: Type.String(),
-        }),
-      })(({ body }) => ({
-        data: {
-          id: Date.now(),
-          name: body.name,
-          email: body.email,
+      handler: createHandler(
+        {
+          body: Type.Object({
+            name: Type.String(),
+            email: Type.String(),
+          }),
         },
-        status: 201,
-      })),
+        ({ body }) => ({
+          data: {
+            id: Date.now(),
+            name: body.name,
+            email: body.email,
+          },
+          status: 201,
+        }),
+      ),
     },
 
     // 复杂嵌套路由

@@ -98,18 +98,19 @@ const routes: Route[] = [
   {
     path: "/api/data",
     method: "POST",
-    handler: createHandler({
-      body: BatchProcessSchema,
-    })(async ({ body, query, headers }) => {
-      return {
-        data: {
-          received: body,
-          query,
-          contentType: headers["content-type"],
-        },
-        success: true,
-      };
-    }),
+    handler: createHandler(
+      { body: BatchProcessSchema },
+      async ({ body, query, headers }) => {
+        return {
+          data: {
+            received: body,
+            query,
+            contentType: headers["content-type"],
+          },
+          success: true,
+        };
+      },
+    ),
   },
 ];
 

@@ -156,7 +156,7 @@ auth → rateLimit → audit → handler → audit → rateLimit → auth
 运行示例查看详细的中间件执行过程：
 
 ```bash
-bun run example/advanced/middleware-order.ts
+npm run example/advanced/middleware-order.ts
 ```
 
 ## 路由结构
@@ -300,10 +300,10 @@ cors() → jsonParser() → errorHandler() → versionCheck('v1') → rateLimit(
 
 ```bash
 # 运行嵌套路由示例
-bun run example/advanced/nested-routes.ts
+npm run example/advanced/nested-routes.ts
 
 # 运行中间件顺序演示
-bun run example/advanced/middleware-order.ts
+npm run example/advanced/middleware-order.ts
 ```
 
 ## 注意事项

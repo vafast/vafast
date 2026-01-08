@@ -9,7 +9,7 @@
 
 **运行方式：**
 ```bash
-bun run example/basic/hello-world.ts
+npm run example/basic/hello-world.ts
 ```
 
 **功能：**
@@ -20,7 +20,7 @@ bun run example/basic/hello-world.ts
 
 **运行方式：**
 ```bash
-bun run example/basic/rest-api.ts
+npm run example/basic/rest-api.ts
 ```
 
 **功能：**

@@ -28,11 +28,11 @@ type UserContext = {
   permissions: string[];
 };
 
-// 创建带额外上下文的处理器工厂
-const createAuthHandler = createHandlerWithExtra<{
+// 带额外上下文的类型定义
+type AuthContext = {
   apiKeyInfo: ApiKeyInfo;
   userContext: UserContext;
-}>();
+};
 
 // ==================== 中间件定义 ====================
 
@@ -63,7 +63,7 @@ const requireAuth = async (req: Request, next: () => Promise<Response>) => {
   }
 
   const apiKeyInfo: ApiKeyInfo = {
-    sub: "user_" + Math.random().toString(36).substr(2, 9),
+    sub: "user_" + Math.random().toString(36).substring(2, 11),
     scopes: ["read", "write"],
     issuedAt: Date.now(),
   };
@@ -129,20 +129,21 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/test/body",
     middleware: [logger],
-    handler: createHandler({
-      body: TestBodySchema,
-    })(({ req, body }) => {
-      const userAgent = req.headers.get("user-agent");
-      return {
-        success: true,
-        message: "Body Schema验证通过",
-        data: {
-          receivedBody: body,
-          userAgent,
-          timestamp: new Date().toISOString(),
-        },
-      };
-    }),
+    handler: createHandler(
+      { body: TestBodySchema },
+      ({ req, body }) => {
+        const userAgent = req.headers.get("user-agent");
+        return {
+          success: true,
+          message: "Body Schema验证通过",
+          data: {
+            receivedBody: body,
+            userAgent,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      },
+    ),
   },
 
   // GET /test/query - Query Schema 验证
@@ -150,16 +151,17 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/query",
     middleware: [logger],
-    handler: createHandler({
-      query: TestQuerySchema,
-    })(({ query }) => ({
-      success: true,
-      message: "Query Schema验证通过",
-      data: {
-        receivedQuery: query,
-        timestamp: new Date().toISOString(),
-      },
-    })),
+    handler: createHandler(
+      { query: TestQuerySchema },
+      ({ query }) => ({
+        success: true,
+        message: "Query Schema验证通过",
+        data: {
+          receivedQuery: query,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    ),
   },
 
   // GET /test/params/:id/:action - Params Schema 验证
@@ -167,16 +169,17 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/params/:id/:action",
     middleware: [logger],
-    handler: createHandler({
-      params: TestParamsSchema,
-    })(({ params }) => ({
-      success: true,
-      message: "Params Schema验证通过",
-      data: {
-        receivedParams: params,
-        timestamp: new Date().toISOString(),
-      },
-    })),
+    handler: createHandler(
+      { params: TestParamsSchema },
+      ({ params }) => ({
+        success: true,
+        message: "Params Schema验证通过",
+        data: {
+          receivedParams: params,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    ),
   },
 
   // GET /test/headers - Headers Schema 验证
@@ -184,17 +187,18 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/headers",
     middleware: [logger],
-    handler: createHandler({
-      headers: TestHeadersSchema,
-    })(({ headers, cookies }) => ({
-      success: true,
-      message: "Headers Schema验证通过",
-      data: {
-        receivedHeaders: headers,
-        receivedCookies: cookies,
-        timestamp: new Date().toISOString(),
-      },
-    })),
+    handler: createHandler(
+      { headers: TestHeadersSchema },
+      ({ headers, cookies }) => ({
+        success: true,
+        message: "Headers Schema验证通过",
+        data: {
+          receivedHeaders: headers,
+          receivedCookies: cookies,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    ),
   },
 
   // GET /test/cookies - Cookies Schema 验证
@@ -202,16 +206,17 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/cookies",
     middleware: [logger],
-    handler: createHandler({
-      cookies: TestCookiesSchema,
-    })(({ cookies }) => ({
-      success: true,
-      message: "Cookies Schema验证通过",
-      data: {
-        receivedCookies: cookies,
-        timestamp: new Date().toISOString(),
-      },
-    })),
+    handler: createHandler(
+      { cookies: TestCookiesSchema },
+      ({ cookies }) => ({
+        success: true,
+        message: "Cookies Schema验证通过",
+        data: {
+          receivedCookies: cookies,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    ),
   },
 
   // POST /test/all/:id/:action - 全部 Schema 验证
@@ -219,24 +224,27 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/test/all/:id/:action",
     middleware: [logger],
-    handler: createHandler({
-      body: TestBodySchema,
-      query: TestQuerySchema,
-      params: TestParamsSchema,
-      headers: TestHeadersSchema,
-      cookies: TestCookiesSchema,
-    })(({ body, query, params, headers, cookies }) => ({
-      success: true,
-      message: "所有Schema验证通过",
-      data: {
-        receivedBody: body,
-        receivedQuery: query,
-        receivedParams: params,
-        receivedHeaders: headers,
-        receivedCookies: cookies,
-        timestamp: new Date().toISOString(),
+    handler: createHandler(
+      {
+        body: TestBodySchema,
+        query: TestQuerySchema,
+        params: TestParamsSchema,
+        headers: TestHeadersSchema,
+        cookies: TestCookiesSchema,
       },
-    })),
+      ({ body, query, params, headers, cookies }) => ({
+        success: true,
+        message: "所有Schema验证通过",
+        data: {
+          receivedBody: body,
+          receivedQuery: query,
+          receivedParams: params,
+          receivedHeaders: headers,
+          receivedCookies: cookies,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    ),
   },
 
   // GET /test/middleware-order - 中间件执行顺序测试
@@ -244,7 +252,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/test/middleware-order",
     middleware: [logger],
-    handler: createHandler({})(() => ({
+    handler: createHandler(() => ({
       success: true,
       message: "中间件执行顺序测试",
       data: {
@@ -258,8 +266,8 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/login",
     middleware: [logger],
-    handler: createHandler({})(() => {
-      const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    handler: createHandler(() => {
+      const token = `token_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       const headers = new Headers();
       headers.set("Set-Cookie", `auth=${token}; HttpOnly; Path=/; Max-Age=3600`);
 
@@ -281,7 +289,7 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "GET",
     path: "/admin/profile",
     middleware: [logger, requireAuth, enrichUserContext],
-    handler: createAuthHandler({})(({ apiKeyInfo, userContext }) => ({
+    handler: createHandlerWithExtra<AuthContext>(({ apiKeyInfo, userContext }) => ({
       success: true,
       message: "管理员资料获取成功",
       data: {
@@ -305,18 +313,19 @@ const schemaTestRoutes: TypedRoute[] = [
     method: "POST",
     path: "/admin/profile/update",
     middleware: [logger, requireAuth, enrichUserContext],
-    handler: createAuthHandler({
-      body: UpdateProfileSchema,
-    })(({ body, apiKeyInfo, userContext }) => ({
-      data: {
-        success: true,
-        updated: body,
-        operator: apiKeyInfo.sub,
-        role: userContext.role,
-        timestamp: new Date().toISOString(),
-      },
-      status: 200,
-    })),
+    handler: createHandlerWithExtra<AuthContext>(
+      { body: UpdateProfileSchema },
+      ({ body, apiKeyInfo, userContext }) => ({
+        data: {
+          success: true,
+          updated: body,
+          operator: apiKeyInfo.sub,
+          role: userContext.role,
+          timestamp: new Date().toISOString(),
+        },
+        status: 200,
+      }),
+    ),
   },
 ];
 

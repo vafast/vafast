@@ -847,7 +847,7 @@ const devTools = [
     description: '运行测试',
     params: z.object({ pattern: z.string().optional() }),
     handler: ({ pattern }) => {
-      const cmd = pattern ? `bun test ${pattern}` : 'bun test'
+      const cmd = pattern ? `npm test ${pattern}` : 'npm test'
       return execSync(cmd).toString()
     }
   },

@@ -1,13 +1,15 @@
 /**
  * Bun.serve vs node:http 在 Bun 下的性能对比
  *
- * 运行方式：
+ * 运行方式（必须使用 Bun）：
  * bun run benchmarks/serve-compare.ts
  *
  * 测试方式：
- * wrk -t4 -c100 -d10s http://localhost:3001/  # Bun.serve
- * wrk -t4 -c100 -d10s http://localhost:3002/  # node:http
+ * wrk -t4 -c100 -d10s http://localhost:4001/  # Bun.serve
+ * wrk -t4 -c100 -d10s http://localhost:4002/  # node:http
  */
+
+/// <reference types="bun-types" />
 
 import { createServer } from "node:http";
 

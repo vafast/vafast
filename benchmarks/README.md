@@ -40,15 +40,15 @@ benchmarks/
 
 ```bash
 # 运行微基准测试
-bun run benchmarks/micro/router.bench.ts
-bun run benchmarks/micro/handler.bench.ts
-bun run benchmarks/micro/server.bench.ts
+npm run benchmarks/micro/router.bench.ts
+npm run benchmarks/micro/handler.bench.ts
+npm run benchmarks/micro/server.bench.ts
 
 # 运行宏基准测试
-bun run benchmarks/macro/http.bench.ts
+npm run benchmarks/macro/http.bench.ts
 
 # 运行性能回归测试 (CI/CD 用)
-bun run vitest run benchmarks/
+npm run vitest run benchmarks/
 ```
 
 ## 📊 测试类型
@@ -139,5 +139,5 @@ interface BenchConfig {
 ```yaml
 # .github/workflows/benchmark.yml
 - name: Run performance tests
-  run: bun test benchmarks/performance-regression.test.ts
+  run: npm test benchmarks/performance-regression.test.ts
 ```

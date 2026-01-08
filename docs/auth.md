@@ -335,7 +335,7 @@ const userAuth = createPermissionAuth(["read", "write", "delete", "admin"], {
 运行认证测试：
 
 ```bash
-bun test tests/unit/auth.test.ts
+npm test tests/unit/auth.test.ts
 ```
 
 ## 类型定义
