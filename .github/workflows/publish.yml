@@ -1,54 +1,27 @@
-name: Publish
+name: Publish Package
 
 on:
   release:
     types: [published]
   workflow_dispatch:
 
-defaults:
-  run:
-    shell: bash
-
-# OIDC 权限 - 用于 npm Trusted Publishing
 permissions:
-  id-token: write
-
-env:
-  ACTIONS_RUNNER_DEBUG: true
+  id-token: write   # Required for OIDC
+  contents: read
 
 jobs:
-  publish-npm:
-    name: "Publish: npm Registry"
+  publish:
     runs-on: ubuntu-latest
-
     steps:
-      - name: "Checkout"
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22.x"
+          node-version: "24"
           registry-url: "https://registry.npmjs.org"
 
-      # npm Trusted Publishing 需要 npm >= 11.5.1
-      - name: "Upgrade npm"
-        run: npm install -g npm@latest
-
-      - name: "Check npm version"
-        run: npm --version
-
-      - name: Install packages
-        run: npm ci
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Build code
-        run: npm run build
-
-      - name: Test
-        run: npm run test
-
-      # Trusted Publishing 自动添加 provenance，不需要 --provenance 标志
-      - name: "Publish"
-        run: npm publish --access=public
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run build
+      - run: npm run test
+      - run: npm publish
