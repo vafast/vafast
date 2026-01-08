@@ -602,6 +602,33 @@ const categories = registry.getCategories();  // ['auth', 'users']
 | `map(callback)` | 映射所有路由 |
 | `size` | 路由数量 |
 
+## 📊 内置监控
+
+零依赖的性能监控，一行代码启用：
+
+```typescript
+import { Server } from 'vafast';
+import { withMonitoring } from 'vafast/monitoring';
+
+const server = new Server(routes);
+const monitored = withMonitoring(server, {
+  slowThreshold: 500,
+  excludePaths: ['/health']
+});
+
+// 获取监控状态
+const status = monitored.getMonitoringStatus();
+console.log(`P99: ${status.p99}ms, RPS: ${status.rps}`);
+```
+
+**特性：**
+- P50/P95/P99 百分位数
+- 时间窗口统计（1分钟/5分钟/1小时）
+- RPS 计算、状态码分布
+- 按路径统计、内存监控
+- 采样率控制、路径排除
+- 自定义回调（onRequest/onSlowRequest）
+
 ## 🔧 运行时支持
 
 ```typescript
