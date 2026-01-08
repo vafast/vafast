@@ -13,7 +13,7 @@ defaults:
 # OIDC 权限 - 用于 npm provenance + Trusted Publishing（OIDC 登录发布）
 permissions:
   id-token: write
-  contents: write  # 创建 GitHub Release
+  contents: write # 创建 GitHub Release
 
 env:
   ACTIONS_RUNNER_DEBUG: true
@@ -22,6 +22,7 @@ jobs:
   publish-npm:
     name: "Release & Publish"
     runs-on: ubuntu-latest
+    environment: release  # npm Trusted Publishing 需要匹配
 
     steps:
       - name: "Checkout"
