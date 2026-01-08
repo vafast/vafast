@@ -41,15 +41,15 @@ const routes = [
     path: "/users",
     handler: createHandler(
       {
-        body: Type.Object({
-          name: Type.String(),
-          email: Type.String(),
-        }),
+      body: Type.Object({
+        name: Type.String(),
+        email: Type.String(),
+      }),
       },
       ({ body }) => ({
-        id: 1,
-        name: body.name,
-        email: body.email,
+      id: 1,
+      name: body.name,
+      email: body.email,
       })
     ),
   },
@@ -80,8 +80,8 @@ const CreateUserSchema = Type.Object({
 const handler = createHandler(
   { body: CreateUserSchema },
   ({ body }) => {
-    // body 类型: { name: string; email: string; age?: number }
-    return { success: true, user: body };
+  // body 类型: { name: string; email: string; age?: number }
+  return { success: true, user: body };
   }
 );
 ```
@@ -99,8 +99,8 @@ const routes = [
     handler: createHandler(
       { params: Type.Object({ id: Type.String() }) },
       ({ params }) => {
-        // params.id 是 string 类型
-        return { userId: params.id };
+      // params.id 是 string 类型
+      return { userId: params.id };
       }
     ),
   },
@@ -165,9 +165,9 @@ const authMiddleware = async (req: Request, next: () => Promise<Response>) => {
 const handler = createHandlerWithExtra<AuthContext>(
   { body: Type.Object({ action: Type.String() }) },
   ({ body, user }) => {
-    // body: { action: string }
-    // user: { id: number; role: "admin" | "user" }
-    return { success: true, operator: user.id };
+  // body: { action: string }
+  // user: { id: number; role: "admin" | "user" }
+  return { success: true, operator: user.id };
   }
 );
 ```
