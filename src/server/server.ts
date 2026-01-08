@@ -118,6 +118,11 @@ export class Server extends BaseServer {
 
   /** 处理请求 */
   fetch = async (req: Request): Promise<Response> => {
+    // 自动编译：如果全局中间件变化且未编译，自动触发编译
+    if (this.globalMiddleware.length !== this.compiledWithMiddlewareCount) {
+      this.compile();
+    }
+
     const pathname = this.extractPathname(req.url);
     const method = req.method as Method;
 
@@ -126,15 +131,12 @@ export class Server extends BaseServer {
     if (match) {
       (req as unknown as Record<string, unknown>).params = match.params;
 
-      // 优先使用预编译的处理链（仅当全局中间件未变化时）
-      if (
-        match.compiled &&
-        this.globalMiddleware.length === this.compiledWithMiddlewareCount
-      ) {
+      // 使用预编译的处理链
+      if (match.compiled) {
         return match.compiled(req);
       }
 
-      // 回退：运行时组合中间件
+      // 回退：运行时组合中间件（理论上不会执行到这里）
       const allMiddleware = [...this.globalMiddleware, ...match.middleware];
       const handler = composeMiddleware(allMiddleware, match.handler);
 
