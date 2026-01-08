@@ -633,7 +633,9 @@ console.log(`P99: ${status.p99}ms, RPS: ${status.rps}`);
 
 ```typescript
 import { serve } from 'vafast';
-serve({ fetch: server.fetch, port: 3000 });
+serve({ fetch: server.fetch, port: 3000 }, (info) => {
+  console.log(`🚀 Server running at http://localhost:${info.port}`);
+});
 ```
 
 > 💡 `serve` 函数兼容 Bun 和 Node.js，代码无需修改即可跨运行时
