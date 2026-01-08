@@ -40,8 +40,7 @@
     "dev": "npx tsx watch example/index.ts",
     "test": "vitest run",
     "type-check": "tsc --noEmit",
-    "release": "npm run type-check && npm run build && npm run test && npx bumpp && npm publish --access=public",
-    "tag": "git tag v$(node -p \"require('./package.json').version\") && git push origin v$(node -p \"require('./package.json').version\")"
+    "release": "npm run type-check && npm run build && npm run test && npx bumpp"
   },
   "keywords": [
     "bun",

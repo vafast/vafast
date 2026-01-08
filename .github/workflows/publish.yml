@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 defaults:
@@ -11,8 +11,8 @@ defaults:
     shell: bash
 
 permissions:
-  id-token: write    # npm provenance + Trusted Publishing
-  contents: write    # 创建 GitHub Release
+  id-token: write # npm provenance + Trusted Publishing
+  contents: write # 创建 GitHub Release
 
 env:
   ACTIONS_RUNNER_DEBUG: true
