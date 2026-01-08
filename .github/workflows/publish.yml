@@ -1,34 +1,34 @@
 name: Publish
 
 on:
-  push:
-    tags:
-      - "v*"
+  release:
+    types: [published]
   workflow_dispatch:
 
 defaults:
   run:
     shell: bash
 
+# OIDC 权限 - 用于 npm provenance + Trusted Publishing（OIDC 登录发布）
 permissions:
-  id-token: write   # OIDC token for npm Trusted Publishing
-  contents: write   # Create GitHub Release
+  id-token: write
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
 
 jobs:
-  release:
-    name: "Create Release & Publish"
+  publish-npm:
+    name: "Publish: npm Registry"
     runs-on: ubuntu-latest
 
     steps:
       - name: "Checkout"
         uses: actions/checkout@v4
 
-      - name: "Setup Node.js"
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
-          node-version: "22"
+          node-version: "22.x"
           registry-url: "https://registry.npmjs.org"
-          cache: "npm"
 
       - name: Install packages
         run: npm ci
@@ -42,14 +42,7 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: "Create GitHub Release"
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Publish to npm (Trusted Publishing)"
-        run: npm publish --provenance --access=public
+      - name: "Publish"
+        run: |
+          # 强制禁用 token，避免旧 classic token 干扰；发布鉴权走 npm Trusted Publishing（OIDC）
+          NODE_AUTH_TOKEN="" npm publish --provenance --access=public
