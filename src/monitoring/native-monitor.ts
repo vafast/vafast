@@ -2,255 +2,261 @@
  * 原生监控装饰器
  *
  * 通过装饰器模式为 Server 添加监控能力，完全不入侵原类
- *
- * @author Framework Team
- * @version 2.0.0
- * @license MIT
+ * 使用函数式风格，避免 class
  */
 
 import type { Server } from "../server";
 
-// 监控配置接口
-export interface NativeMonitoringConfig {
+// ========== 类型定义 ==========
+
+/** 监控配置 */
+export interface MonitoringConfig {
+  /** 是否启用监控 */
   enabled?: boolean;
+  /** 是否输出到控制台 */
   console?: boolean;
-  slowThreshold?: number; // 毫秒
-  errorThreshold?: number;
+  /** 慢请求阈值（毫秒） */
+  slowThreshold?: number;
+  /** 最大记录数 */
+  maxRecords?: number;
+  /** 自定义标签 */
   tags?: Record<string, string>;
 }
 
-// 监控指标接口
-export interface NativeMonitoringMetrics {
+/** 监控指标 */
+export interface MonitoringMetrics {
   requestId: string;
   method: string;
   path: string;
   statusCode: number;
   totalTime: number;
   timestamp: number;
+  memoryUsage: MemoryInfo;
+}
+
+/** 内存信息 */
+export interface MemoryInfo {
+  heapUsed: number;
+  heapTotal: number;
+}
+
+/** 监控状态 */
+export interface MonitoringStatus {
+  enabled: boolean;
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  errorRate: number;
+  avgResponseTime: string;
   memoryUsage: {
-    heapUsed: number;
-    heapTotal: number;
+    heapUsed: string;
+    heapTotal: string;
+    external: string;
+  } | { message: string };
+  recentRequests: MonitoringMetrics[];
+}
+
+/** 带监控的 Server */
+export interface MonitoredServer extends Server {
+  getMonitoringStatus(): MonitoringStatus;
+  getMonitoringMetrics(): MonitoringMetrics[];
+  resetMonitoring(): void;
+}
+
+// ========== 工具函数 ==========
+
+/** 生成请求 ID */
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/** 获取内存使用情况 */
+function getMemoryInfo(): MemoryInfo {
+  if (typeof process !== "undefined" && process.memoryUsage) {
+    const mem = process.memoryUsage();
+    return { heapUsed: mem.heapUsed, heapTotal: mem.heapTotal };
+  }
+  return { heapUsed: 0, heapTotal: 0 };
+}
+
+/** 格式化内存大小 */
+function formatMemory(bytes: number): string {
+  return (bytes / 1024 / 1024).toFixed(2) + "MB";
+}
+
+/** 获取格式化的内存信息 */
+function getFormattedMemory() {
+  if (typeof process !== "undefined" && process.memoryUsage) {
+    const mem = process.memoryUsage();
+    return {
+      heapUsed: formatMemory(mem.heapUsed),
+      heapTotal: formatMemory(mem.heapTotal),
+      external: formatMemory(mem.external),
+    };
+  }
+  return { message: "Memory info unavailable" };
+}
+
+// ========== 监控状态管理（闭包实现） ==========
+
+function createMonitorState(config: Required<MonitoringConfig>) {
+  let metrics: MonitoringMetrics[] = [];
+
+  return {
+    /** 添加指标 */
+    addMetrics(m: MonitoringMetrics) {
+      metrics.push(m);
+      // 保持最大记录数
+      if (metrics.length > config.maxRecords) {
+        metrics = metrics.slice(-config.maxRecords);
+      }
+    },
+
+    /** 获取所有指标 */
+    getMetrics: () => metrics,
+
+    /** 重置 */
+    reset() {
+      metrics = [];
+    },
+
+    /** 获取状态 */
+    getStatus(): MonitoringStatus {
+      const total = metrics.length;
+      const successful = metrics.filter((m) => m.statusCode < 400).length;
+      const failed = total - successful;
+      const avgTime =
+        total > 0
+          ? metrics.reduce((sum, m) => sum + m.totalTime, 0) / total
+          : 0;
+
+      return {
+        enabled: config.enabled,
+        totalRequests: total,
+        successfulRequests: successful,
+        failedRequests: failed,
+        errorRate: total > 0 ? failed / total : 0,
+        avgResponseTime: avgTime.toFixed(2) + "ms",
+        memoryUsage: getFormattedMemory(),
+        recentRequests: metrics.slice(-5),
+      };
+    },
   };
 }
 
-// 带监控的 Server 接口
-export interface MonitoredServer extends Server {
-  // 监控相关方法
-  getMonitoringStatus(): any;
-  getMonitoringMetrics(): NativeMonitoringMetrics[];
-  resetMonitoring(): void;
+// ========== 日志输出 ==========
 
-  // 原始方法保持不变
-  fetch: (req: Request) => Promise<Response>;
-  use: (mw: any) => void;
-}
+function logRequest(
+  metrics: MonitoringMetrics,
+  slowThreshold: number,
+  enabled: boolean
+) {
+  if (!enabled) return;
 
-// 原生监控器
-class NativeMonitor {
-  private config: NativeMonitoringConfig;
-  private metrics: NativeMonitoringMetrics[] = [];
-  private isEnabled = false;
+  const status = metrics.statusCode < 400 ? "✅" : "❌";
+  const speed = metrics.totalTime > slowThreshold ? "🐌" : "⚡";
 
-  constructor(config: NativeMonitoringConfig = {}) {
-    this.config = {
-      enabled: true,
-      console: true,
-      slowThreshold: 1000,
-      errorThreshold: 0.05,
-      tags: { framework: "vafast" },
-      ...config,
-    };
+  console.log(
+    `${status} ${metrics.method} ${metrics.path} - ${metrics.statusCode} (${speed} ${metrics.totalTime.toFixed(2)}ms)`
+  );
 
-    this.isEnabled = this.config.enabled ?? true;
-
-    if (this.isEnabled && this.config.console) {
-      console.log("✅ 原生监控已启用");
-      console.log(`📊 监控配置:`, {
-        慢请求阈值: `${this.config.slowThreshold}ms`,
-        错误率阈值: `${(this.config.errorThreshold! * 100).toFixed(1)}%`,
-        标签: this.config.tags,
-      });
-    }
-  }
-
-  // 记录监控指标
-  recordMetrics(metrics: NativeMonitoringMetrics): void {
-    if (!this.isEnabled) return;
-
-    this.metrics.push(metrics);
-
-    // 保持最近1000条记录
-    if (this.metrics.length > 1000) {
-      this.metrics = this.metrics.slice(-1000);
-    }
-
-    // 控制台输出
-    if (this.config.console) {
-      const status = metrics.statusCode < 400 ? "✅" : "❌";
-      const timeColor =
-        metrics.totalTime > this.config.slowThreshold! ? "🐌" : "⚡";
-
-      console.log(
-        `${status} ${metrics.method} ${metrics.path} - ${
-          metrics.statusCode
-        } (${timeColor} ${metrics.totalTime.toFixed(2)}ms)`,
-      );
-
-      // 慢请求警告
-      if (metrics.totalTime > this.config.slowThreshold!) {
-        console.warn(
-          `🐌 慢请求警告: ${metrics.path} 耗时 ${metrics.totalTime.toFixed(
-            2,
-          )}ms`,
-        );
-      }
-    }
-  }
-
-  // 获取监控状态
-  getStatus() {
-    if (!this.isEnabled) {
-      return { enabled: false, message: "监控未启用" };
-    }
-
-    const totalRequests = this.metrics.length;
-    const successfulRequests = this.metrics.filter(
-      (m) => m.statusCode < 400,
-    ).length;
-    const failedRequests = totalRequests - successfulRequests;
-    const avgResponseTime =
-      totalRequests > 0
-        ? this.metrics.reduce((sum, m) => sum + m.totalTime, 0) / totalRequests
-        : 0;
-
-    return {
-      enabled: true,
-      totalRequests,
-      successfulRequests,
-      failedRequests,
-      errorRate: totalRequests > 0 ? failedRequests / totalRequests : 0,
-      avgResponseTime: avgResponseTime.toFixed(2) + "ms",
-      memoryUsage: this.getMemoryUsage(),
-      recentRequests: this.metrics.slice(-5),
-    };
-  }
-
-  // 获取监控指标
-  getMetrics() {
-    return this.metrics;
-  }
-
-  // 重置监控数据
-  reset() {
-    this.metrics = [];
-    console.log("🔄 监控数据已重置");
-  }
-
-  // 获取内存使用情况
-  private getMemoryUsage() {
-    if (typeof process !== "undefined" && process.memoryUsage) {
-      const mem = process.memoryUsage();
-      return {
-        heapUsed: (mem.heapUsed / 1024 / 1024).toFixed(2) + "MB",
-        heapTotal: (mem.heapTotal / 1024 / 1024).toFixed(2) + "MB",
-        external: (mem.external / 1024 / 1024).toFixed(2) + "MB",
-      };
-    }
-    return { message: "内存信息不可用" };
+  if (metrics.totalTime > slowThreshold) {
+    console.warn(
+      `🐌 Slow request: ${metrics.path} took ${metrics.totalTime.toFixed(2)}ms`
+    );
   }
 }
 
-// 纯函数：为 Server 添加监控能力
+// ========== 主函数 ==========
+
+/** 默认配置 */
+const defaultConfig: Required<MonitoringConfig> = {
+  enabled: true,
+  console: true,
+  slowThreshold: 1000,
+  maxRecords: 1000,
+  tags: { framework: "vafast" },
+};
+
+/**
+ * 为 Server 添加监控能力
+ *
+ * @example
+ * ```ts
+ * const server = new Server(routes)
+ * const monitored = withMonitoring(server, { slowThreshold: 500 })
+ *
+ * // 获取监控状态
+ * monitored.getMonitoringStatus()
+ * ```
+ */
 export function withMonitoring(
   server: Server,
-  config: NativeMonitoringConfig = {},
+  config: MonitoringConfig = {}
 ): MonitoredServer {
-  const monitor = new NativeMonitor(config);
-
-  // 保存原始的 fetch 方法
+  const finalConfig = { ...defaultConfig, ...config };
+  const state = createMonitorState(finalConfig);
   const originalFetch = server.fetch.bind(server);
 
-  // 创建带监控的 fetch 方法
+  if (finalConfig.enabled && finalConfig.console) {
+    console.log("✅ Monitoring enabled");
+    console.log(`📊 Config:`, {
+      slowThreshold: `${finalConfig.slowThreshold}ms`,
+      maxRecords: finalConfig.maxRecords,
+      tags: finalConfig.tags,
+    });
+  }
+
+  // 带监控的 fetch
   const monitoredFetch = async (req: Request): Promise<Response> => {
+    if (!finalConfig.enabled) {
+      return originalFetch(req);
+    }
+
     const startTime = performance.now();
-    const requestId = `req_${Date.now()}_${Math.random()
-      .toString(36)
-      .substr(2, 9)}`;
+    const requestId = generateRequestId();
     const { pathname } = new URL(req.url);
     const method = req.method;
 
+    let statusCode = 500;
     try {
-      // 调用原始 fetch
       const response = await originalFetch(req);
-
-      // 记录监控指标
-      const totalTime = performance.now() - startTime;
-      monitor.recordMetrics({
-        requestId,
-        method,
-        path: pathname,
-        statusCode: response.status,
-        totalTime,
-        timestamp: Date.now(),
-        memoryUsage: (() => {
-          if (typeof process !== "undefined" && process.memoryUsage) {
-            const mem = process.memoryUsage();
-            return {
-              heapUsed: mem.heapUsed,
-              heapTotal: mem.heapTotal,
-            };
-          }
-          return { heapUsed: 0, heapTotal: 0 };
-        })(),
-      });
-
+      statusCode = response.status;
       return response;
-    } catch (error) {
-      // 记录错误监控指标
-      const totalTime = performance.now() - startTime;
-      monitor.recordMetrics({
+    } finally {
+      const metrics: MonitoringMetrics = {
         requestId,
         method,
         path: pathname,
-        statusCode: 500,
-        totalTime,
+        statusCode,
+        totalTime: performance.now() - startTime,
         timestamp: Date.now(),
-        memoryUsage: (() => {
-          if (typeof process !== "undefined" && process.memoryUsage) {
-            const mem = process.memoryUsage();
-            return {
-              heapUsed: mem.heapUsed,
-              heapTotal: mem.heapTotal,
-            };
-          }
-          return { heapUsed: 0, heapTotal: 0 };
-        })(),
-      });
+        memoryUsage: getMemoryInfo(),
+      };
 
-      throw error;
+      state.addMetrics(metrics);
+      logRequest(metrics, finalConfig.slowThreshold, finalConfig.console);
     }
   };
 
-  // 创建带监控的 Server 对象
-  const monitoredServer = {
+  // 返回增强的 Server
+  return {
     ...server,
     fetch: monitoredFetch,
-
-    // 监控方法
-    getMonitoringStatus: () => monitor.getStatus(),
-    getMonitoringMetrics: () => monitor.getMetrics(),
-    resetMonitoring: () => monitor.reset(),
+    getMonitoringStatus: state.getStatus,
+    getMonitoringMetrics: state.getMetrics,
+    resetMonitoring: state.reset,
   } as MonitoredServer;
-
-  return monitoredServer;
 }
 
-// 便捷函数：创建带监控的 Server
+/**
+ * 创建带监控的 Server（便捷函数）
+ */
 export function createMonitoredServer(
-  routes: any[],
-  config?: NativeMonitoringConfig,
+  ServerClass: typeof Server,
+  routes: Parameters<typeof Server>[0],
+  config?: MonitoringConfig
 ): MonitoredServer {
-  const { Server } = require("../server");
-  const server = new Server(routes);
+  const server = new ServerClass(routes);
   return withMonitoring(server, config);
 }

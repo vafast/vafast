@@ -1,29 +1,32 @@
 /**
- * 原生监控系统入口
- *
- * @author Framework Team
- * @version 2.0.0
- * @license MIT
+ * 监控系统入口
  */
 
-export * from "./types";
-export * from "./native-monitor";
+export {
+  withMonitoring,
+  createMonitoredServer,
+  type MonitoringConfig,
+  type MonitoringMetrics,
+  type MonitoringStatus,
+  type MonitoredServer,
+  type MemoryInfo,
+} from "./native-monitor";
 
-// 默认监控配置
-export const defaultMonitoringConfig = {
+// 默认配置
+export const defaultMonitoringConfig: MonitoringConfig = {
   enabled: true,
   console: true,
-  slowThreshold: 1000, // 1秒
-  errorThreshold: 0.05, // 5%
-  tags: {
-    framework: "vafast",
-    version: "2.0.0",
-  },
+  slowThreshold: 1000,
+  maxRecords: 1000,
+  tags: { framework: "vafast" },
 };
 
-// 创建监控配置
+// 导入类型
+import type { MonitoringConfig } from "./native-monitor";
+
+/** 创建监控配置 */
 export function createMonitoringConfig(
-  config: Partial<typeof defaultMonitoringConfig> = {},
-) {
+  config: Partial<MonitoringConfig> = {}
+): MonitoringConfig {
   return { ...defaultMonitoringConfig, ...config };
 }
