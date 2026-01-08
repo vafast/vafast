@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write   # npm OIDC
-  contents: write   # 创建 Release
+  id-token: write # npm OIDC
+  contents: write # 创建 Release
 
 jobs:
   release:
@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # changelogithub 需要完整 git 历史
+          fetch-depth: 0 # changelogithub 需要完整 git 历史
 
       - uses: actions/setup-node@v4
         with:
