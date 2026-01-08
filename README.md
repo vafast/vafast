@@ -115,7 +115,7 @@ export default app;
 
 **Vafast 完整示例：**
 ```typescript
-import { Server, VafastError, createHandler } from 'vafast';
+import { Server, createHandler, err } from 'vafast';
 import type { Route } from 'vafast';
 
 const routes: Route[] = [
@@ -125,11 +125,7 @@ const routes: Route[] = [
     handler: createHandler((ctx) => {
       const name = ctx.query.name;
       if (!name) {
-        throw new VafastError('Missing name', {
-          status: 400,
-          type: 'bad_request',
-          expose: true,  // 控制是否暴露给客户端
-        });
+        throw err.badRequest('Missing name');  // ✨ 简洁！
       }
       return `Hello, ${name}`;
     }),
@@ -138,10 +134,10 @@ const routes: Route[] = [
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
-// 错误响应: { type: 'bad_request', message: 'Missing name' }
+// 错误响应: { error: 'BAD_REQUEST', message: 'Missing name' }
 ```
 
-**对比：VafastError 有统一的 `type` + `status` + `expose` 契约。**
+**对比：Vafast 的 `err()` 函数提供语义化的错误 API，统一的响应格式。**
 
 ### 组合优于约定 — 显式优于隐式
 
@@ -338,6 +334,45 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 - 🔒 **端到端类型安全** - 完整的 TypeScript 类型推断
 - 🧩 **灵活中间件系统** - 可组合的中间件架构
 - 📦 **零配置** - 开箱即用，无需复杂配置
+
+### 返回值与错误处理
+
+Vafast 提供简洁、对称的响应 API：
+
+```typescript
+import { createHandler, json, err } from 'vafast';
+
+// ==================== 成功响应 ====================
+return user                    // 200 + JSON（自动转换）
+return json(user, 201)         // 201 Created
+return json(user, 200, {       // 自定义头部
+  'X-Request-Id': 'abc123'
+})
+return 'Hello'                 // 200 + text/plain
+return new Response(...)       // 完全控制
+
+// ==================== 错误响应 ====================
+throw err.badRequest('参数错误')     // 400
+throw err.unauthorized('请先登录')   // 401
+throw err.forbidden('无权限')        // 403
+throw err.notFound('用户不存在')     // 404
+throw err.conflict('用户名已存在')   // 409
+throw err.internal('服务器错误')     // 500
+throw err('自定义错误', 422, 'CUSTOM_TYPE')  // 自定义
+```
+
+**API 速查表：**
+
+| 场景 | 写法 | 结果 |
+|------|------|------|
+| 查询成功 | `return data` | 200 + JSON |
+| 创建成功 | `return json(data, 201)` | 201 + JSON |
+| 参数错误 | `throw err.badRequest()` | 400 |
+| 未授权 | `throw err.unauthorized()` | 401 |
+| 禁止访问 | `throw err.forbidden()` | 403 |
+| 未找到 | `throw err.notFound()` | 404 |
+| 资源冲突 | `throw err.conflict()` | 409 |
+| 服务器错误 | `throw err.internal()` | 500 |
 
 ### 类型安全的路由
 
