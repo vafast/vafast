@@ -1,8 +1,9 @@
 name: Publish
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 defaults:
@@ -12,13 +13,14 @@ defaults:
 # OIDC 权限 - 用于 npm provenance + Trusted Publishing（OIDC 登录发布）
 permissions:
   id-token: write
+  contents: write  # 创建 GitHub Release
 
 env:
   ACTIONS_RUNNER_DEBUG: true
 
 jobs:
   publish-npm:
-    name: "Publish: npm Registry"
+    name: "Release & Publish"
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +44,16 @@ jobs:
       - name: Test
         run: npm run test
 
-      - name: "Publish"
+      - name: "Create GitHub Release"
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "Publish to npm"
         run: |
           # 强制禁用 token，避免旧 classic token 干扰；发布鉴权走 npm Trusted Publishing（OIDC）
           NODE_AUTH_TOKEN="" npm publish --provenance --access=public
