@@ -43,6 +43,4 @@ jobs:
         run: npm run test
 
       - name: "Publish"
-        run: |
-          # 强制禁用 token，发布鉴权走 npm Trusted Publishing（OIDC）
-          NODE_AUTH_TOKEN="" npm publish --provenance --access=public
+        run: npm publish --provenance --access=public
