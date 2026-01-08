@@ -668,6 +668,36 @@ npm install  # 或 bun install
 npm test     # 或 bun test
 ```
 
+## 🚀 发布流程
+
+**一条命令完成发布：**
+
+```bash
+npm run release
+```
+
+**自动完成：**
+1. ✅ `bumpp` 交互式选择版本（patch/minor/major）
+2. ✅ 更新 `package.json` 版本号
+3. ✅ 创建 git commit + tag
+4. ✅ 推送到 GitHub
+5. ✅ GitHub Actions 自动触发：
+   - 构建 + 测试
+   - `changelogithub` 生成 Release Notes
+   - 创建 GitHub Release
+   - 发布到 npm（Trusted Publishing）
+
+**Commit 规范（用于生成 changelog）：**
+
+```bash
+feat: 新增功能      # → 🚀 Features
+fix: 修复问题       # → 🐛 Bug Fixes
+docs: 更新文档      # → 📝 Documentation
+perf: 性能优化      # → ⚡ Performance
+refactor: 重构     # → ♻️ Refactors
+chore: 杂项        # → 🏠 Chores
+```
+
 ## 📄 许可证
 
 [MIT](./LICENSE)
