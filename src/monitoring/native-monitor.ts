@@ -271,7 +271,7 @@ function createMonitorState(config: Required<MonitoringConfig>) {
 
     // 计算实际时间跨度（用于 RPS）
     const timestamps = metrics.map((m) => m.timestamp);
-    const actualWindow = Math.max(timestamps) - Math.min(timestamps);
+    const actualWindow = Math.max(...timestamps) - Math.min(...timestamps);
     const effectiveWindow = Math.max(actualWindow, 1000); // 至少 1 秒
     const rps = (count / effectiveWindow) * 1000;
 
