@@ -20,6 +20,10 @@
   - 实际应用场景
 
 ### 🔧 功能文档
+- [withContext 使用指南](./with-context.md) - 父级中间件类型注入
+  - 解决跨路由类型推断问题
+  - withContext 工厂函数用法
+  - 最佳实践和完整示例
 - [服务器优化](./server-optimization.md)
 - [认证系统](./auth.md)
 - [自动响应优化](./auto-response-optimization.md)

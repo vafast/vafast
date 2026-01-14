@@ -447,6 +447,36 @@ const routes = defineRoutes([
 ]);
 ```
 
+### 父级中间件类型注入 (withContext)
+
+当中间件在父级定义，子路由需要使用 `withContext` 获得类型推断：
+
+```typescript
+import { defineRoute, defineRoutes, withContext } from 'vafast'
+
+// 创建带 UserInfo 上下文的路由定义器
+const defineAuthRoute = withContext<{ userInfo: UserInfo }>()
+
+const routes = defineRoutes([
+  defineRoute({
+    path: '/api',
+    middleware: [authMiddleware],  // 父级中间件注入 userInfo
+    children: [
+      defineAuthRoute({  // ← 使用 defineAuthRoute
+        method: 'GET',
+        path: '/profile',
+        handler: ({ userInfo }) => {
+          // ✅ userInfo 自动有类型！
+          return { id: userInfo.id }
+        }
+      })
+    ]
+  })
+])
+```
+
+> 📖 详细文档：[withContext 使用指南](./docs/with-context.md)
+
 ### JIT 编译验证器
 
 Vafast 内置验证器 JIT 编译，自动缓存编译后的验证器：
@@ -762,7 +792,9 @@ export default { port: 3000, fetch: server.fetch };
 - [快速开始](./docs/getting-started/quickstart.md)
 - [示例代码](./examples/)
 
-### 架构设计
+
+### 核心概念
+- [withContext 使用指南](./docs/with-context.md) - 父级中间件类型注入，解决跨路由类型推断
 - [路由设计与网关架构](./docs/router-design.md) - 声明式路由的设计哲学、AI 时代能力、网关优势
 - [本地工具模式](./docs/local-tools-mode.md) - 声明式路由作为 AI Tools，无需 HTTP 服务
 

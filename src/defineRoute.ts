@@ -293,12 +293,32 @@ function isNestedRoute(route: RouteConfigResult): route is NestedRouteConfig {
 // ============= defineRoute 函数（支持重载） =============
 
 /**
- * 定义叶子路由（有 method 和 handler），支持中间件类型推断
+ * 定义叶子路由（有 method 和 handler），支持中间件类型推断和显式上下文类型
+ *
+ * @example
+ * ```typescript
+ * // 方式1：通过中间件自动推断上下文
+ * defineRoute({
+ *   method: 'GET',
+ *   path: '/profile',
+ *   middleware: [authMiddleware],
+ *   handler: ({ user }) => { ... }  // user 来自 authMiddleware
+ * })
+ *
+ * // 方式2：显式声明上下文类型（用于父级中间件注入的场景）
+ * defineRoute({
+ *   method: 'GET',
+ *   path: '/profile',
+ *   context: {} as { userInfo: UserInfo },
+ *   handler: ({ userInfo }) => { ... }  // userInfo 有类型
+ * })
+ * ```
  */
 export function defineRoute<
   const TSchema extends RouteSchema,
   TReturn,
   const TMiddleware extends readonly AnyMiddleware[],
+  TContext extends object = object,
   TMethod extends HTTPMethod = HTTPMethod,
   TPath extends string = string
 >(config: {
@@ -307,8 +327,10 @@ export function defineRoute<
   readonly name?: string;
   readonly description?: string;
   readonly schema?: TSchema;
+  /** 显式声明上下文类型（用于父级中间件注入的场景） */
+  readonly context?: TContext;
   readonly handler: (
-    ctx: HandlerContextWithExtra<TSchema, MergeMiddlewareContexts<TMiddleware>>
+    ctx: HandlerContextWithExtra<TSchema, TContext & MergeMiddlewareContexts<TMiddleware>>
   ) => TReturn | Promise<TReturn>;
   readonly middleware?: TMiddleware;
   readonly docs?: {
@@ -341,6 +363,7 @@ export function defineRoute(config: {
   readonly name?: string;
   readonly description?: string;
   readonly schema?: RouteSchema;
+  readonly context?: object;
   readonly handler?: (ctx: HandlerContext<RouteSchema>) => unknown | Promise<unknown>;
   readonly middleware?: readonly AnyMiddleware[];
   readonly children?: ReadonlyArray<RouteConfigResult>;
@@ -351,6 +374,56 @@ export function defineRoute(config: {
   };
 }): RouteConfigResult {
   return config as RouteConfigResult;
+}
+
+// ============= withContext 工厂函数 =============
+
+/**
+ * 创建带预设上下文类型的路由定义器
+ *
+ * 用于父级中间件注入上下文的场景，定义一次，多处复用
+ *
+ * @example
+ * ```typescript
+ * // 1. 在 middleware/index.ts 中定义
+ * export const defineAuthRoute = withContext<{ userInfo: UserInfo }>()
+ *
+ * // 2. 在路由文件中使用
+ * defineAuthRoute({
+ *   method: 'GET',
+ *   path: '/profile',
+ *   handler: ({ userInfo }) => {
+ *     // userInfo 自动有类型！
+ *     return { id: userInfo.id }
+ *   }
+ * })
+ * ```
+ */
+export function withContext<TContext extends object>() {
+  return <
+    const TSchema extends RouteSchema,
+    TReturn,
+    const TMiddleware extends readonly AnyMiddleware[],
+    TMethod extends HTTPMethod = HTTPMethod,
+    TPath extends string = string
+  >(config: {
+    readonly method: TMethod;
+    readonly path: TPath;
+    readonly name?: string;
+    readonly description?: string;
+    readonly schema?: TSchema;
+    readonly handler: (
+      ctx: HandlerContextWithExtra<TSchema, TContext & MergeMiddlewareContexts<TMiddleware>>
+    ) => TReturn | Promise<TReturn>;
+    readonly middleware?: TMiddleware;
+    readonly docs?: {
+      tags?: string[];
+      security?: unknown[];
+      responses?: Record<string, unknown>;
+    };
+  }): LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware> => {
+    return config as LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware>;
+  };
 }
 
 // ============= 扁平化嵌套路由 =============
