@@ -69,6 +69,7 @@ export {
   getRoute,
   getAllRoutes,
   filterRoutes,
+  getRoutesByMethod,
   type RouteMeta,
 } from "./route-registry";
 

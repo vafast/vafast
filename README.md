@@ -567,7 +567,7 @@ const permissionRoutes = registry.filter('permission');
 const categories = registry.getCategories();  // ['auth', 'users']
 ```
 
-**完整 API：**
+**Registry 实例方法：**
 
 | 方法 | 说明 |
 |------|------|
@@ -581,6 +581,33 @@ const categories = registry.getCategories();  // ['auth', 'users']
 | `forEach(callback)` | 遍历所有路由 |
 | `map(callback)` | 映射所有路由 |
 | `size` | 路由数量 |
+
+**全局便捷函数：**
+
+```typescript
+import {
+  getRoute,
+  getAllRoutes,
+  filterRoutes,
+  getRoutesByMethod,
+} from 'vafast'
+
+// 获取单个路由
+const route = getRoute('POST', '/users')
+
+// 获取所有路由
+const allRoutes = getAllRoutes()
+
+// 按字段筛选
+const webhookRoutes = filterRoutes('webhook')
+
+// 按 HTTP 方法获取
+const getRoutes = getRoutesByMethod('GET')
+const postRoutes = getRoutesByMethod('POST')
+
+// 按路径前缀筛选（自己 filter）
+const authRoutes = getAllRoutes().filter(r => r.path.startsWith('/auth'))
+```
 
 ### API Spec 生成
 

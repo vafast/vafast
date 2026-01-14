@@ -300,3 +300,18 @@ export function filterRoutes<K extends string>(field: K): (RouteMeta & Record<K,
   return getRouteRegistry().filter(field)
 }
 
+/**
+ * 按 HTTP 方法获取路由
+ *
+ * @example
+ * ```typescript
+ * import { getRoutesByMethod } from 'vafast'
+ *
+ * const getRoutes = getRoutesByMethod('GET')
+ * const postRoutes = getRoutesByMethod('POST')
+ * ```
+ */
+export function getRoutesByMethod(method: string): RouteMeta[] {
+  return getRouteRegistry().filterBy(r => r.method === method)
+}
+
