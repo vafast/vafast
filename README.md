@@ -8,25 +8,23 @@
 
 > Vafast 不只是框架，更是一种 **结构、清晰、可控** 的开发哲学。
 
-```typescript
-import { Server, defineRoute, defineRoutes } from 'vafast';
-
-const routes = defineRoutes([
-  defineRoute({
-    method: 'GET',
-    path: '/',
-    handler: () => 'Hello Vafast!'
-  })
-]);
-
-const server = new Server(routes);
-export default { port: 3000, fetch: server.fetch };
-```
+## 🚀 快速开始
 
 ```bash
-# 启动服务器
-npx tsx index.ts
+npx create-vafast-app
 ```
+
+按照提示输入项目名称，然后运行：
+
+```bash
+cd my-vafast-app
+npm install
+npm run dev
+```
+
+访问 [http://localhost:3000](http://localhost:3000) 即可看到 "Hello Vafast!"。
+
+> 💡 想要手动配置？查看 [安装](#-安装) 部分。
 
 ## ⚡ 性能
 
@@ -42,8 +40,45 @@ npx tsx index.ts
 
 ## 📦 安装
 
+### 方式一：使用脚手架（推荐）
+
+使用官方脚手架快速创建项目：
+
+```bash
+npx create-vafast-app
+```
+
+### 方式二：手动安装
+
+在现有项目中安装：
+
 ```bash
 npm install vafast
+```
+
+然后创建 `index.ts`：
+
+```typescript
+import { Server, defineRoute, defineRoutes, serve } from 'vafast';
+
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => 'Hello Vafast!'
+  })
+]);
+
+const server = new Server(routes);
+serve({ fetch: server.fetch, port: 3000 }, (info) => {
+  console.log(`🚀 Server running at http://localhost:${info.port}`);
+});
+```
+
+运行：
+
+```bash
+npx tsx index.ts
 ```
 
 ## 💡 设计哲学
@@ -329,7 +364,10 @@ nest new my-app  # 生成 20+ 文件
 # ❌ Express - 需要配置和样板代码
 npm init && npm install express && mkdir routes controllers...
 
-# ✅ Vafast - 一个文件搞定
+# ✅ Vafast - 使用脚手架一键创建
+npx create-vafast-app
+
+# ✅ 或手动创建 - 一个文件搞定
 echo "import { Server, defineRoute, defineRoutes } from 'vafast';
 const routes = defineRoutes([defineRoute({ method: 'GET', path: '/', handler: () => 'Hi' })]);
 const server = new Server(routes);
