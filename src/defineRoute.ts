@@ -463,11 +463,31 @@ function flattenRoutes(
 
 // ============= defineRoutes 函数 =============
 
+/** 带原始类型信息的路由数组 */
+export type RoutesWithSource<T extends readonly RouteConfigResult[]> = ProcessedRoute[] & { __source: T };
+
 /**
  * 定义路由数组，支持嵌套路由
+ * 
+ * 使用 `const T` 泛型自动保留字面量类型，无需手动添加 `as const`
+ * 
+ * @example
+ * ```typescript
+ * const routes = defineRoutes([
+ *   defineRoute({ method: 'GET', path: '/users', handler: ... }),
+ *   defineRoute({ method: 'POST', path: '/users', handler: ... }),
+ * ])
+ * 
+ * // 类型推断自动工作，无需 as const
+ * type Api = InferEden<typeof routes>
+ * ```
  */
-export function defineRoutes(routes: ReadonlyArray<RouteConfigResult>): ProcessedRoute[] {
-  return flattenRoutes(routes);
+export function defineRoutes<const T extends readonly RouteConfigResult[]>(
+  routes: T
+): RoutesWithSource<T> {
+  const processed = flattenRoutes(routes);
+  // 附加原始类型信息（仅用于类型推断，运行时不使用）
+  return Object.assign(processed, { __source: routes }) as RoutesWithSource<T>;
 }
 
 // ============= 用于 API Client 的类型推断 =============
