@@ -89,3 +89,6 @@ export {
   filterRoutes,
   type RouteMeta,
 } from "./route-registry";
+
+// API 契约生成
+export { createContractHandler, getContract } from "./contract";

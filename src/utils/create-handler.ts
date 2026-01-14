@@ -244,8 +244,10 @@ export function createHandler<const T extends RouteSchema, R>(
     }
   };
 
-  // 类型断言：这些属性只在编译时用于类型推断，运行时不存在
-  return handlerFn as InferableHandler<R, T>;
+  // 运行时保存 schema，用于契约生成
+  const inferableHandler = handlerFn as InferableHandler<R, T>;
+  (inferableHandler as unknown as { __schema: T }).__schema = schema;
+  return inferableHandler;
 }
 
 /**
