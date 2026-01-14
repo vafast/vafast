@@ -23,25 +23,27 @@
 Vafast 路由采用 **Vue Router 风格**的声明式设计：
 
 ```typescript
-const routes = [
-  { method: 'GET', path: '/', handler: home },
-  { method: 'GET', path: '/users', handler: listUsers },
-  { method: 'GET', path: '/users/:id', handler: getUser },
-  {
+import { defineRoute, defineRoutes } from 'vafast';
+
+const routes = defineRoutes([
+  defineRoute({ method: 'GET', path: '/', handler: home }),
+  defineRoute({ method: 'GET', path: '/users', handler: listUsers }),
+  defineRoute({ method: 'GET', path: '/users/:id', handler: getUser }),
+  defineRoute({
     path: '/api',
     middleware: [cors()],
     children: [
-      { method: 'GET', path: '/health', handler: healthCheck },
-      {
+      defineRoute({ method: 'GET', path: '/health', handler: healthCheck }),
+      defineRoute({
         path: '/v1',
         middleware: [rateLimit()],
         children: [
-          { method: 'GET', path: '/posts', handler: listPosts },
+          defineRoute({ method: 'GET', path: '/posts', handler: listPosts }),
         ]
-      }
+      })
     ]
-  }
-]
+  })
+])
 ```
 
 ### 设计映射
@@ -75,18 +77,21 @@ const app = vafast()
 
 **声明式写法：**
 ```typescript
-const routes = [
-  { method: 'GET', path: '/users', handler: listUsers },
-  { method: 'POST', path: '/users', handler: createUser },
-  {
+import { defineRoute, defineRoutes } from 'vafast';
+
+const routes = defineRoutes([
+  defineRoute({ method: 'GET', path: '/users', handler: listUsers }),
+  defineRoute({ method: 'POST', path: '/users', handler: createUser }),
+  defineRoute({
     path: '/api/v1',
     middleware: [auth],
     children: [
-      { method: 'GET', path: '/posts', handler: listPosts },
+      defineRoute({ method: 'GET', path: '/posts', handler: listPosts }),
     ]
-  }
-]
-app.addRoutes(routes)
+  })
+])
+
+const server = new Server(routes)
 ```
 
 ### 详细对比
@@ -126,13 +131,16 @@ app.addRoutes(routes)
 **推荐方向**：声明式定义 + 链式组装
 
 ```typescript
-// 声明式定义（可测试、可序列化）
-const userRoutes = [
-  { method: 'GET', path: '/users', handler: listUsers },
-]
+import { defineRoute, defineRoutes } from 'vafast';
 
-// 链式组装（灵活、动态）
-app.use(cors()).addRoutes(userRoutes)
+// 声明式定义（可测试、可序列化）
+const userRoutes = defineRoutes([
+  defineRoute({ method: 'GET', path: '/users', handler: listUsers }),
+])
+
+// 创建服务器
+const server = new Server(userRoutes)
+server.useGlobalMiddleware(cors())
 ```
 
 ---
@@ -383,17 +391,26 @@ app.basePath('/api/v1').use(usersPlugin)
 ### 1. 自动生成 API 文档
 
 ```typescript
-const routes = [
-  {
+import { defineRoute, defineRoutes, Type } from 'vafast';
+
+const CreateUserSchema = Type.Object({
+  name: Type.String(),
+  email: Type.String()
+});
+
+const routes = defineRoutes([
+  defineRoute({
     method: 'POST',
     path: '/users',
+    schema: { body: CreateUserSchema },
     handler: createUser,
-    body: CreateUserSchema,
-    meta: { summary: '创建用户', tags: ['用户'] }
-  }
-]
+    name: '创建用户',
+    description: '创建新用户',
+  })
+])
 
-app.generateOpenAPI()  // 自动生成 Swagger
+const server = new Server(routes)
+// 使用 getApiSpec() 自动生成 Swagger
 ```
 
 ### 2. 可视化路由编辑器

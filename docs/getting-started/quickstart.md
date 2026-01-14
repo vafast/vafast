@@ -20,7 +20,7 @@ npm install vafast
 创建一个新文件 `app.ts`：
 
 ```typescript
-import { createServer, defineRoute } from 'vafast';
+import { Server, defineRoute, defineRoutes, serve } from 'vafast';
 import { Type } from '@sinclair/typebox';
 
 // 定义用户Schema
@@ -31,27 +31,31 @@ const userSchema = Type.Object({
 });
 
 // 创建路由
-const userRoute = defineRoute({
-  method: 'POST',
-  path: '/users',
-  body: userSchema,
-  handler: async (req) => {
-    const { name, email, age } = req.body;
-    return { 
-      success: true, 
-      user: { name, email, age },
-      timestamp: new Date().toISOString()
-    };
-  }
-});
+const routes = defineRoutes([
+  defineRoute({
+    method: 'POST',
+    path: '/users',
+    schema: { body: userSchema },
+    handler: ({ body }) => {
+      return { 
+        success: true, 
+        user: body,
+        timestamp: new Date().toISOString()
+      };
+    }
+  })
+]);
 
 // 创建服务器
-const server = createServer([userRoute]);
+const server = new Server(routes);
 
-// 启动服务器
-server.listen(3000, () => {
+// 启动服务器（Node.js）
+serve({ fetch: server.fetch, port: 3000 }, () => {
   console.log('🚀 服务器运行在 http://localhost:3000');
 });
+
+// 或者使用 Bun（推荐）
+// export default { port: 3000, fetch: server.fetch };
 ```
 
 ## 🧪 测试应用
@@ -80,10 +84,10 @@ curl -X POST http://localhost:3000/users \
 ## 🔧 添加中间件
 
 ```typescript
-import { createServer, defineRoute } from 'vafast';
+import { Server, defineRoute, defineRoutes, defineMiddleware } from 'vafast';
 
 // 日志中间件
-const logger = async (req: Request, next: () => Promise<Response>) => {
+const logger = defineMiddleware(async (req, next) => {
   const start = Date.now();
   console.log(`📥 ${req.method} ${req.url}`);
   
@@ -93,10 +97,10 @@ const logger = async (req: Request, next: () => Promise<Response>) => {
   console.log(`📤 ${req.method} ${req.url} → ${response.status} (${duration}ms)`);
   
   return response;
-};
+});
 
 // 认证中间件
-const auth = async (req: Request, next: () => Promise<Response>) => {
+const auth = defineMiddleware(async (req, next) => {
   const token = req.headers.get('authorization');
   
   if (!token) {
@@ -104,16 +108,18 @@ const auth = async (req: Request, next: () => Promise<Response>) => {
   }
   
   return next();
-};
+});
 
-const server = createServer([
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: 'GET',
     path: '/protected',
     middleware: [logger, auth],
     handler: () => ({ message: '认证成功！' })
-  }
+  })
 ]);
+
+const server = new Server(routes);
 ```
 
 ## 📚 下一步

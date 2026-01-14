@@ -9,12 +9,17 @@
 > Vafast 不只是框架，更是一种 **结构、清晰、可控** 的开发哲学。
 
 ```typescript
-import { Server, createHandler } from 'vafast';
+import { Server, defineRoute, defineRoutes } from 'vafast';
 
-const server = new Server([
-  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Vafast!') }
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => 'Hello Vafast!'
+  })
 ]);
 
+const server = new Server(routes);
 export default { port: 3000, fetch: server.fetch };
 ```
 
@@ -72,14 +77,25 @@ export default app;
 
 **Vafast 完整示例：**
 ```typescript
-import { Server, createHandler } from 'vafast';
-import type { Route } from 'vafast';
+import { Server, defineRoute, defineRoutes } from 'vafast';
 
-const routes: Route[] = [
-  { method: 'GET',  path: '/users',     handler: createHandler(() => 'list users') },
-  { method: 'POST', path: '/users',     handler: createHandler(({ body }) => body) },
-  { method: 'GET',  path: '/users/:id', handler: createHandler(({ params }) => `User ${params.id}`) },
-];
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/users',
+    handler: () => 'list users'
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/users',
+    handler: ({ body }) => body
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/users/:id',
+    handler: ({ params }) => `User ${params.id}`
+  }),
+]);
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
@@ -110,22 +126,21 @@ export default app;
 
 **Vafast 完整示例：**
 ```typescript
-import { Server, createHandler, err } from 'vafast';
-import type { Route } from 'vafast';
+import { Server, defineRoute, defineRoutes, err } from 'vafast';
 
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: 'GET',
     path: '/user',
-    handler: createHandler((ctx) => {
-      const name = ctx.query.name;
+    handler: ({ query }) => {
+      const name = query.name;
       if (!name) {
         throw err.badRequest('Missing name');  // ✨ 简洁！
       }
       return `Hello, ${name}`;
-    }),
-  },
-];
+    },
+  }),
+]);
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
@@ -155,21 +170,29 @@ export default app;
 
 **Vafast 完整示例：**
 ```typescript
-import { Server, createHandler } from 'vafast';
-import type { Route, Middleware } from 'vafast';
+import { Server, defineRoute, defineRoutes, defineMiddleware } from 'vafast';
 
-const authMiddleware: Middleware = async (req, next) => {
+const authMiddleware = defineMiddleware(async (req, next) => {
   const token = req.headers.get('Authorization');
   if (!token) return new Response('Unauthorized', { status: 401 });
   return next();
-};
+});
 
-const routes: Route[] = [
+const routes = defineRoutes([
   // 无中间件
-  { method: 'GET', path: '/public', handler: createHandler(() => 'public') },
+  defineRoute({
+    method: 'GET',
+    path: '/public',
+    handler: () => 'public'
+  }),
   // 仅 auth
-  { method: 'GET', path: '/api/users', middleware: [authMiddleware], handler: createHandler(() => 'users') },
-];
+  defineRoute({
+    method: 'GET',
+    path: '/api/users',
+    middleware: [authMiddleware],
+    handler: () => 'users'
+  }),
+]);
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
@@ -205,33 +228,37 @@ export function setupRoutes(app: Hono) {
 export type AuthContext = { user: { id: string; role: string } };
 
 // -------- file: middleware/auth.ts --------
-import type { Middleware } from 'vafast';
-
-export const authMiddleware: Middleware = async (req, next) => {
-  const user = await verifyToken(req.headers.get('Authorization'));
-  (req as any).__locals = { user };
-  return next();
-};
-
-// -------- file: handlers/profile.ts --------
-import { createHandlerWithExtra } from 'vafast';
+import { defineMiddleware } from 'vafast';
 import type { AuthContext } from '../types';
 
-// 类型在 Handler 级别定义，任意文件都能用！
-export const getProfile = createHandlerWithExtra<AuthContext>((ctx) => {
-  const user = ctx.user;  // ✅ 类型完整: { id: string; role: string }
-  return { profile: user, isAdmin: user.role === 'admin' };
+// 使用 defineMiddleware 定义带类型的中间件
+export const authMiddleware = defineMiddleware<AuthContext>(async (req, next) => {
+  const user = await verifyToken(req.headers.get('Authorization'));
+  return next({ user });  // 通过 next 传递上下文
+});
+
+// -------- file: handlers/profile.ts --------
+import { defineRoute } from 'vafast';
+import { authMiddleware } from '../middleware/auth';
+
+// 类型在路由级别定义，任意文件都能用！
+export const getProfileRoute = defineRoute({
+  method: 'GET',
+  path: '/profile',
+  middleware: [authMiddleware],
+  handler: ({ user }) => {
+    // ✅ user 自动有类型: { id: string; role: string }
+    return { profile: user, isAdmin: user.role === 'admin' };
+  }
 });
 
 // -------- file: routes.ts --------
-import { Server } from 'vafast';
-import type { Route } from 'vafast';
-import { authMiddleware } from './middleware/auth';
-import { getProfile } from './handlers/profile';
+import { Server, defineRoutes } from 'vafast';
+import { getProfileRoute } from './handlers/profile';
 
-const routes: Route[] = [
-  { method: 'GET', path: '/profile', middleware: [authMiddleware], handler: getProfile },
-];
+const routes = defineRoutes([
+  getProfileRoute,
+]);
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
@@ -243,34 +270,49 @@ export default { fetch: server.fetch };
 
 **Bun 环境完整示例：**
 ```typescript
-import { Server, createHandler } from 'vafast';
+import { Server, defineRoute, defineRoutes } from 'vafast';
 
-const server = new Server([
-  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Bun!') }
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => 'Hello Bun!'
+  })
 ]);
 
+const server = new Server(routes);
 export default { port: 3000, fetch: server.fetch };
 ```
 
 **Cloudflare Workers 完整示例：**
 ```typescript
-import { Server, createHandler } from 'vafast';
+import { Server, defineRoute, defineRoutes } from 'vafast';
 
-const server = new Server([
-  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Workers!') }
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => 'Hello Workers!'
+  })
 ]);
 
+const server = new Server(routes);
 export default { fetch: server.fetch };
 ```
 
 **Node.js 完整示例：**
 ```typescript
-import { Server, createHandler, serve } from 'vafast';
+import { Server, defineRoute, defineRoutes, serve } from 'vafast';
 
-const server = new Server([
-  { method: 'GET', path: '/', handler: createHandler(() => 'Hello Node!') }
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/',
+    handler: () => 'Hello Node!'
+  })
 ]);
 
+const server = new Server(routes);
 serve({ fetch: server.fetch, port: 3000 }, () => {
   console.log('Server running on http://localhost:3000');
 });
@@ -288,8 +330,9 @@ nest new my-app  # 生成 20+ 文件
 npm init && npm install express && mkdir routes controllers...
 
 # ✅ Vafast - 一个文件搞定
-echo "import { Server } from 'vafast';
-const server = new Server([{ method: 'GET', path: '/', handler: () => 'Hi' }]);
+echo "import { Server, defineRoute, defineRoutes } from 'vafast';
+const routes = defineRoutes([defineRoute({ method: 'GET', path: '/', handler: () => 'Hi' })]);
+const server = new Server(routes);
 export default { fetch: server.fetch };" > index.ts && bun index.ts
 ```
 
@@ -335,25 +378,31 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 Vafast 提供简洁、对称的响应 API：
 
 ```typescript
-import { createHandler, json, err } from 'vafast';
+import { defineRoute, json, err } from 'vafast';
 
-// ==================== 成功响应 ====================
-return user                    // 200 + JSON（自动转换）
-return json(user, 201)         // 201 Created
-return json(user, 200, {       // 自定义头部
-  'X-Request-Id': 'abc123'
+defineRoute({
+  method: 'POST',
+  path: '/users',
+  handler: ({ body }) => {
+    // ==================== 成功响应 ====================
+    return body                    // 200 + JSON（自动转换）
+    return json(body, 201)         // 201 Created
+    return json(body, 200, {       // 自定义头部
+      'X-Request-Id': 'abc123'
+    })
+    return 'Hello'                 // 200 + text/plain
+    return new Response(...)       // 完全控制
+
+    // ==================== 错误响应 ====================
+    throw err.badRequest('参数错误')     // 400
+    throw err.unauthorized('请先登录')   // 401
+    throw err.forbidden('无权限')        // 403
+    throw err.notFound('用户不存在')     // 404
+    throw err.conflict('用户名已存在')   // 409
+    throw err.internal('服务器错误')     // 500
+    throw err('自定义错误', 422, 'CUSTOM_TYPE')  // 自定义
+  }
 })
-return 'Hello'                 // 200 + text/plain
-return new Response(...)       // 完全控制
-
-// ==================== 错误响应 ====================
-throw err.badRequest('参数错误')     // 400
-throw err.unauthorized('请先登录')   // 401
-throw err.forbidden('无权限')        // 403
-throw err.notFound('用户不存在')     // 404
-throw err.conflict('用户名已存在')   // 409
-throw err.internal('服务器错误')     // 500
-throw err('自定义错误', 422, 'CUSTOM_TYPE')  // 自定义
 ```
 
 **API 速查表：**
@@ -372,20 +421,20 @@ throw err('自定义错误', 422, 'CUSTOM_TYPE')  // 自定义
 ### 类型安全的路由
 
 ```typescript
-import { Server, defineRoutes, createHandler, Type } from 'vafast';
+import { Server, defineRoute, defineRoutes, Type } from 'vafast';
 
 const routes = defineRoutes([
-  {
+  defineRoute({
     method: 'POST',
     path: '/users',
-    handler: createHandler(
-      { body: Type.Object({ name: Type.String(), email: Type.String() }) },
-      ({ body }) => {
-        // body.name 和 body.email 自动类型推断
-        return { success: true, user: body };
-      }
-    )
-  }
+    schema: {
+      body: Type.Object({ name: Type.String(), email: Type.String() })
+    },
+    handler: ({ body }) => {
+      // body.name 和 body.email 自动类型推断
+      return { success: true, user: body };
+    }
+  })
 ]);
 
 const server = new Server(routes);
@@ -395,32 +444,34 @@ export default { port: 3000, fetch: server.fetch };
 ### 路径参数
 
 ```typescript
-{
+defineRoute({
   method: 'GET',
   path: '/users/:id',
-  handler: createHandler(
-    { params: Type.Object({ id: Type.String() }) },
-    ({ params }) => ({ userId: params.id })
-  )
-}
+  schema: {
+    params: Type.Object({ id: Type.String() })
+  },
+  handler: ({ params }) => ({ userId: params.id })
+})
 ```
 
 ### 中间件
 
 ```typescript
-const authMiddleware = async (req, next) => {
+import { defineMiddleware } from 'vafast';
+
+const authMiddleware = defineMiddleware(async (req, next) => {
   const token = req.headers.get('Authorization');
   if (!token) return new Response('Unauthorized', { status: 401 });
-  return next(req);
-};
+  return next();
+});
 
 const routes = defineRoutes([
-  {
+  defineRoute({
     method: 'GET',
     path: '/protected',
     middleware: [authMiddleware],
-    handler: createHandler(() => ({ secret: 'data' }))
-  }
+    handler: () => ({ secret: 'data' })
+  })
 ]);
 ```
 
@@ -428,22 +479,42 @@ const routes = defineRoutes([
 
 ```typescript
 const routes = defineRoutes([
-  {
+  defineRoute({
     path: '/api',
     middleware: [apiMiddleware],
     children: [
-      { method: 'GET', path: '/users', handler: getUsers },
-      { method: 'POST', path: '/users', handler: createUser },
-      {
+      defineRoute({
+        method: 'GET',
+        path: '/users',
+        handler: getUsers
+      }),
+      defineRoute({
+        method: 'POST',
+        path: '/users',
+        handler: createUser
+      }),
+      defineRoute({
         path: '/users/:id',
         children: [
-          { method: 'GET', path: '/', handler: getUser },
-          { method: 'PUT', path: '/', handler: updateUser },
-          { method: 'DELETE', path: '/', handler: deleteUser },
+          defineRoute({
+            method: 'GET',
+            path: '/',
+            handler: getUser
+          }),
+          defineRoute({
+            method: 'PUT',
+            path: '/',
+            handler: updateUser
+          }),
+          defineRoute({
+            method: 'DELETE',
+            path: '/',
+            handler: deleteUser
+          }),
         ]
-      }
+      })
     ]
-  }
+  })
 ]);
 ```
 
@@ -509,7 +580,7 @@ precompileSchemas([UserSchema, PostSchema, CommentSchema]);
 Vafast 内置 30+ 常用 format 验证器，**导入框架时自动注册**，对标 Zod 的内置验证：
 
 ```typescript
-import { Type, createHandler } from 'vafast';
+import { defineRoute, defineRoutes, Type } from 'vafast';
 
 // 直接使用内置 format，无需手动注册
 const UserSchema = Type.Object({
@@ -520,9 +591,16 @@ const UserSchema = Type.Object({
   createdAt: Type.String({ format: 'date-time' }),
 });
 
-const handler = createHandler({ body: UserSchema }, ({ body }) => {
-  return { success: true, user: body };
-});
+const routes = defineRoutes([
+  defineRoute({
+    method: 'POST',
+    path: '/users',
+    schema: { body: UserSchema },
+    handler: ({ body }) => {
+      return { success: true, user: body };
+    }
+  })
+]);
 ```
 
 **支持的 Format 列表：**
@@ -556,31 +634,30 @@ const isEmail = Patterns.EMAIL.test('test@example.com');
 Vafast 提供 `RouteRegistry` 用于路由元信息的收集和查询，适用于 API 文档生成、Webhook 事件注册、权限检查等场景：
 
 ```typescript
-import { Server, createRouteRegistry } from 'vafast';
-import type { Route } from 'vafast';
+import { Server, defineRoute, defineRoutes, getRouteRegistry } from 'vafast';
 
 // 定义带扩展字段的路由
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: 'POST',
     path: '/auth/signIn',
-    handler: signInHandler,
     name: '用户登录',                    // 扩展字段
     description: '用户通过邮箱密码登录',   // 扩展字段
+    handler: signInHandler,
     webhook: { eventKey: 'auth.signIn' }, // 自定义扩展
-  },
-  {
+  }),
+  defineRoute({
     method: 'GET',
     path: '/users',
     handler: getUsersHandler,
     permission: 'users.read',            // 自定义扩展
-  },
-];
+  }),
+]);
 
 const server = new Server(routes);
 
-// 创建路由注册表
-const registry = createRouteRegistry(server.getRoutesWithMeta());
+// Server 创建时自动设置全局注册表，直接使用即可
+const registry = getRouteRegistry();
 
 // 查询路由
 const route = registry.get('POST', '/auth/signIn');
@@ -612,52 +689,61 @@ const categories = registry.getCategories();  // ['auth', 'users']
 | `map(callback)` | 映射所有路由 |
 | `size` | 路由数量 |
 
-**全局便捷函数：**
+**全局便捷函数（Server 创建后自动可用）：**
 
 ```typescript
 import {
-  getRoute,
-  getAllRoutes,
-  filterRoutes,
-  getRoutesByMethod,
+  getRouteRegistry,  // 获取全局注册表实例
+  getRoute,          // 快速查询单个路由
+  getAllRoutes,      // 获取所有路由
+  filterRoutes,      // 按字段筛选
+  getRoutesByMethod, // 按 HTTP 方法获取
 } from 'vafast'
 
-// 获取单个路由
+// 方式一：使用全局注册表实例
+const registry = getRouteRegistry()
+const route = registry.get('POST', '/users')
+
+// 方式二：使用便捷函数（推荐，更简洁）
 const route = getRoute('POST', '/users')
-
-// 获取所有路由
 const allRoutes = getAllRoutes()
-
-// 按字段筛选
 const webhookRoutes = filterRoutes('webhook')
-
-// 按 HTTP 方法获取
 const getRoutes = getRoutesByMethod('GET')
 const postRoutes = getRoutesByMethod('POST')
 
-// 按路径前缀筛选（自己 filter）
+// 按路径前缀筛选
 const authRoutes = getAllRoutes().filter(r => r.path.startsWith('/auth'))
 ```
+
+> 💡 **提示**：Server 创建时会自动设置全局 RouteRegistry，无需手动创建。在任意文件中导入 `getRouteRegistry()` 即可访问。
 
 ### API Spec 生成
 
 Vafast 提供 `getApiSpec` 用于生成 API 规范，支持跨仓库类型同步和 AI 工具函数生成：
 
 ```typescript
-import { Server, defineRoutes, getApiSpec } from 'vafast';
+import { Server, defineRoute, defineRoutes, getApiSpec } from 'vafast';
 
 const routes = defineRoutes([
-  { method: 'GET', path: '/users', handler: getUsers },
-  { method: 'POST', path: '/users', handler: createUser },
+  defineRoute({
+    method: 'GET',
+    path: '/users',
+    handler: getUsers
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/users',
+    handler: createUser
+  }),
+  // 添加 API Spec 接口
+  defineRoute({
+    method: 'GET',
+    path: '/api-spec',
+    handler: getApiSpec  // 直接作为 handler
+  }),
 ]);
 
-// 添加 API Spec 接口
-const allRoutes = [
-  ...routes,
-  { method: 'GET', path: '/api-spec', handler: getApiSpec }  // 直接作为 handler
-];
-
-const server = new Server(allRoutes);
+const server = new Server(routes);
 ```
 
 **三种使用方式：**

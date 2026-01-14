@@ -2,12 +2,13 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
-## [未发布]
+## [0.5.5] - 2025-01-14
 
 ### 新增
 - 🆕 **RouteRegistry 路由注册表** - 路由元信息收集与查询工具
   - `createRouteRegistry()` - 创建路由注册表
   - `server.getRoutesWithMeta()` - 获取完整路由元信息
+  - Server 创建时自动设置全局 RouteRegistry
   - 支持按 method+path 查询、按分类筛选、自定义字段筛选
   - 适用于 API 文档生成、Webhook 事件注册、权限检查等场景
 - 🆕 **全局路由访问函数** - Server 创建后可在任意位置访问路由信息
@@ -15,6 +16,15 @@
   - `getRoute(method, path)` - 快速查询单个路由
   - `getAllRoutes()` - 获取所有路由
   - `filterRoutes(field)` - 筛选有特定字段的路由
+  - `getRoutesByMethod(method)` - 按 HTTP 方法获取路由
+
+### 改进
+- Server 自动初始化全局 RouteRegistry，无需手动创建
+- 优化路由注册表查询性能
+
+## [未发布]
+
+### 新增
 - 新增超优化验证器系统
 - 新增组件渲染支持 (Vue/React SSR)
 - 新增嵌套路由系统

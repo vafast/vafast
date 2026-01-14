@@ -37,23 +37,25 @@ const payload = await verifyToken(token, "your-secret-key");
 ### 2. 在路由中使用
 
 ```typescript
-import { Server } from "vafast";
+import { Server, defineRoute, defineRoutes } from "vafast";
 import { createAuth } from "vafast/middleware/auth";
 
 const auth = createAuth({ secret: "your-secret-key" });
 
-const server = new Server([
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: "GET",
     path: "/protected",
+    middleware: [auth],
     handler: async (req) => {
       // 用户信息通过中间件注入到 req.user
       const user = (req as any).user;
       return new Response(`Hello, ${user.username}!`);
-    },
-    middleware: [auth]
-  }
+    }
+  })
 ]);
+
+const server = new Server(routes);
 ```
 
 ## API 参考
