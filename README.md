@@ -582,6 +582,110 @@ const categories = registry.getCategories();  // ['auth', 'users']
 | `map(callback)` | 映射所有路由 |
 | `size` | 路由数量 |
 
+### API Spec 生成
+
+Vafast 提供 `getApiSpec` 用于生成 API 规范，支持跨仓库类型同步和 AI 工具函数生成：
+
+```typescript
+import { Server, defineRoutes, getApiSpec } from 'vafast';
+
+const routes = defineRoutes([
+  { method: 'GET', path: '/users', handler: getUsers },
+  { method: 'POST', path: '/users', handler: createUser },
+]);
+
+// 添加 API Spec 接口
+const allRoutes = [
+  ...routes,
+  { method: 'GET', path: '/api-spec', handler: getApiSpec }  // 直接作为 handler
+];
+
+const server = new Server(allRoutes);
+```
+
+**三种使用方式：**
+
+```typescript
+// 方式 1：直接作为 handler（推荐，最简洁）
+{ method: 'GET', path: '/api-spec', handler: getApiSpec }
+
+// 方式 2：显式传参（只暴露公开 API）
+{ handler: () => getApiSpec(publicRoutes) }
+
+// 方式 3：本地使用（CLI、测试）
+const spec = getApiSpec()
+```
+
+**返回格式：**
+
+```json
+{
+  "version": "1.0.0",
+  "generatedAt": "2024-01-01T00:00:00.000Z",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/users",
+      "name": "get_users",
+      "description": "获取用户列表",
+      "schema": { "query": { "type": "object", ... } }
+    }
+  ]
+}
+```
+
+### AI 工具函数生成
+
+`generateAITools` 可将路由转换为 OpenAI Function Calling / Claude Tools 格式：
+
+```typescript
+import { generateAITools } from 'vafast';
+
+const tools = generateAITools(routes);
+// [
+//   { name: 'get_users', description: '获取用户列表', parameters: {...} },
+//   { name: 'create_user', description: '创建用户', parameters: {...} }
+// ]
+
+// 直接用于 AI 调用
+const response = await openai.chat.completions.create({
+  model: 'gpt-4',
+  messages: [...],
+  tools: tools.map(t => ({ type: 'function', function: t }))
+});
+```
+
+### 跨仓库类型同步 (CLI)
+
+对于多仓库项目，使用 `@vafast/cli` 从远程服务同步类型：
+
+```bash
+# 安装 CLI
+npm install -g @vafast/cli
+
+# 从服务端同步类型
+vafast sync --url http://api.example.com --out src/api.generated.ts
+```
+
+**生成的类型文件：**
+
+```typescript
+// src/api.generated.ts
+export interface Api {
+  users: {
+    get: { query: { page?: number } }
+    post: { body: { name: string; email: string } }
+  }
+}
+
+// 使用
+import { eden } from '@vafast/api-client'
+import type { Api } from './api.generated'
+
+const api = eden<Api>('http://api.example.com')
+const { data } = await api.users.get({ query: { page: 1 } })
+```
+
 ## 📊 内置监控
 
 零依赖的性能监控，一行代码启用：
