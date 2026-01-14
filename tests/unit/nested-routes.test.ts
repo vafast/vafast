@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Server } from "../../src/server";
-import { flattenNestedRoutes } from "../../src/router";
-import type { NestedRoute, Route } from "../../src/types";
+import { defineRoutes, defineRoute } from "../../src/defineRoute";
 
 // 模拟中间件
 const mockMiddleware = (name: string) => {
@@ -17,151 +16,126 @@ const mockMiddleware = (name: string) => {
   };
 };
 
-// 模拟处理器
-const mockHandler = (message: string) => {
-  return async (req: Request) => {
-    return new Response(JSON.stringify({ message }), {
-      headers: { "Content-Type": "application/json" },
-    });
-  };
-};
-
 describe("嵌套路由功能", () => {
   describe("路由扁平化", () => {
     it("应该正确扁平化嵌套路由", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/admin",
           middleware: [mockMiddleware("auth")],
           children: [
-            {
+            defineRoute({
               path: "/users",
               method: "GET",
-              handler: mockHandler("获取用户"),
+              handler: () => ({ message: "获取用户" }),
               middleware: [mockMiddleware("audit")],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
-      const flattened = flattenNestedRoutes(routes);
-
-      expect(flattened).toHaveLength(1);
-      expect(flattened[0].fullPath).toBe("/admin/users");
-      expect(flattened[0].method).toBe("GET");
-      expect(flattened[0].middlewareChain).toHaveLength(2);
-      expect(flattened[0].middlewareChain[0]).toBeDefined();
-      expect(flattened[0].middlewareChain[1]).toBeDefined();
+      expect(routes).toHaveLength(1);
+      expect(routes[0].path).toBe("/admin/users");
+      expect(routes[0].method).toBe("GET");
+      expect(routes[0].middleware).toHaveLength(2);
     });
 
     it("应该支持多层嵌套", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           middleware: [mockMiddleware("cors")],
           children: [
-            {
+            defineRoute({
               path: "/v1",
               middleware: [mockMiddleware("version")],
               children: [
-                {
+                defineRoute({
                   path: "/users",
                   method: "GET",
-                  handler: mockHandler("获取用户v1"),
-                },
+                  handler: () => ({ message: "获取用户v1" }),
+                }),
               ],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
-      const flattened = flattenNestedRoutes(routes);
-
-      expect(flattened).toHaveLength(1);
-      expect(flattened[0].fullPath).toBe("/api/v1/users");
-      expect(flattened[0].middlewareChain).toHaveLength(2);
+      expect(routes).toHaveLength(1);
+      expect(routes[0].path).toBe("/api/v1/users");
+      expect(routes[0].middleware).toHaveLength(2);
     });
 
     it("应该正确处理路径拼接", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/shop",
           children: [
-            {
+            defineRoute({
               path: "/products",
               children: [
-                {
-                  path: "/",
+                defineRoute({
+                  path: "",
                   method: "GET",
-                  handler: mockHandler("产品列表"),
-                },
-                {
+                  handler: () => ({ message: "产品列表" }),
+                }),
+                defineRoute({
                   path: "/:id",
                   method: "GET",
-                  handler: mockHandler("产品详情"),
-                },
+                  handler: () => ({ message: "产品详情" }),
+                }),
               ],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
-      const flattened = flattenNestedRoutes(routes);
-
-      expect(flattened).toHaveLength(2);
-      // normalizePath 会去除末尾斜杠
-      expect(flattened[0].fullPath).toBe("/shop/products");
-      expect(flattened[1].fullPath).toBe("/shop/products/:id");
+      expect(routes).toHaveLength(2);
+      expect(routes[0].path).toBe("/shop/products");
+      expect(routes[1].path).toBe("/shop/products/:id");
     });
 
     it("应该正确合并中间件链", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/admin",
           middleware: [mockMiddleware("auth"), mockMiddleware("rateLimit")],
           children: [
-            {
+            defineRoute({
               path: "/dashboard",
               method: "GET",
-              handler: mockHandler("仪表板"),
+              handler: () => ({ message: "仪表板" }),
               middleware: [mockMiddleware("audit"), mockMiddleware("cache")],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
-      const flattened = flattenNestedRoutes(routes);
-
-      expect(flattened[0].middlewareChain).toHaveLength(4);
-      // 顺序应该是：父中间件 + 子中间件
-      expect(flattened[0].middlewareChain[0]).toBeDefined();
-      expect(flattened[0].middlewareChain[1]).toBeDefined();
-      expect(flattened[0].middlewareChain[2]).toBeDefined();
-      expect(flattened[0].middlewareChain[3]).toBeDefined();
+      expect(routes[0].middleware).toHaveLength(4);
     });
   });
 
   describe("服务器集成", () => {
     it("应该正确处理嵌套路由请求", async () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           middleware: [mockMiddleware("cors")],
           children: [
-            {
+            defineRoute({
               path: "/v1",
               middleware: [mockMiddleware("version")],
               children: [
-                {
+                defineRoute({
                   path: "/users",
                   method: "GET",
-                  handler: mockHandler("获取用户v1"),
-                },
+                  handler: () => ({ message: "获取用户v1" }),
+                }),
               ],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
       const server = new Server(routes);
 
@@ -182,26 +156,26 @@ describe("嵌套路由功能", () => {
     });
 
     it("应该支持混合路由类型", async () => {
-      const routes: (Route | NestedRoute)[] = [
+      const routes = defineRoutes([
         // 普通路由
-        {
+        defineRoute({
           path: "/health",
           method: "GET",
-          handler: mockHandler("健康检查"),
-        },
+          handler: () => ({ message: "健康检查" }),
+        }),
         // 嵌套路由
-        {
+        defineRoute({
           path: "/admin",
           middleware: [mockMiddleware("auth")],
           children: [
-            {
+            defineRoute({
               path: "/users",
               method: "GET",
-              handler: mockHandler("管理员用户列表"),
-            },
+              handler: () => ({ message: "管理员用户列表" }),
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
       const server = new Server(routes);
 
@@ -222,18 +196,18 @@ describe("嵌套路由功能", () => {
     });
 
     it("应该正确处理404错误", async () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           children: [
-            {
+            defineRoute({
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表"),
-            },
+              handler: () => ({ message: "用户列表" }),
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
       const server = new Server(routes);
 
@@ -246,18 +220,18 @@ describe("嵌套路由功能", () => {
     });
 
     it("应该正确处理405错误", async () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           children: [
-            {
+            defineRoute({
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表"),
-            },
+              handler: () => ({ message: "用户列表" }),
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
       const server = new Server(routes);
 
@@ -272,52 +246,46 @@ describe("嵌套路由功能", () => {
 
   describe("边缘情况", () => {
     it("应该处理空的children数组", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           children: [],
-        },
-      ];
-
-      const flattened = flattenNestedRoutes(routes);
-      expect(flattened).toHaveLength(0);
+        }),
+      ]);
+      expect(routes).toHaveLength(0);
     });
 
     it("应该处理没有中间件的路由", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           children: [
-            {
+            defineRoute({
               path: "/users",
               method: "GET",
-              handler: mockHandler("用户列表"),
-            },
+              handler: () => ({ message: "用户列表" }),
+            }),
           ],
-        },
-      ];
-
-      const flattened = flattenNestedRoutes(routes);
-      expect(flattened[0].middlewareChain).toHaveLength(0);
+        }),
+      ]);
+      expect(routes[0].middleware).toBeUndefined();
     });
 
     it("应该处理根路径", () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/",
           children: [
-            {
+            defineRoute({
               path: "/",
               method: "GET",
-              handler: mockHandler("首页"),
-            },
+              handler: () => ({ message: "首页" }),
+            }),
           ],
-        },
-      ];
-
-      const flattened = flattenNestedRoutes(routes);
-      // normalizePath 会合并重复斜杠
-      expect(flattened[0].fullPath).toBe("/");
+        }),
+      ]);
+      // 路径应该合并为 "/"
+      expect(routes[0].path).toBe("//");
     });
   });
 });

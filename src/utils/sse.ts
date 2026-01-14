@@ -22,7 +22,7 @@
  * ```
  */
 
-import type { RouteSchema, HandlerContext } from "../types/schema";
+import type { RouteSchema, HandlerContext } from "../defineRoute";
 import { parseQuery, parseHeaders, parseCookies } from "./parsers";
 import { precompileSchemas, validateAllSchemas } from "./validators/validators";
 
@@ -90,8 +90,6 @@ export interface SSEHandler<TSchema extends RouteSchema = RouteSchema> {
   (req: Request): Promise<Response>;
   /** 返回类型标记 - SSE 流的数据类型 */
   readonly __returnType: unknown;
-  /** Schema 类型标记 */
-  readonly __schema: TSchema;
   /** SSE 标记 - 使用品牌类型确保不被扩展 */
   readonly __sse: SSEMarker;
 }
@@ -217,7 +215,6 @@ export function createSSEHandler<const T extends RouteSchema>(
   // 添加类型标记
   const handler = handlerFn as SSEHandler<T>;
   (handler as unknown as { __sse: SSEMarker }).__sse = { __brand: 'SSE' } as const;
-  (handler as unknown as { __schema: T }).__schema = schema;
   (handler as unknown as { __returnType: unknown }).__returnType = undefined;
   return handler;
 }

@@ -1,4 +1,4 @@
-import type { Middleware } from "./route";
+import type { Middleware } from "./types";
 
 /**
  * 组件路由配置

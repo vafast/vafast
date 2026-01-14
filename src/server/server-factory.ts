@@ -1,4 +1,4 @@
-import type { Route, NestedRoute } from "../types";
+import type { ProcessedRoute } from "../defineRoute";
 import type {
   ComponentRoute,
   NestedComponentRoute,
@@ -16,7 +16,7 @@ export class ServerFactory {
   /**
    * 创建标准REST API服务器
    */
-  createRestServer(routes: (Route | NestedRoute)[]): Server {
+  createRestServer(routes: ProcessedRoute[]): Server {
     const server = new Server(routes);
     this.servers.set("rest", server);
     return server;

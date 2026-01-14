@@ -1,16 +1,16 @@
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src";
+import { defineRoute, defineRoutes, defineMiddleware } from "../../src/defineRoute";
 
 // 基础日志中间件 - 符合 Vafast 文档风格
-const logger: Middleware = async (req, next) => {
+const logger = defineMiddleware(async (req, next) => {
   const start = Date.now();
   const res = await next();
   console.log(`[${req.method}] ${req.url} - ${Date.now() - start}ms`);
   return res;
-};
+});
 
-// 认证中间件
-const requireAuth: Middleware = async (req, next) => {
+// 认证中间件 - 注入用户信息到上下文
+const requireAuth = defineMiddleware(async (req, next) => {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
 
   if (!token || token !== "valid-token") {
@@ -20,11 +20,12 @@ const requireAuth: Middleware = async (req, next) => {
     });
   }
 
-  return next();
-};
+  // 注入用户信息
+  return next({ user: { id: "1", token } });
+});
 
 // 管理员权限中间件
-const requireAdmin: Middleware = async (req, next) => {
+const requireAdmin = defineMiddleware(async (req, next) => {
   const role = req.headers.get("x-user-role");
 
   if (role !== "admin") {
@@ -35,10 +36,10 @@ const requireAdmin: Middleware = async (req, next) => {
   }
 
   return next();
-};
+});
 
 // 安全头中间件
-const securityHeaders: Middleware = async (req, next) => {
+const securityHeaders = defineMiddleware(async (req, next) => {
   const res = await next();
 
   res.headers.set("X-Content-Type-Options", "nosniff");
@@ -46,10 +47,10 @@ const securityHeaders: Middleware = async (req, next) => {
   res.headers.set("X-XSS-Protection", "1; mode=block");
 
   return res;
-};
+});
 
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: "GET",
     path: "/",
     handler: () =>
@@ -57,17 +58,19 @@ const routes: Route[] = [
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
     middleware: [logger, securityHeaders], // 全局中间件 + 安全头
-  },
-  {
+  }),
+  defineRoute({
     method: "GET",
     path: "/api/data",
-    handler: () =>
-      new Response(JSON.stringify({ message: "Protected data" }), {
+    handler: ({ user }) => {
+      // user 从中间件注入
+      return new Response(JSON.stringify({ message: "Protected data", user }), {
         headers: { "Content-Type": "application/json; charset=utf-8" },
-      }),
+      });
+    },
     middleware: [logger, requireAuth, securityHeaders], // 需要认证
-  },
-  {
+  }),
+  defineRoute({
     method: "GET",
     path: "/admin",
     handler: () =>
@@ -75,8 +78,8 @@ const routes: Route[] = [
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       }),
     middleware: [logger, requireAuth, requireAdmin, securityHeaders], // 需要管理员权限
-  },
-];
+  }),
+]);
 
 const server = new Server(routes);
 

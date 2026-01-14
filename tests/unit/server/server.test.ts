@@ -4,18 +4,19 @@
 
 import { describe, it, expect } from "vitest";
 import { Server } from "../../../src/server";
-import type { NestedRoute } from "../../../src/types";
+import { defineRoutes, defineRoute } from "../../../src/defineRoute";
 
 describe("Server", () => {
   describe("基本路由", () => {
     it("应该处理根路径", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/",
-          handler: () => new Response("Hello World"),
-        },
+          handler: () => "Hello World",
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/");
       const res = await server.fetch(req);
@@ -25,16 +26,14 @@ describe("Server", () => {
     });
 
     it("应该处理静态路径", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users",
-          handler: () =>
-            new Response(JSON.stringify([{ id: 1 }]), {
-              headers: { "Content-Type": "application/json" },
-            }),
-        },
+          handler: () => [{ id: 1 }],
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/users");
       const res = await server.fetch(req);
@@ -45,20 +44,14 @@ describe("Server", () => {
     });
 
     it("应该处理动态路径参数", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users/:id",
-          handler: (req) => {
-            const params = (
-              req as unknown as { params: Record<string, string> }
-            ).params;
-            return new Response(JSON.stringify({ userId: params.id }), {
-              headers: { "Content-Type": "application/json" },
-            });
-          },
-        },
+          handler: ({ params }) => ({ userId: params.id }),
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/users/123");
       const res = await server.fetch(req);
@@ -69,24 +62,17 @@ describe("Server", () => {
     });
 
     it("应该处理多个动态参数", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/posts/:postId/comments/:commentId",
-          handler: (req) => {
-            const params = (
-              req as unknown as { params: Record<string, string> }
-            ).params;
-            return new Response(
-              JSON.stringify({
-                postId: params.postId,
-                commentId: params.commentId,
-              }),
-              { headers: { "Content-Type": "application/json" } },
-            );
-          },
-        },
+          handler: ({ params }) => ({
+            postId: params.postId,
+            commentId: params.commentId,
+          }),
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/posts/10/comments/5");
       const res = await server.fetch(req);
@@ -97,20 +83,14 @@ describe("Server", () => {
     });
 
     it("应该处理通配符路径", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/files/*",
-          handler: (req) => {
-            const params = (
-              req as unknown as { params: Record<string, string> }
-            ).params;
-            return new Response(JSON.stringify({ path: params["*"] }), {
-              headers: { "Content-Type": "application/json" },
-            });
-          },
-        },
+          handler: ({ params }) => ({ path: params["*"] }),
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/files/path/to/file.txt");
       const res = await server.fetch(req);
@@ -122,18 +102,19 @@ describe("Server", () => {
 
   describe("HTTP 方法", () => {
     it("应该区分不同的 HTTP 方法", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users",
-          handler: () => new Response("GET users"),
-        },
-        {
+          handler: () => "GET users",
+        }),
+        defineRoute({
           method: "POST",
           path: "/users",
-          handler: () => new Response("POST users", { status: 201 }),
-        },
+          handler: () => ({ message: "POST users" }),
+        }),
       ]);
+      const server = new Server(routes);
 
       const getReq = new Request("http://localhost/users", { method: "GET" });
       const getRes = await server.fetch(getReq);
@@ -141,18 +122,19 @@ describe("Server", () => {
 
       const postReq = new Request("http://localhost/users", { method: "POST" });
       const postRes = await server.fetch(postReq);
-      expect(await postRes.text()).toBe("POST users");
-      expect(postRes.status).toBe(201);
+      const postData = await postRes.json();
+      expect(postData.message).toBe("POST users");
     });
 
     it("应该返回 405 对于不支持的方法", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users",
-          handler: () => new Response("GET users"),
-        },
+          handler: () => "GET users",
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/users", { method: "DELETE" });
       const res = await server.fetch(req);
@@ -165,13 +147,14 @@ describe("Server", () => {
     });
 
     it("应该返回 404 对于不存在的路径", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users",
-          handler: () => new Response("users"),
-        },
+          handler: () => "users",
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/posts");
       const res = await server.fetch(req);
@@ -184,23 +167,23 @@ describe("Server", () => {
 
   describe("嵌套路由", () => {
     it("应该处理嵌套路由", async () => {
-      const routes: NestedRoute[] = [
-        {
+      const routes = defineRoutes([
+        defineRoute({
           path: "/api",
           children: [
-            {
+            defineRoute({
               path: "/v1",
               children: [
-                {
+                defineRoute({
                   method: "GET",
                   path: "/users",
-                  handler: () => new Response("API v1 users"),
-                },
+                  handler: () => "API v1 users",
+                }),
               ],
-            },
+            }),
           ],
-        },
-      ];
+        }),
+      ]);
 
       const server = new Server(routes);
 
@@ -216,13 +199,14 @@ describe("Server", () => {
     it("应该执行全局中间件", async () => {
       const logs: string[] = [];
 
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/test",
-          handler: () => new Response("test"),
-        },
+          handler: () => "test",
+        }),
       ]);
+      const server = new Server(routes);
 
       server.use(async (req, next) => {
         logs.push("before");
@@ -248,14 +232,15 @@ describe("Server", () => {
         return next();
       };
 
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/test",
-          handler: () => new Response("test"),
+          handler: () => "test",
           middleware: [middleware],
-        },
+        }),
       ]);
+      const server = new Server(routes);
 
       const req = new Request("http://localhost/test");
       await server.fetch(req);
@@ -268,11 +253,14 @@ describe("Server", () => {
     it("应该支持动态添加路由", async () => {
       const server = new Server([]);
 
-      server.addRoute({
-        method: "GET",
-        path: "/dynamic",
-        handler: () => new Response("dynamic route"),
-      });
+      const routes = defineRoutes([
+        defineRoute({
+          method: "GET",
+          path: "/dynamic",
+          handler: () => "dynamic route",
+        }),
+      ]);
+      server.addRoutes(routes);
 
       const req = new Request("http://localhost/dynamic");
       const res = await server.fetch(req);
@@ -284,18 +272,19 @@ describe("Server", () => {
 
   describe("路由优先级", () => {
     it("静态路由应该优先于动态路由", async () => {
-      const server = new Server([
-        {
+      const routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/users/admin",
-          handler: () => new Response("admin user"),
-        },
-        {
+          handler: () => "admin user",
+        }),
+        defineRoute({
           method: "GET",
           path: "/users/:id",
-          handler: () => new Response("user by id"),
-        },
+          handler: () => "user by id",
+        }),
       ]);
+      const server = new Server(routes);
 
       // 静态路径优先
       const adminReq = new Request("http://localhost/users/admin");
@@ -311,19 +300,16 @@ describe("Server", () => {
 
   describe("getRoutes", () => {
     it("应该返回所有注册的路由", async () => {
-      const server = new Server([
-        { method: "GET", path: "/users", handler: () => new Response("") },
-        { method: "POST", path: "/users", handler: () => new Response("") },
-        {
-          method: "GET",
-          path: "/users/:id",
-          handler: () => new Response(""),
-        },
+      const routes = defineRoutes([
+        defineRoute({ method: "GET", path: "/users", handler: () => "" }),
+        defineRoute({ method: "POST", path: "/users", handler: () => "" }),
+        defineRoute({ method: "GET", path: "/users/:id", handler: () => "" }),
       ]);
+      const server = new Server(routes);
 
-      const routes = server.getRoutes();
+      const registeredRoutes = server.getRoutes();
 
-      expect(routes.length).toBe(3);
+      expect(registeredRoutes.length).toBe(3);
     });
   });
 });

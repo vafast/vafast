@@ -1,21 +1,21 @@
 /**
  * API Spec 生成器
- * 
+ *
  * 用于生成 API 规范，支持：
  * - 跨仓库类型同步
  * - AI 工具函数生成
  * - Swagger/OpenAPI 文档生成
- * 
+ *
  * @example
  * ```typescript
  * import { getApiSpec } from 'vafast'
- * 
+ *
  * // 方式 1：直接作为 handler（推荐，自动从全局 Registry 获取）
  * const allRoutes = [
  *   ...routes,
  *   { method: 'GET', path: '/api-spec', handler: getApiSpec }
  * ]
- * 
+ *
  * // 方式 2：显式传参（灵活场景，如只暴露公开 API）
  * { handler: () => getApiSpec(publicRoutes) }
  * ```
@@ -70,7 +70,7 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
     }
 
     if (!r.method || !r.path) continue
-    
+
     // 跳过 spec 接口本身
     if (r.path === '/api-spec' || r.path === '/__spec__') continue
 
@@ -108,9 +108,9 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
 
 /**
  * 从路由数组生成 AI 工具函数
- * 
+ *
  * 可直接用于 OpenAI Function Calling / Claude Tools
- * 
+ *
  * @example
  * ```typescript
  * const tools = generateAITools(routes)
@@ -159,34 +159,34 @@ function pathToToolName(method: string, path: string): string {
   const cleanSegments = segments
     .map(s => s.startsWith(':') ? '' : s)
     .filter(Boolean)
-  
+
   const prefix = method.toLowerCase()
   const suffix = cleanSegments.join('_')
-  
+
   return suffix ? `${prefix}_${suffix}` : prefix
 }
 
 /**
  * 获取 API 规范
- * 
+ *
  * 支持多种调用方式：
  * 1. 直接作为 handler：自动从全局 Registry 获取（推荐）
  * 2. 无参调用：同上，用于 CLI/测试
  * 3. 有参调用：显式传递路由数组（灵活场景）
- * 
+ *
  * @param routesOrContext - 可选，路由数组或 handler context。不传则从全局 Registry 获取
  * @returns ApiSpec 对象
- * 
+ *
  * @example
  * ```typescript
  * import { getApiSpec } from 'vafast'
- * 
+ *
  * // 方式 1：直接作为 handler（推荐，最简洁）
  * { method: 'GET', path: '/api-spec', handler: getApiSpec }
- * 
+ *
  * // 方式 2：显式传参（只暴露公开 API）
  * { handler: () => getApiSpec(publicRoutes) }
- * 
+ *
  * // 方式 3：本地使用（CLI、测试）
  * const spec = getApiSpec()
  * ```
@@ -194,14 +194,14 @@ function pathToToolName(method: string, path: string): string {
 export function getApiSpec(routesOrContext?: readonly unknown[] | Record<string, unknown>): ApiSpec {
   // 智能检测：是路由数组还是 handler context
   // 路由数组：Array && 第一个元素有 method 属性
-  const isRoutesArray = Array.isArray(routesOrContext) && 
-    routesOrContext.length > 0 && 
+  const isRoutesArray = Array.isArray(routesOrContext) &&
+    routesOrContext.length > 0 &&
     typeof (routesOrContext[0] as Record<string, unknown>)?.method === 'string'
-  
-  const routeList = isRoutesArray 
-    ? routesOrContext 
+
+  const routeList = isRoutesArray
+    ? routesOrContext
     : getRoutesFromRegistry()
-  
+
   return generateSpec(routeList)
 }
 

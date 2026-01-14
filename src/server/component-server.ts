@@ -24,7 +24,7 @@ export class ComponentServer extends BaseServer {
 
     // 检测路由冲突
     this.detectRouteConflicts(this.routes);
-    this.logFlattenedRoutes(this.routes, "组件路由");
+    this.logRoutes(this.routes, "组件路由");
     console.log("🚀 依赖按需加载，服务器启动完成");
   }
 

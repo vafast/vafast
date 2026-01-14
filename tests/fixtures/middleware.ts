@@ -1,14 +1,16 @@
 /**
  * 测试用中间件
+ * 
+ * 使用 defineMiddleware 创建类型安全的中间件
  */
 
-import type { Middleware } from "../../src/types";
+import { defineMiddleware } from "../../src/defineRoute";
 
 /**
  * 日志中间件 - 记录请求和响应
  */
-export function createLoggerMiddleware(logs: string[]): Middleware {
-  return async (req, next) => {
+export function createLoggerMiddleware(logs: string[]) {
+  return defineMiddleware(async (req, next) => {
     const start = Date.now();
     logs.push(`[${req.method}] ${new URL(req.url).pathname} - start`);
 
@@ -20,16 +22,14 @@ export function createLoggerMiddleware(logs: string[]): Middleware {
     );
 
     return response;
-  };
+  });
 }
 
 /**
  * 认证中间件 - 检查 Authorization 头
  */
-export function createAuthMiddleware(
-  validTokens: string[] = ["valid-token"],
-): Middleware {
-  return async (req, next) => {
+export function createAuthMiddleware(validTokens: string[] = ["valid-token"]) {
+  return defineMiddleware(async (req, next) => {
     const authHeader = req.headers.get("Authorization");
 
     if (!authHeader) {
@@ -53,17 +53,16 @@ export function createAuthMiddleware(
       );
     }
 
-    return next();
-  };
+    // 注入用户信息到上下文
+    return next({ user: { id: "1", token } });
+  });
 }
 
 /**
  * CORS 中间件
  */
-export function createCorsMiddleware(
-  allowedOrigins: string[] = ["*"],
-): Middleware {
-  return async (req, next) => {
+export function createCorsMiddleware(allowedOrigins: string[] = ["*"]) {
+  return defineMiddleware(async (req, next) => {
     const origin = req.headers.get("Origin") || "";
     const isAllowed =
       allowedOrigins.includes("*") || allowedOrigins.includes(origin);
@@ -86,7 +85,7 @@ export function createCorsMiddleware(
     }
 
     return response;
-  };
+  });
 }
 
 /**
@@ -95,10 +94,10 @@ export function createCorsMiddleware(
 export function createRateLimitMiddleware(options: {
   max: number;
   windowMs: number;
-}): Middleware {
+}) {
   const requests = new Map<string, { count: number; resetTime: number }>();
 
-  return async (req, next) => {
+  return defineMiddleware(async (req, next) => {
     const ip = req.headers.get("X-Forwarded-For") || "unknown";
     const now = Date.now();
 
@@ -121,7 +120,7 @@ export function createRateLimitMiddleware(options: {
     }
 
     return next();
-  };
+  });
 }
 
 /**
@@ -129,8 +128,8 @@ export function createRateLimitMiddleware(options: {
  */
 export function createErrorHandlerMiddleware(
   onError?: (error: Error) => void,
-): Middleware {
-  return async (req, next) => {
+) {
+  return defineMiddleware(async (req, next) => {
     try {
       return await next();
     } catch (error) {
@@ -149,60 +148,27 @@ export function createErrorHandlerMiddleware(
       }
       throw error;
     }
-  };
+  });
 }
 
 /**
  * 请求时间中间件 - 添加 X-Response-Time 头
  */
-export function createTimingMiddleware(): Middleware {
-  return async (req, next) => {
+export function createTimingMiddleware() {
+  return defineMiddleware(async (req, next) => {
     const start = Date.now();
     const response = await next();
     const duration = Date.now() - start;
     response.headers.set("X-Response-Time", `${duration}ms`);
     return response;
-  };
+  });
 }
 
 /**
  * 本地数据注入中间件
  */
-export function createLocalsMiddleware(
-  data: Record<string, unknown>,
-): Middleware {
-  return async (req, next) => {
-    (req as unknown as Record<string, unknown>).__locals = {
-      ...((req as unknown as Record<string, unknown>).__locals || {}),
-      ...data,
-    };
-    return next();
-  };
-}
-
-/**
- * 组合中间件数组
- */
-export function composeTestMiddleware(
-  ...middlewares: Middleware[]
-): Middleware {
-  return async (req, next) => {
-    let index = -1;
-
-    const dispatch = async (i: number): Promise<Response> => {
-      if (i <= index) {
-        throw new Error("next() called multiple times");
-      }
-      index = i;
-
-      const middleware = middlewares[i];
-      if (!middleware) {
-        return next();
-      }
-
-      return middleware(req, () => dispatch(i + 1));
-    };
-
-    return dispatch(0);
-  };
+export function createLocalsMiddleware(data: Record<string, unknown>) {
+  return defineMiddleware(async (req, next) => {
+    return next(data);
+  });
 }

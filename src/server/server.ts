@@ -5,8 +5,8 @@
  * 时间复杂度: O(k)，k 为路径段数
  */
 
-import type { Route, NestedRoute, FlattenedRoute, Method } from "../types";
-import { flattenNestedRoutes } from "../router";
+import type { Method, Middleware } from "../types";
+import type { ProcessedRoute } from "../defineRoute";
 import { composeMiddleware } from "../middleware";
 import { json } from "../utils/response";
 import { BaseServer } from "./base-server";
@@ -18,17 +18,18 @@ import { RouteRegistry, setGlobalRegistry } from "../utils/route-registry";
  *
  * @example
  * ```typescript
- * const server = new Server([
- *   { method: "GET", path: "/", handler: () => new Response("Hello") },
- * ]);
- * export default { fetch: server.fetch };
+ * const routes = defineRoutes([
+ *   defineRoute({ method: "GET", path: "/", handler: () => "Hello" }),
+ * ])
+ * const server = new Server(routes)
+ * export default { fetch: server.fetch }
  * ```
  */
 export class Server extends BaseServer {
   private router: RadixRouter;
-  private routes: FlattenedRoute[];
+  private routes: ProcessedRoute[];
 
-  constructor(routes: readonly (Route | NestedRoute)[] = []) {
+  constructor(routes: readonly ProcessedRoute[] = []) {
     super();
     this.router = new RadixRouter();
     this.routes = [];
@@ -38,23 +39,22 @@ export class Server extends BaseServer {
     }
   }
 
-  private registerRoutes(routes: (Route | NestedRoute)[]): void {
-    const flattened = flattenNestedRoutes(routes);
-    this.routes.push(...flattened);
+  private registerRoutes(routes: ProcessedRoute[]): void {
+    this.routes.push(...routes);
 
-    for (const route of flattened) {
+    for (const route of routes) {
       this.router.register(
         route.method as Method,
-        route.fullPath,
+        route.path,
         route.handler,
-        route.middlewareChain || [],
+        (route.middleware || []) as Middleware[],
       );
     }
 
-    this.detectRouteConflicts(flattened);
-    this.logFlattenedRoutes(flattened);
+    this.detectRouteConflicts(routes);
+    this.logRoutes(routes);
 
-    // 自动设置全局 RouteRegistry（支持在任意位置通过 getRouteRegistry() 访问）
+    // 自动设置全局 RouteRegistry
     setGlobalRegistry(new RouteRegistry(this.routes));
   }
 
@@ -144,44 +144,33 @@ export class Server extends BaseServer {
     return this.createErrorResponse(method, pathname);
   };
 
-  addRoute(route: Route): void {
-    const flattenedRoute: FlattenedRoute = {
-      ...route,
-      fullPath: route.path,
-      middlewareChain: route.middleware || [],
-    };
-
-    this.routes.push(flattenedRoute);
+  /** 动态添加单个路由 */
+  addRoute(route: ProcessedRoute): void {
+    this.routes.push(route);
     this.router.register(
       route.method as Method,
       route.path,
       route.handler,
-      route.middleware || [],
+      (route.middleware || []) as Middleware[],
     );
   }
 
-  addRoutes(routes: readonly (Route | NestedRoute)[]): void {
+  /** 动态添加多个路由 */
+  addRoutes(routes: readonly ProcessedRoute[]): void {
     this.registerRoutes([...routes]);
   }
 
+  /** 获取路由列表 */
   getRoutes(): Array<{ method: Method; path: string }> {
     return this.router.getRoutes();
   }
 
   /**
-   * 获取完整的路由元信息（不含 handler 和 middleware）
+   * 获取完整的路由元信息
    *
    * 用于 API 文档生成、Webhook 事件注册、权限检查等场景
-   *
-   * @example
-   * ```typescript
-   * const routes = server.getRoutesWithMeta()
-   * for (const route of routes) {
-   *   console.log(route.fullPath, route.name, route.description)
-   * }
-   * ```
    */
-  getRoutesWithMeta(): FlattenedRoute[] {
+  getRoutesWithMeta(): ProcessedRoute[] {
     return this.routes;
   }
 }

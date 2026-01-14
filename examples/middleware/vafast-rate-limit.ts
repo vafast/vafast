@@ -1,14 +1,14 @@
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src";
+import { defineRoute, defineRoutes, defineMiddleware } from "../../src/defineRoute";
 
 // 简单的内存存储
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 
 // 速率限制中间件 - 符合 Vafast 文档风格
-const rateLimit = (options: { windowMs: number; max: number }): Middleware => {
+const rateLimit = (options: { windowMs: number; max: number }) => {
   const { windowMs, max } = options;
   
-  return async (req, next) => {
+  return defineMiddleware(async (req, next) => {
     const clientId = req.headers.get("X-Forwarded-For") || 
                     req.headers.get("X-Real-IP") || 
                     "unknown";
@@ -39,13 +39,14 @@ const rateLimit = (options: { windowMs: number; max: number }): Middleware => {
     const response = await next();
     
     // 添加速率限制头
-    const remaining = Math.max(0, max - (clientData?.count || 0));
+    const currentData = requestCounts.get(clientId);
+    const remaining = Math.max(0, max - (currentData?.count || 0));
     response.headers.set("X-RateLimit-Limit", max.toString());
     response.headers.set("X-RateLimit-Remaining", remaining.toString());
-    response.headers.set("X-RateLimit-Reset", new Date(clientData?.resetTime || 0).toISOString());
+    response.headers.set("X-RateLimit-Reset", new Date(currentData?.resetTime || 0).toISOString());
     
     return response;
-  };
+  });
 };
 
 // 创建速率限制器
@@ -54,8 +55,8 @@ const limiter = rateLimit({
   max: 5,           // 限制每个客户端在窗口内最多5次请求
 });
 
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: "GET",
     path: "/limited",
     handler: () => new Response(JSON.stringify({ 
@@ -64,8 +65,8 @@ const routes: Route[] = [
       headers: { "Content-Type": "application/json" }
     }),
     middleware: [limiter],
-  },
-  {
+  }),
+  defineRoute({
     method: "GET",
     path: "/api/data",
     handler: () => new Response(JSON.stringify({ 
@@ -74,8 +75,8 @@ const routes: Route[] = [
       headers: { "Content-Type": "application/json" }
     }),
     middleware: [limiter],
-  },
-];
+  }),
+]);
 
 const server = new Server(routes);
 

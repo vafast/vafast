@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Server, defineRoutes, createHandler } from "../../src";
+import { Server, defineRoutes } from "../../src";
 import {
   withMonitoring,
   createMonitoredServer,
@@ -17,32 +17,32 @@ function createTestRoutes() {
     {
       method: "GET",
       path: "/",
-      handler: createHandler(() => "Hello"),
+      handler: () => "Hello",
     },
     {
       method: "GET",
       path: "/slow",
-      handler: createHandler(async () => {
+      handler: async () => {
         await new Promise((r) => setTimeout(r, 50));
         return "Slow response";
-      }),
+      },
     },
     {
       method: "GET",
       path: "/error",
-      handler: createHandler(() => {
+      handler: () => {
         throw new Error("Test error");
-      }),
+      },
     },
     {
       method: "GET",
       path: "/health",
-      handler: createHandler(() => ({ status: "ok" })),
+      handler: () => ({ status: "ok" }),
     },
     {
       method: "GET",
       path: "/users/:id",
-      handler: createHandler(({ params }) => ({ id: params.id })),
+      handler: ({ params }) => ({ id: params.id }),
     },
   ]);
 }

@@ -1,10 +1,10 @@
 import { Server } from "../../src";
-import type { Route } from "../../src";
+import { defineRoute, defineRoutes } from "../../src/defineRoute";
 import { VafastError } from "../../src/middleware";
 
 // 错误处理示例 - 符合 Vafast 文档风格
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: "GET",
     path: "/",
     handler: (req) => {
@@ -20,8 +20,8 @@ const routes: Route[] = [
         headers: { "Content-Type": "text/plain; charset=utf-8" },
       });
     },
-  },
-  {
+  }),
+  defineRoute({
     method: "POST",
     path: "/users",
     handler: async (req) => {
@@ -73,8 +73,8 @@ const routes: Route[] = [
         });
       }
     },
-  },
-  {
+  }),
+  defineRoute({
     method: "GET",
     path: "/admin",
     handler: (req) => {
@@ -106,12 +106,15 @@ const routes: Route[] = [
         }
       );
     },
-  },
-  {
+  }),
+  defineRoute({
     method: "GET",
     path: "/data/:id",
-    handler: (req, params) => {
-      const id = params?.id;
+    schema: {
+      params: {} as { id: string },
+    },
+    handler: ({ params }) => {
+      const id = params.id;
 
       if (!id) {
         throw new VafastError("缺少数据ID", {
@@ -149,8 +152,8 @@ const routes: Route[] = [
         }
       );
     },
-  },
-];
+  }),
+]);
 
 const server = new Server(routes);
 

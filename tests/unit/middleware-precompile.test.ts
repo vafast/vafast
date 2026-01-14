@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { Server, defineRoutes, createHandler } from "../../src";
+import { Server, defineRoutes } from "../../src";
 import type { Middleware } from "../../src/types";
 
 describe("中间件功能测试", () => {
@@ -16,12 +16,12 @@ describe("中间件功能测试", () => {
         {
           method: "GET",
           path: "/",
-          handler: createHandler(() => ({ message: "Hello" })),
+          handler: () => ({ message: "Hello" }),
         },
         {
           method: "GET",
           path: "/users/:id",
-          handler: createHandler(({ params }) => ({ id: params.id })),
+          handler: ({ params }) => ({ id: params.id }),
         },
       ]);
 
@@ -45,7 +45,7 @@ describe("中间件功能测试", () => {
     it("带路由中间件的路由应该正常工作", async () => {
       const testMiddleware: Middleware = async (req, next) => {
         (req as unknown as Record<string, unknown>).__test = "middleware-ok";
-        return next(req);
+        return next();
       };
 
       const routes = defineRoutes([
@@ -53,9 +53,9 @@ describe("中间件功能测试", () => {
           method: "GET",
           path: "/protected",
           middleware: [testMiddleware],
-          handler: createHandler(({ req }) => ({
+          handler: ({ req }) => ({
             test: (req as unknown as Record<string, unknown>).__test,
-          })),
+          }),
         },
       ]);
 
@@ -70,16 +70,16 @@ describe("中间件功能测试", () => {
     it("带全局中间件应该正常工作", async () => {
       const globalMiddleware: Middleware = async (req, next) => {
         (req as unknown as Record<string, unknown>).__global = "global-ok";
-        return next(req);
+        return next();
       };
 
       const routes = defineRoutes([
         {
           method: "GET",
           path: "/with-global",
-          handler: createHandler(({ req }) => ({
+          handler: ({ req }) => ({
             global: (req as unknown as Record<string, unknown>).__global,
-          })),
+          }),
         },
       ]);
 
@@ -108,7 +108,7 @@ describe("中间件功能测试", () => {
         {
           method: "GET",
           path: "/only-get",
-          handler: createHandler(() => ({ ok: true })),
+          handler: () => ({ ok: true }),
         },
       ]);
 
@@ -125,9 +125,9 @@ describe("中间件功能测试", () => {
         {
           method: "GET",
           path: "/files/*",
-          handler: createHandler(({ params }) => ({
+          handler: ({ params }) => ({
             file: params["*"],
-          })),
+          }),
         },
       ]);
 

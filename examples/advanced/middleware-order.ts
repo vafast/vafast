@@ -1,9 +1,9 @@
 import { Server } from "../../src/server";
-import type { NestedRoute } from "../../src/types";
+import { defineRoute, defineRoutes, defineMiddleware } from "../../src/defineRoute";
 
 // 创建带编号的中间件，用于跟踪执行顺序
 const createNumberedMiddleware = (name: string, number: number) => {
-  return async (req: Request, next: () => Promise<Response>) => {
+  return defineMiddleware(async (req, next) => {
     console.log(`🔄 [${number}] 进入中间件: ${name}`);
 
     // 在请求处理前执行
@@ -19,7 +19,7 @@ const createNumberedMiddleware = (name: string, number: number) => {
     console.log(`✅ [${number}] 离开中间件: ${name} (耗时: ${duration}ms)`);
 
     return response;
-  };
+  });
 };
 
 // 模拟处理器
@@ -38,29 +38,29 @@ const demoHandler = async (req: Request) => {
 };
 
 // 嵌套路由配置 - 演示中间件执行顺序
-const routes: NestedRoute[] = [
-  {
+const routeDefinitions = [
+  defineRoute({
     path: "/demo",
     middleware: [
       createNumberedMiddleware("全局中间件1", 1),
       createNumberedMiddleware("全局中间件2", 2),
     ],
     children: [
-      {
+      defineRoute({
         path: "/level1",
         middleware: [
           createNumberedMiddleware("一级中间件1", 3),
           createNumberedMiddleware("一级中间件2", 4),
         ],
         children: [
-          {
+          defineRoute({
             path: "/level2",
             middleware: [
               createNumberedMiddleware("二级中间件1", 5),
               createNumberedMiddleware("二级中间件2", 6),
             ],
             children: [
-              {
+              defineRoute({
                 path: "/final",
                 method: "GET",
                 handler: demoHandler,
@@ -68,27 +68,30 @@ const routes: NestedRoute[] = [
                   createNumberedMiddleware("最终中间件1", 7),
                   createNumberedMiddleware("最终中间件2", 8),
                 ],
-              },
+              }),
             ],
-          },
+          }),
         ],
-      },
+      }),
     ],
-  },
+  }),
 
   // 另一个示例：展示不同层级的中间件
-  {
+  defineRoute({
     path: "/api",
-    middleware: [createNumberedMiddleware("API网关", 10), createNumberedMiddleware("CORS", 11)],
+    middleware: [
+      createNumberedMiddleware("API网关", 10),
+      createNumberedMiddleware("CORS", 11),
+    ],
     children: [
-      {
+      defineRoute({
         path: "/v1",
         middleware: [
           createNumberedMiddleware("版本检查", 12),
           createNumberedMiddleware("限流", 13),
         ],
         children: [
-          {
+          defineRoute({
             path: "/users",
             method: "GET",
             handler: demoHandler,
@@ -96,12 +99,15 @@ const routes: NestedRoute[] = [
               createNumberedMiddleware("用户权限", 14),
               createNumberedMiddleware("缓存", 15),
             ],
-          },
+          }),
         ],
-      },
+      }),
     ],
-  },
+  }),
 ];
+
+// 处理路由
+const routes = defineRoutes(routeDefinitions);
 
 // 创建服务器实例
 const server = new Server(routes);

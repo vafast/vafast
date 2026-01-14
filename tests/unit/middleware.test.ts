@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src";
+import { defineRoute, defineRoutes, defineMiddleware } from "../../src/defineRoute";
 import { VafastError } from "../../src/middleware";
 
 describe("中间件示例", () => {
   describe("基础中间件", () => {
     let server: Server;
-    let routes: Route[];
+    let routes: ReturnType<typeof defineRoutes>;
 
     beforeEach(() => {
       // 日志中间件
-      const logger: Middleware = async (req, next) => {
+      const logger = defineMiddleware(async (req, next) => {
         const start = Date.now();
         console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
 
@@ -24,20 +24,20 @@ describe("中间件示例", () => {
         );
 
         return response;
-      };
+      });
 
       // 请求计时中间件
-      const timer: Middleware = async (req, next) => {
+      const timer = defineMiddleware(async (req, next) => {
         const start = performance.now();
         const response = await next();
         const duration = performance.now() - start;
 
         response.headers.set("X-Response-Time", `${duration.toFixed(2)}ms`);
         return response;
-      };
+      });
 
       // 请求 ID 中间件
-      const requestId: Middleware = async (req, next) => {
+      const requestId = defineMiddleware(async (req, next) => {
         const id = crypto.randomUUID();
         req.headers.set("X-Request-ID", id);
 
@@ -45,10 +45,10 @@ describe("中间件示例", () => {
         response.headers.set("X-Request-ID", id);
 
         return response;
-      };
+      });
 
-      routes = [
-        {
+      routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/",
           handler: () =>
@@ -56,8 +56,8 @@ describe("中间件示例", () => {
               headers: { "Content-Type": "text/plain; charset=utf-8" },
             }),
           middleware: [logger, timer, requestId],
-        },
-        {
+        }),
+        defineRoute({
           method: "GET",
           path: "/api/data",
           handler: () =>
@@ -65,8 +65,8 @@ describe("中间件示例", () => {
               headers: { "Content-Type": "application/json; charset=utf-8" },
             }),
           middleware: [logger, requestId],
-        },
-      ];
+        }),
+      ]);
       server = new Server(routes);
     });
 
@@ -97,7 +97,7 @@ describe("中间件示例", () => {
 
   describe("CORS 中间件", () => {
     let server: Server;
-    let routes: Route[];
+    let routes: ReturnType<typeof defineRoutes>;
 
     beforeEach(() => {
       // CORS 中间件
@@ -109,7 +109,7 @@ describe("中间件示例", () => {
           credentials?: boolean;
           maxAge?: number;
         } = {},
-      ): Middleware => {
+      ) => {
         const {
           origin = "*",
           methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -118,7 +118,7 @@ describe("中间件示例", () => {
           maxAge,
         } = options;
 
-        return async (req, next) => {
+        return defineMiddleware(async (req, next) => {
           const reqOrigin = req.headers.get("Origin") || "";
           const isAllowedOrigin =
             origin === "*" ||
@@ -172,7 +172,7 @@ describe("中间件示例", () => {
               res.headers.set("Access-Control-Allow-Credentials", "true");
           }
           return res;
-        };
+        });
       };
 
       const cors = createCORS({
@@ -183,8 +183,8 @@ describe("中间件示例", () => {
         maxAge: 86400,
       });
 
-      routes = [
-        {
+      routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/data",
           handler: () =>
@@ -196,12 +196,11 @@ describe("中间件示例", () => {
                 headers: { "Content-Type": "application/json" },
               },
             ),
-        },
-        {
+        }),
+        defineRoute({
           method: "POST",
           path: "/data",
-          handler: async (req) => {
-            const body = await req.json();
+          handler: ({ body }) => {
             return new Response(
               JSON.stringify({
                 message: "Data received with CORS",
@@ -212,8 +211,8 @@ describe("中间件示例", () => {
               },
             );
           },
-        },
-      ];
+        }),
+      ]);
 
       server = new Server(routes);
       server.use(cors);
@@ -270,21 +269,21 @@ describe("中间件示例", () => {
 
   describe("Rate Limit Middleware", () => {
     let server: Server;
-    let routes: Route[];
+    let routes: ReturnType<typeof defineRoutes>;
 
     beforeEach(() => {
       // 速率限制中间件
       const rateLimit = (options: {
         windowMs: number;
         max: number;
-      }): Middleware => {
+      }) => {
         const { windowMs, max } = options;
         const requestCounts = new Map<
           string,
           { count: number; resetTime: number }
         >();
 
-        return async (req, next) => {
+        return defineMiddleware(async (req, next) => {
           const clientId = req.headers.get("X-Forwarded-For") || "unknown";
           const now = Date.now();
           const clientData = requestCounts.get(clientId);
@@ -310,12 +309,13 @@ describe("中间件示例", () => {
           }
 
           const response = await next();
-          const remaining = Math.max(0, max - (clientData?.count || 0));
+          const clientDataAfter = requestCounts.get(clientId);
+          const remaining = Math.max(0, max - (clientDataAfter?.count || 0));
           response.headers.set("X-RateLimit-Limit", max.toString());
           response.headers.set("X-RateLimit-Remaining", remaining.toString());
 
           return response;
-        };
+        });
       };
 
       const limiter = rateLimit({
@@ -323,8 +323,8 @@ describe("中间件示例", () => {
         max: 3,
       });
 
-      routes = [
-        {
+      routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/limited",
           handler: () =>
@@ -337,8 +337,8 @@ describe("中间件示例", () => {
               },
             ),
           middleware: [limiter],
-        },
-      ];
+        }),
+      ]);
       server = new Server(routes);
     });
 
@@ -383,14 +383,14 @@ describe("中间件示例", () => {
 
   describe("Error Handling Middleware", () => {
     let server: Server;
-    let routes: Route[];
+    let routes: ReturnType<typeof defineRoutes>;
 
     beforeEach(() => {
-      routes = [
-        {
+      routes = defineRoutes([
+        defineRoute({
           method: "GET",
           path: "/",
-          handler: (req) => {
+          handler: ({ req }) => {
             const name = new URL(req.url).searchParams.get("name");
             if (!name) {
               throw new VafastError("缺少名称参数", {
@@ -403,13 +403,13 @@ describe("中间件示例", () => {
               headers: { "Content-Type": "text/plain; charset=utf-8" },
             });
           },
-        },
-        {
+        }),
+        defineRoute({
           method: "POST",
           path: "/users",
-          handler: async (req) => {
-            const body = await req.json();
-            const { name, email } = body;
+          handler: ({ body }) => {
+            // body 已经在 wrapHandler 中自动解析
+            const { name, email } = (body || {}) as { name?: string; email?: string };
 
             if (!name || !email) {
               throw new VafastError("缺少必填字段", {
@@ -430,8 +430,8 @@ describe("中间件示例", () => {
               },
             );
           },
-        },
-      ];
+        }),
+      ]);
       server = new Server(routes);
     });
 
@@ -439,8 +439,9 @@ describe("中间件示例", () => {
       const request = new Request("http://localhost/", { method: "GET" });
       const response = await server.fetch(request);
 
-      expect(response.status).toBe(400);
       const data = await response.json();
+      console.log("Response:", response.status, data);
+      expect(response.status).toBe(400);
       expect(data.error).toBe("bad_request");
       expect(data.message).toBe("缺少名称参数");
     });

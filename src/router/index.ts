@@ -6,4 +6,4 @@
 export { RadixRouter } from "./radix-tree";
 
 // 路由工具函数
-export { flattenNestedRoutes, normalizePath } from "../router";
+export { normalizePath } from "../router";

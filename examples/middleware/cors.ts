@@ -1,5 +1,5 @@
 import { Server } from "../../src";
-import type { Route, Middleware } from "../../src/types";
+import { defineRoute, defineRoutes, defineMiddleware } from "../../src/defineRoute";
 
 // CORS 中间件 - 符合 Vafast 文档风格
 export function createCORS(
@@ -10,7 +10,7 @@ export function createCORS(
     credentials?: boolean;
     maxAge?: number;
   } = {}
-): Middleware {
+) {
   const {
     origin = "*",
     methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -19,11 +19,11 @@ export function createCORS(
     maxAge,
   } = options;
 
-  return async (req, next) => {
+  return defineMiddleware(async (req, next) => {
     const reqOrigin = req.headers.get("Origin") || "";
 
     // 判断：是否为允许的 Origin？
-    const isAllowedOrigin = origin === "*" || origin.includes(reqOrigin);
+    const isAllowedOrigin = origin === "*" || (Array.isArray(origin) && origin.includes(reqOrigin));
 
     // 预检 (OPTIONS) 请求处理
     if (req.method === "OPTIONS") {
@@ -57,7 +57,7 @@ export function createCORS(
     }
 
     return res;
-  };
+  });
 }
 
 // 创建 CORS 中间件
@@ -69,8 +69,8 @@ const cors = createCORS({
   maxAge: 86400, // 缓存预检请求1天
 });
 
-const routes: Route[] = [
-  {
+const routes = defineRoutes([
+  defineRoute({
     method: "GET",
     path: "/data",
     handler: () =>
@@ -82,8 +82,8 @@ const routes: Route[] = [
           headers: { "Content-Type": "application/json" },
         }
       ),
-  },
-  {
+  }),
+  defineRoute({
     method: "POST",
     path: "/data",
     handler: async (req) => {
@@ -98,8 +98,8 @@ const routes: Route[] = [
         }
       );
     },
-  },
-];
+  }),
+]);
 
 const server = new Server(routes);
 
