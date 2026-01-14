@@ -235,6 +235,69 @@ export default { fetch: server.fetch };
 
 **对比：Vafast 的中间件直接声明在路由上，一目了然。**
 
+### 扩展字段 — 声明式元数据，赋能业务逻辑
+
+**其他框架的问题：**
+- 路由定义和元数据分离，难以统一管理
+- 需要额外的配置文件或装饰器来存储 webhook、权限、计费等信息
+- 元数据查询需要遍历路由或维护独立映射表
+
+**Vafast 完整示例：**
+```typescript
+import { Server, defineRoute, defineRoutes, getRouteRegistry, defineMiddleware } from 'vafast';
+
+// 计费中间件（基于路由元数据）
+const billingMiddleware = defineMiddleware(async (req, next) => {
+  const route = getRouteRegistry().get(req.method, new URL(req.url).pathname);
+  
+  // 从路由元数据读取计费配置
+  if (route?.billing) {
+    const { price, currency } = route.billing;
+    // 执行计费逻辑
+    await chargeUser(req, price, currency);
+  }
+  
+  return next();
+});
+
+const routes = defineRoutes([
+  defineRoute({
+    method: 'POST',
+    path: '/ai/generate',
+    name: 'AI 生成',
+    description: '生成 AI 内容',
+    // ✨ 扩展字段：计费配置
+    billing: { price: 0.01, currency: 'USD' },
+    // ✨ 扩展字段：Webhook 事件
+    webhook: { eventKey: 'ai.generate', enabled: true },
+    // ✨ 扩展字段：权限要求
+    permission: 'ai.generate',
+    middleware: [billingMiddleware],
+    handler: async ({ body }) => {
+      const result = await generateAI(body.prompt);
+      return { result };
+    }
+  }),
+  defineRoute({
+    method: 'GET',
+    path: '/users',
+    // 免费 API，无需计费
+    handler: () => ({ users: [] })
+  }),
+]);
+
+const server = new Server(routes);
+
+// 查询所有需要计费的 API
+const paidRoutes = getRouteRegistry().filter('billing');
+// 查询所有 Webhook 事件
+const webhookRoutes = getRouteRegistry().filter('webhook');
+// 按权限筛选
+const aiRoutes = getRouteRegistry().filterBy(r => r.permission?.startsWith('ai.'));
+```
+
+**对比：Vafast 的扩展字段让路由定义成为单一数据源，元数据查询、中间件配置、业务逻辑都基于声明式配置。**
+
 ### 类型注入 — 跨文件不丢失
 
 **Hono 跨文件类型问题：**
@@ -385,6 +448,9 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 | **类型推断** | 优秀 | 良好 | **优秀 (TypeBox)** |
 | **跨文件类型** | ⚠️ 链断裂丢失 | ❌ 实例绑定丢失 | **✅ Handler 级独立** |
 | **类型定义位置** | 链式调用上下文 | App 实例泛型 | **Handler 泛型参数** |
+| **扩展字段** | ❌ 不支持 | ❌ 不支持 | **✅ 任意扩展字段** |
+| **元数据查询** | ❌ 需遍历 | ❌ 需遍历 | **✅ RouteRegistry API** |
+| **业务集成** | ⚠️ 需额外配置 | ⚠️ 需额外配置 | **✅ 声明式集成** |
 | **性能 (RPS)** | ~118K | ~56K | **~101K** |
 | **学习曲线** | 中等 | 简单 | **简单** |
 | **API 风格** | 函数式链 | Express-like | **配置式** |
@@ -398,8 +464,11 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 | **需要路由一览表** | **✅ Vafast** |
 | **需要精确中间件控制** | **✅ Vafast** |
 | **需要结构化错误** | **✅ Vafast** |
+| **需要扩展字段（webhook、计费、权限）** | **✅ Vafast** |
+| **需要元数据查询和筛选** | **✅ Vafast (RouteRegistry)** |
 | **大型项目多文件拆分** | **✅ Vafast (类型不丢失)** |
 | **团队协作类型安全** | **✅ Vafast** |
+| **API 网关/微服务场景** | **✅ Vafast (声明式配置)** |
 | 从 Express 迁移 | Hono (API 相似) |
 
 ## 🎯 核心功能
@@ -667,28 +736,78 @@ registerFormat('order-id', (v) => /^ORD-\d{8}$/.test(v));
 const isEmail = Patterns.EMAIL.test('test@example.com');
 ```
 
-### 路由注册表 (RouteRegistry)
+### 路由注册表 (RouteRegistry) — 声明式元数据，赋能业务逻辑
 
-Vafast 提供 `RouteRegistry` 用于路由元信息的收集和查询，适用于 API 文档生成、Webhook 事件注册、权限检查等场景：
+Vafast 的声明式路由支持**任意扩展字段**，让路由定义成为业务逻辑的单一数据源。适用于 API 文档生成、Webhook 事件注册、权限检查、**按 API 计费**等场景：
 
 ```typescript
-import { Server, defineRoute, defineRoutes, getRouteRegistry } from 'vafast';
+import { Server, defineRoute, defineRoutes, getRouteRegistry, defineMiddleware } from 'vafast';
+
+// 计费中间件：基于路由元数据自动计费
+const billingMiddleware = defineMiddleware(async (req, next) => {
+  const registry = getRouteRegistry();
+  const url = new URL(req.url);
+  const route = registry.get(req.method, url.pathname);
+  
+  if (route?.billing) {
+    const { price, currency, unit } = route.billing;
+    const userId = getUserId(req);
+    
+    // 执行计费逻辑
+    await chargeUser(userId, {
+      api: `${req.method} ${url.pathname}`,
+      price,
+      currency,
+      unit, // 'request' | 'token' | 'minute'
+    });
+  }
+  
+  return next();
+});
 
 // 定义带扩展字段的路由
 const routes = defineRoutes([
   defineRoute({
     method: 'POST',
     path: '/auth/signIn',
-    name: '用户登录',                    // 扩展字段
-    description: '用户通过邮箱密码登录',   // 扩展字段
+    name: '用户登录',
+    description: '用户通过邮箱密码登录',
     handler: signInHandler,
-    webhook: { eventKey: 'auth.signIn' }, // 自定义扩展
+    // ✨ 扩展字段：Webhook 事件
+    webhook: { eventKey: 'auth.signIn', enabled: true },
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/ai/generate',
+    name: 'AI 生成',
+    description: '生成 AI 内容',
+    // ✨ 扩展字段：按请求计费
+    billing: { price: 0.01, currency: 'USD', unit: 'request' },
+    // ✨ 扩展字段：权限要求
+    permission: 'ai.generate',
+    middleware: [billingMiddleware],
+    handler: async ({ body }) => {
+      return await generateAI(body.prompt);
+    }
+  }),
+  defineRoute({
+    method: 'POST',
+    path: '/ai/chat',
+    name: 'AI 对话',
+    // ✨ 扩展字段：按 token 计费
+    billing: { price: 0.0001, currency: 'USD', unit: 'token' },
+    permission: 'ai.chat',
+    middleware: [billingMiddleware],
+    handler: async ({ body }) => {
+      return await chatAI(body.message);
+    }
   }),
   defineRoute({
     method: 'GET',
     path: '/users',
     handler: getUsersHandler,
-    permission: 'users.read',            // 自定义扩展
+    permission: 'users.read',
+    // 免费 API，无需计费配置
   }),
 ]);
 
@@ -697,20 +816,32 @@ const server = new Server(routes);
 // Server 创建时自动设置全局注册表，直接使用即可
 const registry = getRouteRegistry();
 
-// 查询路由
-const route = registry.get('POST', '/auth/signIn');
-console.log(route?.name);  // '用户登录'
+// 查询路由元信息
+const route = registry.get('POST', '/ai/generate');
+console.log(route?.name);        // 'AI 生成'
+console.log(route?.billing);     // { price: 0.01, currency: 'USD', unit: 'request' }
+console.log(route?.permission);  // 'ai.generate'
+
+// 筛选有特定字段的路由
+const webhookRoutes = registry.filter('webhook');      // 所有 Webhook 事件
+const paidRoutes = registry.filter('billing');         // 所有付费 API
+const aiRoutes = registry.filterBy(r => r.permission?.startsWith('ai.')); // AI 相关 API
 
 // 按分类获取
 const authRoutes = registry.getByCategory('auth');
-
-// 筛选有特定字段的路由
-const webhookRoutes = registry.filter('webhook');
-const permissionRoutes = registry.filter('permission');
+const aiCategoryRoutes = registry.getByCategory('ai');
 
 // 获取所有分类
-const categories = registry.getCategories();  // ['auth', 'users']
+const categories = registry.getCategories();  // ['auth', 'ai', 'users']
 ```
+
+**扩展字段的优势：**
+
+1. **单一数据源**：路由定义包含所有元数据，无需额外配置文件
+2. **类型安全**：扩展字段在 TypeScript 中完全类型化
+3. **运行时查询**：通过 `RouteRegistry` API 动态查询和筛选
+4. **业务集成**：中间件可直接读取路由元数据，实现计费、权限、审计等功能
+5. **API 网关友好**：声明式配置完美适配网关场景
 
 **Registry 实例方法：**
 
