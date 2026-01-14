@@ -72,5 +72,5 @@ export {
   type RouteMeta,
 } from "./route-registry";
 
-// API 契约生成
-export { getContract, generateAITools } from "./contract";
+// API Spec 生成
+export { getApiSpec, generateAITools } from "./contract";

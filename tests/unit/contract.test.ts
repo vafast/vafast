@@ -1,14 +1,14 @@
 /**
- * API 契约生成器测试
+ * API Spec 生成器测试
  */
 
 import { describe, it, expect, expectTypeOf, beforeEach, afterEach } from 'vitest'
-import { getContract, generateAITools } from '../../src/utils/contract'
+import { getApiSpec, generateAITools } from '../../src/utils/contract'
 import { defineRoutes, defineRoute, defineMiddleware } from '../../src/defineRoute'
 import { createRouteRegistry, setGlobalRegistry } from '../../src/utils/route-registry'
 import { Type } from '@sinclair/typebox'
 
-describe('API 契约生成器', () => {
+describe('API Spec 生成器', () => {
   // 使用 defineRoute 获得完整类型推断
   const routes = defineRoutes([
     defineRoute({
@@ -42,9 +42,9 @@ describe('API 契约生成器', () => {
     })
   ])
 
-  describe('getContract', () => {
+  describe('getApiSpec', () => {
     it('应该生成正确的契约结构', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
 
       expect(contract.version).toBe('1.0.0')
       expect(contract.generatedAt).toBeDefined()
@@ -52,7 +52,7 @@ describe('API 契约生成器', () => {
     })
 
     it('应该包含所有路由的 method 和 path', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
 
       expect(contract.routes[0].method).toBe('GET')
       expect(contract.routes[0].path).toBe('/users')
@@ -65,7 +65,7 @@ describe('API 契约生成器', () => {
     })
 
     it('应该包含 name 和 description', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
 
       expect(contract.routes[0].name).toBe('get_users')
       expect(contract.routes[0].description).toBe('获取用户列表')
@@ -75,7 +75,7 @@ describe('API 契约生成器', () => {
     })
 
     it('应该提取 query schema', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
       const getUsersRoute = contract.routes[0]
 
       expect(getUsersRoute.schema?.query).toBeDefined()
@@ -83,7 +83,7 @@ describe('API 契约生成器', () => {
     })
 
     it('应该提取 body schema', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
       const postUsersRoute = contract.routes[1]
 
       expect(postUsersRoute.schema?.body).toBeDefined()
@@ -93,7 +93,7 @@ describe('API 契约生成器', () => {
     })
 
     it('应该提取 params schema', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
       const getUserByIdRoute = contract.routes[2]
 
       expect(getUserByIdRoute.schema?.params).toBeDefined()
@@ -102,27 +102,27 @@ describe('API 契约生成器', () => {
     })
 
     it('无 schema 的路由应该没有 schema 字段', () => {
-      const contract = getContract(routes)
+      const contract = getApiSpec(routes)
       const deleteUserRoute = contract.routes[3]
 
       expect(deleteUserRoute.schema).toBeUndefined()
     })
 
-    it('应该跳过 /__contract__ 路由', () => {
+    it('应该跳过 /api-spec 路由', () => {
       const routesWithContract = [
         ...routes,
         {
           method: 'GET' as const,
-          path: '/__contract__',
-          handler: getContract
+          path: '/api-spec',
+          handler: getApiSpec
         }
       ]
 
-      const contract = getContract(routesWithContract)
+      const contract = getApiSpec(routesWithContract)
 
-      // 应该只有 4 个路由，不包含 /__contract__
+      // 应该只有 4 个路由，不包含 /api-spec
       expect(contract.routes).toHaveLength(4)
-      expect(contract.routes.find(r => r.path === '/__contract__')).toBeUndefined()
+      expect(contract.routes.find(r => r.path === '/api-spec')).toBeUndefined()
     })
 
     it('无参调用应该从全局 Registry 获取路由', () => {
@@ -131,7 +131,7 @@ describe('API 契约生成器', () => {
       setGlobalRegistry(registry)
 
       // 无参调用
-      const contract = getContract()
+      const contract = getApiSpec()
 
       expect(contract.version).toBe('1.0.0')
       expect(contract.routes).toHaveLength(4)
@@ -144,7 +144,7 @@ describe('API 契约生成器', () => {
       setGlobalRegistry(registry)
 
       // 无参调用
-      const contract = getContract()
+      const contract = getApiSpec()
 
       // 验证 schema 存在
       expect(contract.routes[0].schema?.query).toBeDefined()
@@ -156,7 +156,7 @@ describe('API 契约生成器', () => {
       // 注意：这里因为之前测试可能设置了 Registry，所以需要重置
       // 但由于没有 clearGlobalRegistry，这个测试可能会受前面测试影响
       // 实际使用中，Server 创建后 Registry 总是存在的
-      const contract = getContract()
+      const contract = getApiSpec()
       expect(contract.routes).toBeDefined()
     })
   })

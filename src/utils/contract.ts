@@ -1,23 +1,23 @@
 /**
- * API 契约生成器
+ * API Spec 生成器
  * 
- * 用于生成 API 契约，支持：
+ * 用于生成 API 规范，支持：
  * - 跨仓库类型同步
  * - AI 工具函数生成
- * - Swagger 文档生成
+ * - Swagger/OpenAPI 文档生成
  * 
  * @example
  * ```typescript
- * import { defineRoutes, getContract } from 'vafast'
+ * import { getApiSpec } from 'vafast'
  * 
  * // 方式 1：直接作为 handler（推荐，自动从全局 Registry 获取）
  * const allRoutes = [
  *   ...routes,
- *   { method: 'GET', path: '/__contract__', handler: getContract }
+ *   { method: 'GET', path: '/api-spec', handler: getApiSpec }
  * ]
  * 
  * // 方式 2：显式传参（灵活场景，如只暴露公开 API）
- * { handler: () => getContract(publicRoutes) }
+ * { handler: () => getApiSpec(publicRoutes) }
  * ```
  */
 
@@ -25,8 +25,8 @@ import type { TSchema } from '@sinclair/typebox'
 import type { RouteSchema } from '../defineRoute'
 import { getRouteRegistry } from './route-registry'
 
-/** 路由契约信息 */
-interface RouteContract {
+/** 路由规范信息 */
+interface RouteSpec {
   method: string
   path: string
   name?: string
@@ -40,11 +40,11 @@ interface RouteContract {
   }
 }
 
-/** API 契约 */
-interface ApiContract {
+/** API 规范 */
+interface ApiSpec {
   version: string
   generatedAt: string
-  routes: RouteContract[]
+  routes: RouteSpec[]
 }
 
 /** AI 工具函数格式 */
@@ -55,10 +55,10 @@ interface AITool {
 }
 
 /**
- * 从路由数组生成 API 契约
+ * 从路由数组生成 API 规范
  */
-function generateContract(routes: readonly unknown[]): ApiContract {
-  const routeContracts: RouteContract[] = []
+function generateSpec(routes: readonly unknown[]): ApiSpec {
+  const routeSpecs: RouteSpec[] = []
 
   for (const route of routes) {
     const r = route as {
@@ -71,38 +71,38 @@ function generateContract(routes: readonly unknown[]): ApiContract {
 
     if (!r.method || !r.path) continue
     
-    // 跳过契约接口本身
-    if (r.path === '/__contract__') continue
+    // 跳过 spec 接口本身
+    if (r.path === '/api-spec' || r.path === '/__spec__') continue
 
-    const contract: RouteContract = {
+    const spec: RouteSpec = {
       method: r.method,
       path: r.path,
     }
 
     // 直接从路由获取 name 和 description
-    if (r.name) contract.name = r.name
-    if (r.description) contract.description = r.description
+    if (r.name) spec.name = r.name
+    if (r.description) spec.description = r.description
 
     // 直接从路由获取 schema
     if (r.schema) {
       const schema = r.schema
       if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
-        contract.schema = {}
-        if (schema.body) contract.schema.body = schema.body
-        if (schema.query) contract.schema.query = schema.query
-        if (schema.params) contract.schema.params = schema.params
-        if (schema.headers) contract.schema.headers = schema.headers
-        if (schema.cookies) contract.schema.cookies = schema.cookies
+        spec.schema = {}
+        if (schema.body) spec.schema.body = schema.body
+        if (schema.query) spec.schema.query = schema.query
+        if (schema.params) spec.schema.params = schema.params
+        if (schema.headers) spec.schema.headers = schema.headers
+        if (schema.cookies) spec.schema.cookies = schema.cookies
       }
     }
 
-    routeContracts.push(contract)
+    routeSpecs.push(spec)
   }
 
   return {
     version: '1.0.0',
     generatedAt: new Date().toISOString(),
-    routes: routeContracts,
+    routes: routeSpecs,
   }
 }
 
@@ -130,7 +130,7 @@ export function generateAITools(routes: readonly unknown[]): AITool[] {
     }
 
     if (!r.method || !r.path) continue
-    if (r.path === '/__contract__') continue
+    if (r.path === '/api-spec' || r.path === '/__spec__') continue
 
     // 使用 name 或从 path 生成
     const name = r.name || pathToToolName(r.method, r.path)
@@ -167,7 +167,7 @@ function pathToToolName(method: string, path: string): string {
 }
 
 /**
- * 获取 API 契约
+ * 获取 API 规范
  * 
  * 支持多种调用方式：
  * 1. 直接作为 handler：自动从全局 Registry 获取（推荐）
@@ -175,23 +175,23 @@ function pathToToolName(method: string, path: string): string {
  * 3. 有参调用：显式传递路由数组（灵活场景）
  * 
  * @param routesOrContext - 可选，路由数组或 handler context。不传则从全局 Registry 获取
- * @returns ApiContract 对象
+ * @returns ApiSpec 对象
  * 
  * @example
  * ```typescript
- * import { getContract } from 'vafast'
+ * import { getApiSpec } from 'vafast'
  * 
  * // 方式 1：直接作为 handler（推荐，最简洁）
- * { method: 'GET', path: '/__contract__', handler: getContract }
+ * { method: 'GET', path: '/api-spec', handler: getApiSpec }
  * 
  * // 方式 2：显式传参（只暴露公开 API）
- * { handler: () => getContract(publicRoutes) }
+ * { handler: () => getApiSpec(publicRoutes) }
  * 
  * // 方式 3：本地使用（CLI、测试）
- * const contract = getContract()
+ * const spec = getApiSpec()
  * ```
  */
-export function getContract(routesOrContext?: readonly unknown[] | Record<string, unknown>): ApiContract {
+export function getApiSpec(routesOrContext?: readonly unknown[] | Record<string, unknown>): ApiSpec {
   // 智能检测：是路由数组还是 handler context
   // 路由数组：Array && 第一个元素有 method 属性
   const isRoutesArray = Array.isArray(routesOrContext) && 
@@ -202,7 +202,7 @@ export function getContract(routesOrContext?: readonly unknown[] | Record<string
     ? routesOrContext 
     : getRoutesFromRegistry()
   
-  return generateContract(routeList)
+  return generateSpec(routeList)
 }
 
 /**
