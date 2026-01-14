@@ -98,7 +98,7 @@ type HandlerContextWithExtra<TSchema extends RouteSchema, TExtra> =
 type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
 /** 叶子路由配置（有 method 和 handler） */
-interface LeafRouteConfig<
+export interface LeafRouteConfig<
   TMethod extends HTTPMethod = HTTPMethod,
   TPath extends string = string,
   TSchema extends RouteSchema = RouteSchema,
