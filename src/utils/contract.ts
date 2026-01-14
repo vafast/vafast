@@ -10,22 +10,20 @@
  * ```typescript
  * import { defineRoutes, getContract } from 'vafast'
  * 
- * const routes = defineRoutes([...])
- * 
- * // 添加契约接口
+ * // 方式 1：直接作为 handler（推荐，自动从全局 Registry 获取）
  * const allRoutes = [
  *   ...routes,
- *   {
- *     method: 'GET',
- *     path: '/__contract__',
- *     handler: () => getContract(routes)
- *   }
+ *   { method: 'GET', path: '/__contract__', handler: getContract }
  * ]
+ * 
+ * // 方式 2：显式传参（灵活场景，如只暴露公开 API）
+ * { handler: () => getContract(publicRoutes) }
  * ```
  */
 
 import type { TSchema } from '@sinclair/typebox'
 import type { RouteSchema } from '../defineRoute'
+import { getRouteRegistry } from './route-registry'
 
 /** 路由契约信息 */
 interface RouteContract {
@@ -171,30 +169,52 @@ function pathToToolName(method: string, path: string): string {
 /**
  * 获取 API 契约
  * 
- * @param routes - 路由数组
+ * 支持多种调用方式：
+ * 1. 直接作为 handler：自动从全局 Registry 获取（推荐）
+ * 2. 无参调用：同上，用于 CLI/测试
+ * 3. 有参调用：显式传递路由数组（灵活场景）
+ * 
+ * @param routesOrContext - 可选，路由数组或 handler context。不传则从全局 Registry 获取
  * @returns ApiContract 对象
  * 
  * @example
  * ```typescript
- * import { defineRoutes, getContract } from 'vafast'
+ * import { getContract } from 'vafast'
  * 
- * const routes = defineRoutes([...])
+ * // 方式 1：直接作为 handler（推荐，最简洁）
+ * { method: 'GET', path: '/__contract__', handler: getContract }
  * 
- * // 方式 1：添加契约接口
- * const allRoutes = [
- *   ...routes,
- *   {
- *     method: 'GET',
- *     path: '/__contract__',
- *     handler: () => getContract(routes)
- *   }
- * ]
+ * // 方式 2：显式传参（只暴露公开 API）
+ * { handler: () => getContract(publicRoutes) }
  * 
- * // 方式 2：本地使用（CLI、测试）
- * const contract = getContract(routes)
- * console.log(contract.routes)
+ * // 方式 3：本地使用（CLI、测试）
+ * const contract = getContract()
  * ```
  */
-export function getContract(routes: readonly unknown[]): ApiContract {
-  return generateContract(routes)
+export function getContract(routesOrContext?: readonly unknown[] | Record<string, unknown>): ApiContract {
+  // 智能检测：是路由数组还是 handler context
+  // 路由数组：Array && 第一个元素有 method 属性
+  const isRoutesArray = Array.isArray(routesOrContext) && 
+    routesOrContext.length > 0 && 
+    typeof (routesOrContext[0] as Record<string, unknown>)?.method === 'string'
+  
+  const routeList = isRoutesArray 
+    ? routesOrContext 
+    : getRoutesFromRegistry()
+  
+  return generateContract(routeList)
+}
+
+/**
+ * 从全局 Registry 获取路由列表
+ * 包含 schema 信息（Registry 存储完整路由）
+ */
+function getRoutesFromRegistry(): readonly unknown[] {
+  try {
+    const registry = getRouteRegistry()
+    return registry.getAll()
+  } catch {
+    // Registry 未初始化时返回空数组
+    return []
+  }
 }

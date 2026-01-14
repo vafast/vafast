@@ -20,7 +20,8 @@
  * ```
  */
 
-import type { FlattenedRoute, Method } from '../types'
+import type { Method } from '../types'
+import type { ProcessedRoute, RouteSchema } from '../defineRoute'
 
 /**
  * 路由元信息（不含 handler 和 middleware）
@@ -28,9 +29,10 @@ import type { FlattenedRoute, Method } from '../types'
 export interface RouteMeta {
   method: Method
   path: string
-  fullPath: string
   name?: string
   description?: string
+  /** Schema 定义（用于契约生成） */
+  schema?: RouteSchema
   /** 扩展字段 */
   [key: string]: unknown
 }
@@ -44,42 +46,42 @@ export class RouteRegistry<T extends Record<string, unknown> = Record<string, un
   /** 所有路由元信息 */
   private routes: RouteMeta[] = []
 
-  /** 路由映射表：METHOD:fullPath -> RouteMeta */
+  /** 路由映射表：METHOD:path -> RouteMeta */
   private routeMap = new Map<string, RouteMeta>()
 
   /** 分类映射表：category -> RouteMeta[] */
   private categoryMap = new Map<string, RouteMeta[]>()
 
-  constructor(routes: FlattenedRoute[]) {
+  constructor(routes: ProcessedRoute[]) {
     this.buildRegistry(routes)
   }
 
   /**
    * 构建注册表
    */
-  private buildRegistry(routes: FlattenedRoute[]): void {
+  private buildRegistry(routes: ProcessedRoute[]): void {
     for (const route of routes) {
       // 提取元信息（排除 handler 和 middleware）
       const meta: RouteMeta = {
-        method: route.method,
+        method: route.method as Method,
         path: route.path,
-        fullPath: route.fullPath,
         name: route.name,
         description: route.description,
+        schema: route.schema,  // 保留 schema 用于契约生成
       }
 
       // 复制扩展字段
       for (const key of Object.keys(route)) {
-        if (!['method', 'path', 'fullPath', 'name', 'description', 'handler', 'middleware', 'middlewareChain'].includes(key)) {
-          meta[key] = route[key as keyof FlattenedRoute]
+        if (!['method', 'path', 'name', 'description', 'handler', 'middleware', 'schema', 'docs'].includes(key)) {
+          meta[key] = route[key]
         }
       }
 
       this.routes.push(meta)
-      this.routeMap.set(`${route.method}:${route.fullPath}`, meta)
+      this.routeMap.set(`${route.method}:${route.path}`, meta)
 
       // 按分类索引
-      const category = this.extractCategory(route.fullPath)
+      const category = this.extractCategory(route.path)
       if (!this.categoryMap.has(category)) {
         this.categoryMap.set(category, [])
       }
@@ -204,7 +206,7 @@ export class RouteRegistry<T extends Record<string, unknown> = Record<string, un
  * ```
  */
 export function createRouteRegistry<T extends Record<string, unknown> = Record<string, unknown>>(
-  routes: FlattenedRoute[]
+  routes: ProcessedRoute[]
 ): RouteRegistry<T> {
   return new RouteRegistry<T>(routes)
 }

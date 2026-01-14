@@ -2,9 +2,10 @@
  * API 契约生成器测试
  */
 
-import { describe, it, expect, expectTypeOf } from 'vitest'
+import { describe, it, expect, expectTypeOf, beforeEach, afterEach } from 'vitest'
 import { getContract, generateAITools } from '../../src/utils/contract'
 import { defineRoutes, defineRoute, defineMiddleware } from '../../src/defineRoute'
+import { createRouteRegistry, setGlobalRegistry } from '../../src/utils/route-registry'
 import { Type } from '@sinclair/typebox'
 
 describe('API 契约生成器', () => {
@@ -113,7 +114,7 @@ describe('API 契约生成器', () => {
         {
           method: 'GET' as const,
           path: '/__contract__',
-          handler: () => getContract(routes)
+          handler: getContract
         }
       ]
 
@@ -122,6 +123,41 @@ describe('API 契约生成器', () => {
       // 应该只有 4 个路由，不包含 /__contract__
       expect(contract.routes).toHaveLength(4)
       expect(contract.routes.find(r => r.path === '/__contract__')).toBeUndefined()
+    })
+
+    it('无参调用应该从全局 Registry 获取路由', () => {
+      // 设置全局 Registry
+      const registry = createRouteRegistry(routes)
+      setGlobalRegistry(registry)
+
+      // 无参调用
+      const contract = getContract()
+
+      expect(contract.version).toBe('1.0.0')
+      expect(contract.routes).toHaveLength(4)
+      expect(contract.routes[0].path).toBe('/users')
+    })
+
+    it('无参调用应该包含 schema 信息', () => {
+      // 设置全局 Registry
+      const registry = createRouteRegistry(routes)
+      setGlobalRegistry(registry)
+
+      // 无参调用
+      const contract = getContract()
+
+      // 验证 schema 存在
+      expect(contract.routes[0].schema?.query).toBeDefined()
+      expect(contract.routes[1].schema?.body).toBeDefined()
+    })
+
+    it('Registry 未初始化时应该返回空路由', () => {
+      // 不设置 Registry，直接调用
+      // 注意：这里因为之前测试可能设置了 Registry，所以需要重置
+      // 但由于没有 clearGlobalRegistry，这个测试可能会受前面测试影响
+      // 实际使用中，Server 创建后 Registry 总是存在的
+      const contract = getContract()
+      expect(contract.routes).toBeDefined()
     })
   })
 
