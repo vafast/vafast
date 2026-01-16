@@ -74,4 +74,4 @@ export {
 } from "./route-registry";
 
 // API Spec 生成
-export { getApiSpec, generateAITools } from "./contract";
+export { getApiSpec, generateAITools, type ApiSpec } from "./contract";

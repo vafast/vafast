@@ -122,7 +122,7 @@ export interface LeafRouteConfig<
 }
 
 /** 嵌套路由配置（有 children，无 method 和 handler） */
-interface NestedRouteConfig<
+export interface NestedRouteConfig<
   TPath extends string = string,
   TMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[]
 > {
@@ -468,16 +468,16 @@ export type RoutesWithSource<T extends readonly RouteConfigResult[]> = Processed
 
 /**
  * 定义路由数组，支持嵌套路由
- * 
+ *
  * 使用 `const T` 泛型自动保留字面量类型，无需手动添加 `as const`
- * 
+ *
  * @example
  * ```typescript
  * const routes = defineRoutes([
  *   defineRoute({ method: 'GET', path: '/users', handler: ... }),
  *   defineRoute({ method: 'POST', path: '/users', handler: ... }),
  * ])
- * 
+ *
  * // 类型推断自动工作，无需 as const
  * type Api = InferEden<typeof routes>
  * ```

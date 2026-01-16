@@ -41,7 +41,7 @@ interface RouteSpec {
 }
 
 /** API 规范 */
-interface ApiSpec {
+export interface ApiSpec {
   version: string
   generatedAt: string
   routes: RouteSpec[]
