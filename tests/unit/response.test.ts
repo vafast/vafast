@@ -97,18 +97,24 @@ describe("Response 工具函数", () => {
 describe("err() 错误工具函数", () => {
   describe("err()", () => {
     it("应该创建 VafastError 实例", () => {
-      const error = err("Test error", 400, "TEST_ERROR");
+      const error = err("Test error", 400, 10001);
       expect(error).toBeInstanceOf(VafastError);
       expect(error.message).toBe("Test error");
       expect(error.status).toBe(400);
-      expect(error.type).toBe("TEST_ERROR");
+      expect(error.code).toBe(10001);
       expect(error.expose).toBe(true);
     });
 
     it("应该使用默认值", () => {
       const error = err("Default error");
       expect(error.status).toBe(500);
-      expect(error.type).toBe("ERROR");
+      expect(error.code).toBe(500);
+    });
+
+    it("code 默认等于 status", () => {
+      const error = err("Test", 404);
+      expect(error.status).toBe(404);
+      expect(error.code).toBe(404);
     });
   });
 
@@ -116,8 +122,14 @@ describe("err() 错误工具函数", () => {
     it("应该创建 400 错误", () => {
       const error = err.badRequest("参数错误");
       expect(error.status).toBe(400);
-      expect(error.type).toBe("BAD_REQUEST");
+      expect(error.code).toBe(400);
       expect(error.message).toBe("参数错误");
+    });
+
+    it("应该支持自定义 code", () => {
+      const error = err.badRequest("参数错误", 10001);
+      expect(error.status).toBe(400);
+      expect(error.code).toBe(10001);
     });
 
     it("应该使用默认消息", () => {
@@ -130,8 +142,13 @@ describe("err() 错误工具函数", () => {
     it("应该创建 401 错误", () => {
       const error = err.unauthorized("请先登录");
       expect(error.status).toBe(401);
-      expect(error.type).toBe("UNAUTHORIZED");
+      expect(error.code).toBe(401);
       expect(error.message).toBe("请先登录");
+    });
+
+    it("应该支持自定义 code", () => {
+      const error = err.unauthorized("Token 过期", 10002);
+      expect(error.code).toBe(10002);
     });
   });
 
@@ -139,7 +156,7 @@ describe("err() 错误工具函数", () => {
     it("应该创建 403 错误", () => {
       const error = err.forbidden("无权限");
       expect(error.status).toBe(403);
-      expect(error.type).toBe("FORBIDDEN");
+      expect(error.code).toBe(403);
       expect(error.message).toBe("无权限");
     });
   });
@@ -148,8 +165,13 @@ describe("err() 错误工具函数", () => {
     it("应该创建 404 错误", () => {
       const error = err.notFound("用户不存在");
       expect(error.status).toBe(404);
-      expect(error.type).toBe("NOT_FOUND");
+      expect(error.code).toBe(404);
       expect(error.message).toBe("用户不存在");
+    });
+
+    it("应该支持自定义 code", () => {
+      const error = err.notFound("用户不存在", 10003);
+      expect(error.code).toBe(10003);
     });
   });
 
@@ -157,7 +179,7 @@ describe("err() 错误工具函数", () => {
     it("应该创建 409 错误", () => {
       const error = err.conflict("用户名已存在");
       expect(error.status).toBe(409);
-      expect(error.type).toBe("CONFLICT");
+      expect(error.code).toBe(409);
       expect(error.message).toBe("用户名已存在");
     });
   });
@@ -166,7 +188,7 @@ describe("err() 错误工具函数", () => {
     it("应该创建 422 错误", () => {
       const error = err.unprocessable("无法处理");
       expect(error.status).toBe(422);
-      expect(error.type).toBe("UNPROCESSABLE_ENTITY");
+      expect(error.code).toBe(422);
       expect(error.message).toBe("无法处理");
     });
   });
@@ -175,7 +197,7 @@ describe("err() 错误工具函数", () => {
     it("应该创建 429 错误", () => {
       const error = err.tooMany("请求过于频繁");
       expect(error.status).toBe(429);
-      expect(error.type).toBe("TOO_MANY_REQUESTS");
+      expect(error.code).toBe(429);
       expect(error.message).toBe("请求过于频繁");
     });
   });
@@ -184,7 +206,7 @@ describe("err() 错误工具函数", () => {
     it("应该创建 500 错误", () => {
       const error = err.internal("服务器错误");
       expect(error.status).toBe(500);
-      expect(error.type).toBe("INTERNAL_ERROR");
+      expect(error.code).toBe(500);
       expect(error.message).toBe("服务器错误");
     });
   });
@@ -198,7 +220,7 @@ describe("错误集成测试", () => {
       expect(e).toBeInstanceOf(VafastError);
       if (e instanceof VafastError) {
         expect(e.status).toBe(404);
-        expect(e.type).toBe("NOT_FOUND");
+        expect(e.code).toBe(404);
         expect(e.expose).toBe(true);
       }
     }

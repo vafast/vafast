@@ -79,8 +79,7 @@ export class Server extends BaseServer {
     if (allowedMethods.length > 0) {
       return json(
         {
-          success: false,
-          error: "Method Not Allowed",
+          code: 405,
           message: `Method ${method} not allowed for this endpoint`,
           allowedMethods,
         },
@@ -88,7 +87,7 @@ export class Server extends BaseServer {
         { Allow: allowedMethods.join(", ") },
       );
     }
-    return json({ success: false, error: "Not Found" }, 404);
+    return json({ code: 404, message: "Not Found" }, 404);
   }
 
   /** 处理请求 */

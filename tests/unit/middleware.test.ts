@@ -296,7 +296,7 @@ describe("中间件示例", () => {
           } else if (clientData.count >= max) {
             return new Response(
               JSON.stringify({
-                error: "rate_limit",
+                code: 429,
                 message: "请求过于频繁",
               }),
               {
@@ -376,7 +376,7 @@ describe("中间件示例", () => {
 
       expect(response.status).toBe(429);
       const data = await response.json();
-      expect(data.error).toBe("rate_limit");
+      expect(data.code).toBe(429);
       expect(data.message).toBe("请求过于频繁");
     });
   });
@@ -395,7 +395,7 @@ describe("中间件示例", () => {
             if (!name) {
               throw new VafastError("缺少名称参数", {
                 status: 400,
-                type: "bad_request",
+                code: 10001,
                 expose: true,
               });
             }
@@ -414,7 +414,7 @@ describe("中间件示例", () => {
             if (!name || !email) {
               throw new VafastError("缺少必填字段", {
                 status: 400,
-                type: "validation_error",
+                code: 10002,
                 expose: true,
               });
             }
@@ -442,7 +442,7 @@ describe("中间件示例", () => {
       const data = await response.json();
       console.log("Response:", response.status, data);
       expect(response.status).toBe(400);
-      expect(data.error).toBe("bad_request");
+      expect(data.code).toBe(10001);
       expect(data.message).toBe("缺少名称参数");
     });
 
@@ -467,7 +467,7 @@ describe("中间件示例", () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error).toBe("validation_error");
+      expect(data.code).toBe(10002);
       expect(data.message).toBe("缺少必填字段");
     });
 

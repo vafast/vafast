@@ -271,9 +271,9 @@ function wrapHandler<TSchema extends RouteSchema>(
         throw error;
       }
       if (error instanceof Error && error.message.includes("验证失败")) {
-        return json({ success: false, error: "Validation Error", message: error.message }, 400);
+        return json({ code: 400, message: error.message }, 400);
       }
-      return json({ success: false, error: "Internal Error", message: error instanceof Error ? error.message : "未知错误" }, 500);
+      return json({ code: 500, message: error instanceof Error ? error.message : "未知错误" }, 500);
     }
   };
 }

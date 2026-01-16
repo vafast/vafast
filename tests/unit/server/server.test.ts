@@ -141,7 +141,8 @@ describe("Server", () => {
       const data = await res.json();
 
       expect(res.status).toBe(405);
-      expect(data.error).toBe("Method Not Allowed");
+      expect(data.code).toBe(405);
+      expect(data.message).toContain("not allowed");
       expect(data.allowedMethods).toContain("GET");
       expect(res.headers.get("Allow")).toBe("GET");
     });
@@ -161,7 +162,8 @@ describe("Server", () => {
       const data = await res.json();
 
       expect(res.status).toBe(404);
-      expect(data.error).toBe("Not Found");
+      expect(data.code).toBe(404);
+      expect(data.message).toBe("Not Found");
     });
   });
 

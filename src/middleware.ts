@@ -8,14 +8,14 @@ import type { Handler, Middleware } from "./types";
 /** Vafast 自定义错误类型 */
 export class VafastError extends Error {
   status: number;
-  type: string;
+  code: number;
   expose: boolean;
 
   constructor(
     message: string,
     options: {
       status?: number;
-      type?: string;
+      code?: number;
       expose?: boolean;
       cause?: unknown;
     } = {},
@@ -23,7 +23,7 @@ export class VafastError extends Error {
     super(message);
     this.name = "VafastError";
     this.status = options.status ?? 500;
-    this.type = options.type ?? "internal_error";
+    this.code = options.code ?? options.status ?? 500;
     this.expose = options.expose ?? false;
     if (options.cause) (this as any).cause = options.cause;
   }
@@ -70,13 +70,13 @@ const errorHandler: Middleware = async (req, next) => {
     if (err instanceof VafastError) {
       return json(
         {
-          error: err.type,
+          code: err.code,
           message: err.expose ? err.message : "发生了一个错误",
         },
         err.status,
       );
     }
 
-    return json({ error: "internal_error", message: "出现了一些问题" }, 500);
+    return json({ code: 500, message: "出现了一些问题" }, 500);
   }
 };

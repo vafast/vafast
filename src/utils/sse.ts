@@ -200,8 +200,7 @@ export function createSSEHandler<const T extends RouteSchema>(
       // 验证错误等
       return new Response(
         JSON.stringify({
-          success: false,
-          error: 'Validation Error',
+          code: 400,
           message: error instanceof Error ? error.message : 'Unknown error'
         }),
         {
