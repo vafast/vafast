@@ -41,6 +41,8 @@ export interface RouteSchema {
   params?: TSchema;
   headers?: TSchema;
   cookies?: TSchema;
+  /** 响应类型 schema（用于类型同步，运行时不做校验） */
+  response?: TSchema;
 }
 
 /** 从 Schema 推断类型 */

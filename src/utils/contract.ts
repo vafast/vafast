@@ -37,6 +37,7 @@ interface RouteSpec {
     params?: TSchema
     headers?: TSchema
     cookies?: TSchema
+    response?: TSchema
   }
 }
 
@@ -86,13 +87,14 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
     // 直接从路由获取 schema
     if (r.schema) {
       const schema = r.schema
-      if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+      if (schema.body || schema.query || schema.params || schema.headers || schema.cookies || schema.response) {
         spec.schema = {}
         if (schema.body) spec.schema.body = schema.body
         if (schema.query) spec.schema.query = schema.query
         if (schema.params) spec.schema.params = schema.params
         if (schema.headers) spec.schema.headers = schema.headers
         if (schema.cookies) spec.schema.cookies = schema.cookies
+        if (schema.response) spec.schema.response = schema.response
       }
     }
 
