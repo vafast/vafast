@@ -973,29 +973,41 @@ const response = await openai.chat.completions.create({
 
 ```bash
 # 安装 CLI
-npm install -g @vafast/cli
+npm install -D @vafast/cli
 
 # 从服务端同步类型
-vafast sync --url http://api.example.com --out src/api.generated.ts
+npx vafast sync --url http://localhost:9002 \
+  --endpoint /restfulApi/api-spec \
+  --out src/types/api/ones.generated.ts \
+  --strip-prefix /restfulApi
 ```
 
 **生成的类型文件：**
 
 ```typescript
-// src/api.generated.ts
-export interface Api {
+// src/types/api/ones.generated.ts
+import type { Client, EdenClient } from '@vafast/api-client'
+import { eden } from '@vafast/api-client'
+
+export type Api = {
   users: {
-    get: { query: { page?: number } }
-    post: { body: { name: string; email: string } }
+    get: { query: { page?: number }; return: any }
+    post: { body: { name: string; email: string }; return: any }
   }
 }
 
-// 使用
-import { eden } from '@vafast/api-client'
-import type { Api } from './api.generated'
+export function createApiClient(client: Client): EdenClient<Api> {
+  return eden<Api>(client)
+}
 
-const api = eden<Api>('http://api.example.com')
-const { data } = await api.users.get({ query: { page: 1 } })
+// 使用
+import { createClient } from '@vafast/api-client'
+import { createApiClient } from './types/api/ones.generated'
+
+const client = createClient({ baseURL: '/restfulApi', timeout: 30000 })
+const api = createApiClient(client)
+
+const { data, error } = await api.users.get({ page: 1 })
 ```
 
 ## 📊 内置监控
