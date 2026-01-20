@@ -64,6 +64,45 @@ defineRoutes([
 
 ---
 
+## 扩展字段支持
+
+`withContext` 支持第二个泛型参数 `TExtensions`，用于添加自定义路由字段：
+
+```typescript
+// 定义扩展类型
+interface RouteExtensions {
+  readonly webhook?: boolean | { eventKey?: string; exclude?: string[] }
+  readonly [key: string]: unknown  // 允许其他自定义字段
+}
+
+// 创建支持扩展的路由定义器
+const defineAuthRoute = withContext<{ userInfo: UserInfo }, RouteExtensions>()
+
+// 使用扩展字段
+defineAuthRoute({
+  method: 'POST',
+  path: '/create',
+  webhook: true,           // ✅ 有类型提示
+  permission: 'admin',     // ✅ 索引签名允许
+  handler: ({ userInfo }) => { ... }
+})
+```
+
+**@vafast/auth-middleware 已内置 webhook 扩展**，无需手动配置：
+
+```typescript
+import { defineAuthRouteWithApp } from '@vafast/auth-middleware'
+
+defineAuthRouteWithApp({
+  method: 'POST',
+  path: '/create',
+  webhook: true,  // ✅ 直接可用，有类型提示
+  handler: ({ userInfo, app }) => { ... }
+})
+```
+
+---
+
 ## 推荐用法：统一导出
 
 在 `middleware/index.ts` 中定义并导出：

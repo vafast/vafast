@@ -75,8 +75,8 @@ type ExtractMiddlewareContext<T> = T extends TypedMiddleware<infer C> ? C : obje
 /** 合并中间件数组的上下文类型 */
 type MergeMiddlewareContexts<T extends readonly unknown[]> =
   T extends readonly [infer First, ...infer Rest]
-    ? ExtractMiddlewareContext<First> & MergeMiddlewareContexts<Rest>
-    : object;
+  ? ExtractMiddlewareContext<First> & MergeMiddlewareContexts<Rest>
+  : object;
 
 // ============= Handler 上下文 =============
 
@@ -401,7 +401,33 @@ export function defineRoute(config: {
  * })
  * ```
  */
-export function withContext<TContext extends object>() {
+/**
+ * 带扩展类型的路由定义器
+ *
+ * @typeParam TContext - Handler 上下文类型（如 { userInfo: UserInfo }）
+ * @typeParam TExtensions - 路由扩展字段类型（如 { webhook?: boolean }）
+ *
+ * @example
+ * ```typescript
+ * // 定义扩展类型
+ * interface WebhookExtension {
+ *   webhook?: boolean | { eventKey?: string }
+ * }
+ *
+ * // 使用扩展
+ * const defineRoute = withContext<MyContext, WebhookExtension>()
+ * defineRoute({
+ *   method: 'POST',
+ *   path: '/create',
+ *   webhook: true,  // TypeScript 严格检查
+ *   handler: ...
+ * })
+ * ```
+ */
+export function withContext<
+  TContext extends object,
+  TExtensions extends object = object
+>() {
   return <
     const TSchema extends RouteSchema,
     TReturn,
@@ -423,8 +449,8 @@ export function withContext<TContext extends object>() {
       security?: unknown[];
       responses?: Record<string, unknown>;
     };
-  }): LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware> => {
-    return config as LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware>;
+  } & TExtensions): LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware> => {
+    return config as unknown as LeafRouteConfig<TMethod, TPath, TSchema, TReturn, TMiddleware>;
   };
 }
 
