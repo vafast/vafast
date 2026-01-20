@@ -471,7 +471,8 @@ function flattenRoutes(
     const mergedMiddleware = [...parentMiddleware, ...(route.middleware || [])];
 
     if (isLeafRoute(route)) {
-      result.push({
+      // 基础属性
+      const processed: ProcessedRoute = {
         method: route.method,
         path: fullPath,
         name: route.name,
@@ -480,7 +481,15 @@ function flattenRoutes(
         handler: wrapHandler(route.schema, route.handler as (ctx: HandlerContext<RouteSchema>) => unknown),
         middleware: mergedMiddleware.length > 0 ? mergedMiddleware : undefined,
         docs: route.docs,
-      });
+      };
+      // 复制扩展属性（如 webhook, permission 等）
+      const knownKeys = ['method', 'path', 'name', 'description', 'schema', 'handler', 'middleware', 'docs'];
+      for (const key of Object.keys(route)) {
+        if (!knownKeys.includes(key)) {
+          processed[key] = (route as unknown as Record<string, unknown>)[key];
+        }
+      }
+      result.push(processed);
     } else if (isNestedRoute(route)) {
       result.push(...flattenRoutes(route.children, fullPath, mergedMiddleware));
     }
