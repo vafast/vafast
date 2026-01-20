@@ -456,13 +456,24 @@ export function withContext<
 
 // ============= 扁平化嵌套路由 =============
 
+/** 父级路由信息 */
+interface ParentRouteInfo {
+  /** 父级路由路径 */
+  path: string;
+  /** 父级路由名称 */
+  name?: string;
+  /** 父级路由描述 */
+  description?: string;
+}
+
 /**
  * 递归扁平化路由，合并路径和中间件
  */
 function flattenRoutes(
   routes: ReadonlyArray<RouteConfigResult>,
   parentPath: string = "",
-  parentMiddleware: readonly AnyMiddleware[] = []
+  parentMiddleware: readonly AnyMiddleware[] = [],
+  parent?: ParentRouteInfo
 ): ProcessedRoute[] {
   const result: ProcessedRoute[] = [];
 
@@ -482,6 +493,10 @@ function flattenRoutes(
         middleware: mergedMiddleware.length > 0 ? mergedMiddleware : undefined,
         docs: route.docs,
       };
+      // 添加父级路由信息
+      if (parent) {
+        processed.parent = parent;
+      }
       // 复制扩展属性（如 webhook, permission 等）
       const knownKeys = ['method', 'path', 'name', 'description', 'schema', 'handler', 'middleware', 'docs'];
       for (const key of Object.keys(route)) {
@@ -491,7 +506,13 @@ function flattenRoutes(
       }
       result.push(processed);
     } else if (isNestedRoute(route)) {
-      result.push(...flattenRoutes(route.children, fullPath, mergedMiddleware));
+      // 传递当前路由信息作为子路由的 parent
+      const currentParent: ParentRouteInfo = {
+        path: fullPath,
+        name: route.name,
+        description: route.description,
+      };
+      result.push(...flattenRoutes(route.children, fullPath, mergedMiddleware, currentParent));
     }
   }
 
