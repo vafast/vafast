@@ -316,6 +316,29 @@ async function subscribeSSE(url, token) {
 }
 ```
 
+## 类型说明
+
+`createSSEHandler` 使用泛型擦除技术，在保证内部完整类型检查的同时，避免复杂类型传播：
+
+```typescript
+// ✅ 内部有完整类型检查
+createSSEHandler(
+  { params: Type.Object({ id: Type.String() }) },
+  async function* ({ params }) {
+    params.id   // TypeScript 知道这是 string
+    params.foo  // ❌ 编译错误：不存在 foo
+  }
+)
+
+// ✅ 使用 SSE handler 的路由数组不需要类型注解
+export const routes = defineRoutes([
+  defineRoute({
+    path: '/stream/:id',
+    handler: createSSEHandler(...),
+  }),
+])
+```
+
 ## 最佳实践
 
 1. **定期发送心跳**：防止连接被中间代理断开

@@ -84,25 +84,18 @@ function formatSSEEvent(event: SSEEvent): string {
 export type SSEMarker = { readonly __brand: 'SSE' }
 
 /**
- * SSE Handler 基础类型（对外暴露，类型简单）
+ * SSE Handler 类型
  * 支持两种调用方式：
  * 1. route('GET', '/path', handler) - 传入 Request
  * 2. defineRoute({ handler }) - 传入 HandlerContext
+ *
+ * 泛型默认为 RouteSchema，避免复杂类型传播
  */
-export interface SSEHandler {
-  (reqOrCtx: Request | HandlerContext<RouteSchema>): Promise<Response>;
+export interface SSEHandler<TSchema extends RouteSchema = RouteSchema> {
+  (reqOrCtx: Request | HandlerContext<TSchema>): Promise<Response>;
   /** 返回类型标记 - SSE 流的数据类型 */
   readonly __returnType?: unknown;
   /** SSE 标记 - 使用品牌类型确保不被扩展 */
-  readonly __sse?: SSEMarker;
-}
-
-/**
- * SSE Handler 内部类型（带泛型，仅内部使用）
- */
-interface SSEHandlerInternal<TSchema extends RouteSchema = RouteSchema> {
-  (reqOrCtx: Request | HandlerContext<TSchema>): Promise<Response>;
-  readonly __returnType?: unknown;
   readonly __sse?: SSEMarker;
 }
 
@@ -133,19 +126,26 @@ interface SSEHandlerInternal<TSchema extends RouteSchema = RouteSchema> {
  * })
  * ```
  */
+/**
+ * 带 schema 的 SSE handler
+ * 泛型 T 用于内部类型检查，返回基础类型避免复杂推断
+ */
 export function createSSEHandler<const T extends RouteSchema>(
   schema: T,
   generator: SSEGenerator<T>
-): SSEHandler;
+): SSEHandler<RouteSchema>;
 
+/**
+ * 无 schema 的 SSE handler
+ */
 export function createSSEHandler(
   generator: SSEGenerator<RouteSchema>
-): SSEHandler;
+): SSEHandler<RouteSchema>;
 
 export function createSSEHandler<const T extends RouteSchema>(
   schemaOrGenerator: T | SSEGenerator<T>,
   maybeGenerator?: SSEGenerator<T>
-): SSEHandler {
+): SSEHandler<RouteSchema> {
   // 判断调用方式
   const hasSchema = typeof schemaOrGenerator !== 'function';
   const schema = hasSchema ? (schemaOrGenerator as T) : ({} as T);

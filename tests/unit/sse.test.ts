@@ -215,6 +215,44 @@ describe('SSE (Server-Sent Events)', () => {
     })
   })
 
+  describe('类型兼容性', () => {
+    it('使用 createSSEHandler 的 defineRoutes 不需要类型注解', () => {
+      // 这个测试验证：使用 SSE handler 的路由数组不需要显式类型注解
+      // 如果类型推断有问题，TypeScript 编译会失败
+      const sseHandler = createSSEHandler(
+        { params: Type.Object({ id: Type.String() }) },
+        async function* ({ params }) {
+          yield { data: { id: params.id } }
+        }
+      )
+
+      // 无类型注解，直接 export（模拟实际使用场景）
+      const routes = defineRoutes([
+        defineRoute({
+          path: '/api',
+          children: [
+            defineRoute({
+              method: 'GET',
+              path: '/normal',
+              handler: () => ({ message: 'ok' }),
+            }),
+            defineRoute({
+              method: 'GET',
+              path: '/stream/:id',
+              schema: { params: Type.Object({ id: Type.String() }) },
+              handler: sseHandler,
+            }),
+          ],
+        }),
+      ])
+
+      // 验证路由数组正确生成
+      expect(routes).toHaveLength(2)
+      expect(routes[0].path).toBe('/api/normal')
+      expect(routes[1].path).toBe('/api/stream/:id')
+    })
+  })
+
   describe('实际应用场景', () => {
     it('应该支持进度更新场景', async () => {
       const handler = createSSEHandler(async function* () {

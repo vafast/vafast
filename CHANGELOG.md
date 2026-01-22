@@ -2,6 +2,21 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## [0.5.17] - 2026-01-22
+
+### 改进
+- 🔧 **SSEHandler 类型优化** - 使用泛型擦除技术解决类型推断问题
+  - `createSSEHandler` 内部保留完整类型检查
+  - 返回类型简化为 `SSEHandler<RouteSchema>`，避免复杂类型传播
+  - 使用 SSE handler 的 `defineRoutes` 不再需要显式类型注解
+  - 新增类型兼容性测试用例
+  - 更新 SSE 文档，添加类型说明
+
+## [0.5.16] - 2026-01-22
+
+### 新增
+- 🆕 **Route 类型别名** - 添加 `Route` 作为 `ProcessedRoute` 的友好别名
+
 ## [0.5.6] - 2026-01-22
 
 ### 改进
