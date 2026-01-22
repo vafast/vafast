@@ -158,6 +158,9 @@ export interface ProcessedRoute {
   [key: string]: unknown;
 }
 
+/** Route 类型别名（便于用户使用） */
+export type Route = ProcessedRoute;
+
 // ============= defineMiddleware =============
 
 /**
