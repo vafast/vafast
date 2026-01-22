@@ -478,6 +478,7 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 - 🎯 **快速请求解析** - 优化的 Query/Cookie 解析，比标准方法快 2x
 - 🔒 **端到端类型安全** - 完整的 TypeScript 类型推断
 - 🧩 **灵活中间件系统** - 可组合的中间件架构
+- 📡 **SSE 流式响应** - 内置 Server-Sent Events 支持，适用于 AI 聊天、进度更新等场景
 - 📦 **零配置** - 开箱即用，无需复杂配置
 
 ### 返回值与错误处理
@@ -524,6 +525,49 @@ defineRoute({
 | 未找到 | `throw err.notFound()` | 404 |
 | 资源冲突 | `throw err.conflict()` | 409 |
 | 服务器错误 | `throw err.internal()` | 500 |
+
+### SSE 流式响应
+
+内置 `createSSEHandler` 支持 Server-Sent Events，适用于 AI 聊天、进度更新等场景：
+
+```typescript
+import { createSSEHandler, defineRoute, defineRoutes, Type } from 'vafast'
+
+// 创建 SSE handler
+const progressHandler = createSSEHandler(
+  { params: Type.Object({ taskId: Type.String() }) },
+  async function* ({ params }) {
+    yield { event: 'start', data: { taskId: params.taskId } }
+    
+    for (let i = 0; i <= 100; i += 10) {
+      yield { data: { progress: i } }
+      await new Promise(r => setTimeout(r, 100))
+    }
+    
+    yield { event: 'complete', data: { message: 'Done!' } }
+  }
+)
+
+// 在 defineRoute 中使用
+const routes = defineRoutes([
+  defineRoute({
+    method: 'GET',
+    path: '/tasks/:taskId/progress',
+    schema: { params: Type.Object({ taskId: Type.String() }) },
+    handler: progressHandler,
+  }),
+])
+```
+
+客户端使用：
+
+```javascript
+const eventSource = new EventSource('/tasks/123/progress')
+eventSource.onmessage = (e) => console.log(JSON.parse(e.data))
+eventSource.addEventListener('complete', () => eventSource.close())
+```
+
+> 📖 详细文档见 [docs/sse.md](./docs/sse.md)
 
 ### 类型安全的路由
 

@@ -85,9 +85,12 @@ export type SSEMarker = { readonly __brand: 'SSE' }
 
 /**
  * SSE Handler 类型标记
+ * 支持两种调用方式：
+ * 1. route('GET', '/path', handler) - 传入 Request
+ * 2. defineRoute({ handler }) - 传入 HandlerContext
  */
 export interface SSEHandler<TSchema extends RouteSchema = RouteSchema> {
-  (req: Request): Promise<Response>;
+  (reqOrCtx: Request | HandlerContext<TSchema>): Promise<Response>;
   /** 返回类型标记 - SSE 流的数据类型 */
   readonly __returnType: unknown;
   /** SSE 标记 - 使用品牌类型确保不被扩展 */
@@ -97,22 +100,28 @@ export interface SSEHandler<TSchema extends RouteSchema = RouteSchema> {
 /**
  * 创建 SSE 流式响应处理器
  *
+ * 支持两种使用方式：
+ *
  * @example
  * ```typescript
- * // 基础用法
- * const streamChat = createSSEHandler(
- *   { query: Type.Object({ message: Type.String() }) },
- *   async function* ({ query }) {
- *     const response = await ai.chat(query.message);
- *
- *     for await (const chunk of response) {
- *       yield { data: { text: chunk } };
- *     }
+ * const streamHandler = createSSEHandler(
+ *   { params: Type.Object({ id: Type.String() }) },
+ *   async function* ({ params }) {
+ *     yield { data: { status: 'started' } };
+ *     // ... 业务逻辑
+ *     yield { data: { status: 'done' } };
  *   }
  * );
  *
- * // 使用路由
- * route('GET', '/chat/stream', streamChat)
+ * // 方式 1: 低层 API（route 函数）
+ * route('GET', '/stream/:id', streamHandler)
+ *
+ * // 方式 2: 高层 API（defineRoute 函数）✅ 现在也支持
+ * defineRoute({
+ *   method: 'GET',
+ *   path: '/stream/:id',
+ *   handler: streamHandler,
+ * })
  * ```
  */
 export function createSSEHandler<const T extends RouteSchema>(
@@ -140,18 +149,51 @@ export function createSSEHandler<const T extends RouteSchema>(
     precompileSchemas(schema);
   }
 
-  const handlerFn = async (req: Request): Promise<Response> => {
-    try {
-      // 解析请求数据
-      const query = parseQuery(req);
-      const headers = parseHeaders(req);
-      const cookies = parseCookies(req);
-      const params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+  /**
+   * 检测是否是 HandlerContext（来自 defineRoute）
+   * HandlerContext 有 req 属性，而 Request 没有
+   */
+  const isHandlerContext = (arg: unknown): arg is HandlerContext<T> => {
+    return arg !== null &&
+      typeof arg === 'object' &&
+      'req' in arg &&
+      'params' in arg;
+  };
 
-      // 验证 schema
-      const data = { body: undefined, query, params, headers, cookies };
-      if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
-        validateAllSchemas(schema, data);
+  const handlerFn = async (reqOrCtx: Request | HandlerContext<T>): Promise<Response> => {
+    try {
+      let req: Request;
+      let query: Record<string, string>;
+      let headers: Record<string, string>;
+      let cookies: Record<string, string>;
+      let params: Record<string, string>;
+      let body: unknown;
+
+      // 检测调用方式
+      if (isHandlerContext(reqOrCtx)) {
+        // 方式 2: defineRoute 传入的 HandlerContext
+        req = reqOrCtx.req;
+        query = reqOrCtx.query as Record<string, string>;
+        headers = reqOrCtx.headers as Record<string, string>;
+        cookies = reqOrCtx.cookies as Record<string, string>;
+        params = reqOrCtx.params as Record<string, string>;
+        body = reqOrCtx.body;
+      } else {
+        // 方式 1: route() 传入的 Request
+        req = reqOrCtx;
+        query = parseQuery(req) as Record<string, string>;
+        headers = parseHeaders(req) as Record<string, string>;
+        cookies = parseCookies(req) as Record<string, string>;
+        params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+        body = undefined;
+      }
+
+      // 验证 schema（仅在方式 1 时需要，方式 2 已由 defineRoute 验证）
+      if (!isHandlerContext(reqOrCtx)) {
+        const data = { body, query, params, headers, cookies };
+        if (schema.body || schema.query || schema.params || schema.headers || schema.cookies) {
+          validateAllSchemas(schema, data);
+        }
       }
 
       // 创建 SSE 流
@@ -162,7 +204,7 @@ export function createSSEHandler<const T extends RouteSchema>(
           try {
             const gen = generator({
               req,
-              body: undefined as HandlerContext<T>['body'],
+              body: body as HandlerContext<T>['body'],
               query: query as HandlerContext<T>['query'],
               params: params as HandlerContext<T>['params'],
               headers: headers as HandlerContext<T>['headers'],

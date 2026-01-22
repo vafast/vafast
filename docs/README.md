@@ -24,6 +24,10 @@
   - 解决跨路由类型推断问题
   - withContext 工厂函数用法
   - 最佳实践和完整示例
+- [SSE 流式响应](./sse.md) - Server-Sent Events 支持
+  - 内置 createSSEHandler
+  - 支持 defineRoute 和低层 API 两种用法
+  - AI 聊天、进度更新等实际场景
 - [服务器优化](./server-optimization.md)
 - [认证系统](./auth.md)
 - [自动响应优化](./auto-response-optimization.md)
