@@ -211,14 +211,19 @@ export function createSSEHandler<const T extends RouteSchema>(
           const encoder = new TextEncoder();
 
           try {
-            const gen = generator({
-              req,
-              body: body as HandlerContext<T>['body'],
-              query: query as HandlerContext<T>['query'],
-              params: params as HandlerContext<T>['params'],
-              headers: headers as HandlerContext<T>['headers'],
-              cookies: cookies as HandlerContext<T>['cookies'],
-            });
+            // 构建 generator context，保留中间件设置的属性（如 userInfo）
+            const generatorCtx = isHandlerContext(reqOrCtx)
+              ? reqOrCtx  // 直接使用完整的 HandlerContext，保留所有属性
+              : {
+                  req,
+                  body: body as HandlerContext<T>['body'],
+                  query: query as HandlerContext<T>['query'],
+                  params: params as HandlerContext<T>['params'],
+                  headers: headers as HandlerContext<T>['headers'],
+                  cookies: cookies as HandlerContext<T>['cookies'],
+                };
+
+            const gen = generator(generatorCtx as HandlerContext<T>);
 
             for await (const event of gen) {
               const formatted = formatSSEEvent(event);
