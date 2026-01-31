@@ -31,12 +31,13 @@ export class VafastError extends Error {
 
 /**
  * 组合类型: 自动注入错误处理器进行中间件组合
+ * errorHandler 放在中间件之后，确保 CORS 等中间件能处理错误响应
  */
 export function composeMiddleware(
   middleware: Middleware[],
   finalHandler: Handler,
 ): (req: Request) => Promise<Response> {
-  const all = [errorHandler, ...middleware];
+  const all = [...middleware, errorHandler];
 
   return function composedHandler(req: Request): Promise<Response> {
     let i = -1;
