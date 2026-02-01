@@ -6,12 +6,115 @@
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type { IncomingMessage } from "node:http";
+import type { Socket } from "node:net";
 
 // 内部 Symbol
 const requestCache = Symbol("requestCache");
 const incomingKey = Symbol("incoming");
 const urlKey = Symbol("url");
 const headersKey = Symbol("headers");
+const ipKey = Symbol("ip");
+const ipsKey = Symbol("ips");
+
+/** 信任代理配置类型 */
+export type TrustProxyOption = boolean | string | string[];
+
+/**
+ * IP 解析优先级列表
+ * 参考业界标准和各大云厂商
+ */
+const IP_HEADERS = [
+  "x-forwarded-for",      // 标准代理头（优先级最高）
+  "x-real-ip",            // Nginx
+  "x-client-ip",          // Apache
+  "cf-connecting-ip",     // Cloudflare
+  "fastly-client-ip",     // Fastly
+  "x-cluster-client-ip",  // GCP
+  "true-client-ip",       // Akamai & Cloudflare
+  "fly-client-ip",        // Fly.io
+  "x-forwarded",          // RFC 7239
+  "forwarded-for",        // RFC 7239
+  "forwarded",            // RFC 7239
+  "appengine-user-ip",    // GCP AppEngine
+  "cf-pseudo-ipv4",       // Cloudflare IPv6 兼容
+];
+
+/**
+ * 检查 IP 是否在 CIDR 范围内
+ */
+function isIpInCidr(ip: string, cidr: string): boolean {
+  // 简单实现：只支持精确匹配和 /8, /16, /24 掩码
+  if (!cidr.includes("/")) {
+    return ip === cidr;
+  }
+  
+  const [network, maskStr] = cidr.split("/");
+  const mask = parseInt(maskStr, 10);
+  
+  const ipParts = ip.split(".").map(Number);
+  const networkParts = network.split(".").map(Number);
+  
+  if (ipParts.length !== 4 || networkParts.length !== 4) {
+    return false;
+  }
+  
+  const ipNum = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+  const networkNum = (networkParts[0] << 24) | (networkParts[1] << 16) | (networkParts[2] << 8) | networkParts[3];
+  const maskNum = ~((1 << (32 - mask)) - 1);
+  
+  return (ipNum & maskNum) === (networkNum & maskNum);
+}
+
+/**
+ * 检查是否应该信任代理
+ */
+function shouldTrustProxy(
+  socketIp: string | undefined,
+  trustProxy: TrustProxyOption,
+): boolean {
+  if (trustProxy === true) return true;
+  if (trustProxy === false || !trustProxy) return false;
+  if (!socketIp) return false;
+  
+  const trustedList = Array.isArray(trustProxy) ? trustProxy : [trustProxy];
+  return trustedList.some((trusted) => isIpInCidr(socketIp, trusted));
+}
+
+/**
+ * 从请求头解析客户端 IP
+ */
+function parseClientIp(
+  incoming: IncomingMessage,
+  trustProxy: TrustProxyOption,
+): { ip: string; ips: string[] } {
+  const socket = incoming.socket as Socket;
+  const socketIp = socket.remoteAddress || "";
+  
+  // 如果不信任代理，直接返回 socket IP
+  if (!shouldTrustProxy(socketIp, trustProxy)) {
+    return { ip: socketIp, ips: [socketIp] };
+  }
+  
+  // 尝试从各种头中获取 IP
+  for (const header of IP_HEADERS) {
+    const value = incoming.headers[header];
+    if (value) {
+      const headerValue = Array.isArray(value) ? value[0] : value;
+      // X-Forwarded-For 可能包含多个 IP，逗号分隔
+      if (header === "x-forwarded-for") {
+        const ips = headerValue.split(",").map((ip) => ip.trim()).filter(Boolean);
+        if (ips.length > 0) {
+          return { ip: ips[0], ips };
+        }
+      } else {
+        return { ip: headerValue.trim(), ips: [headerValue.trim()] };
+      }
+    }
+  }
+  
+  // 回退到 socket IP
+  return { ip: socketIp, ips: [socketIp] };
+}
 
 /**
  * 从 rawHeaders 高效解析 Headers
@@ -47,6 +150,8 @@ interface ProxyRequestInternal {
   [incomingKey]: IncomingMessage;
   [urlKey]: string;
   [headersKey]?: Headers;
+  [ipKey]?: string;
+  [ipsKey]?: string[];
   _getRequest(): Request;
 }
 
@@ -169,17 +274,43 @@ proxyMethods.forEach((key) => {
   });
 });
 
+// 定义 ip 属性（客户端真实 IP）
+Object.defineProperty(requestPrototype, "ip", {
+  get() {
+    const self = this as ProxyRequestInternal;
+    return self[ipKey] || "";
+  },
+  enumerable: true,
+});
+
+// 定义 ips 属性（代理链中的所有 IP）
+Object.defineProperty(requestPrototype, "ips", {
+  get() {
+    const self = this as ProxyRequestInternal;
+    return self[ipsKey] || [];
+  },
+  enumerable: true,
+});
+
 // 设置原型链
 Object.setPrototypeOf(requestPrototype, Request.prototype);
+
+/** 创建代理 Request 的选项 */
+export interface CreateProxyRequestOptions {
+  /** 信任代理配置 */
+  trustProxy?: TrustProxyOption;
+}
 
 /**
  * 创建代理 Request
  * @param incoming Node.js IncomingMessage
  * @param defaultHost 默认主机名
+ * @param options 可选配置
  */
 export function createProxyRequest(
   incoming: IncomingMessage,
   defaultHost: string,
+  options?: CreateProxyRequestOptions,
 ): Request {
   const req = Object.create(requestPrototype) as ProxyRequestInternal;
   req[incomingKey] = incoming;
@@ -190,6 +321,18 @@ export function createProxyRequest(
     ? "https"
     : "http";
   req[urlKey] = `${protocol}://${host}${incoming.url || "/"}`;
+
+  // 解析客户端 IP（如果启用了 trustProxy）
+  if (options?.trustProxy) {
+    const { ip, ips } = parseClientIp(incoming, options.trustProxy);
+    req[ipKey] = ip;
+    req[ipsKey] = ips;
+  } else {
+    // 默认使用 socket IP
+    const socketIp = (incoming.socket as Socket).remoteAddress || "";
+    req[ipKey] = socketIp;
+    req[ipsKey] = [socketIp];
+  }
 
   return req as unknown as Request;
 }

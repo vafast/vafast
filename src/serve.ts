@@ -14,4 +14,7 @@ export type {
   ServeOptions,
   ServeResult,
   FetchHandler,
+  GracefulShutdownOptions,
+  RequestTimeoutOptions,
+  TrustProxyOption,
 } from "./node-server/serve";
