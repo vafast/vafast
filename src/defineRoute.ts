@@ -498,7 +498,7 @@ function flattenRoutes(
         schema: route.schema,
         // SSE handler 不需要包装，它自己处理请求和响应
         handler: isSSE 
-          ? (route.handler as (req: Request) => Promise<Response>)
+          ? (route.handler as unknown as (req: Request) => Promise<Response>)
           : wrapHandler(route.schema, route.handler as (ctx: HandlerContext<RouteSchema>) => unknown),
         middleware: mergedMiddleware.length > 0 ? mergedMiddleware : undefined,
         docs: route.docs,
