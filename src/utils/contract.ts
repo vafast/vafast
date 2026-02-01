@@ -31,6 +31,8 @@ interface RouteSpec {
   path: string
   name?: string
   description?: string
+  /** 是否为 SSE 端点（Server-Sent Events） */
+  sse?: boolean
   schema?: {
     body?: TSchema
     query?: TSchema
@@ -68,6 +70,8 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
       name?: string
       description?: string
       schema?: RouteSchema
+      handler?: { __sse?: { readonly __brand: 'SSE' } }
+      sse?: boolean  // 从 Registry 获取时已经是布尔值
     }
 
     if (!r.method || !r.path) continue
@@ -83,6 +87,11 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
     // 直接从路由获取 name 和 description
     if (r.name) spec.name = r.name
     if (r.description) spec.description = r.description
+
+    // 检测 SSE 标记（两种来源：handler.__sse 或直接的 sse 字段）
+    if (r.sse === true || r.handler?.__sse?.__brand === 'SSE') {
+      spec.sse = true
+    }
 
     // 直接从路由获取 schema
     if (r.schema) {

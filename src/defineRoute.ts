@@ -485,6 +485,10 @@ function flattenRoutes(
     const mergedMiddleware = [...parentMiddleware, ...(route.middleware || [])];
 
     if (isLeafRoute(route)) {
+      // 检测 SSE handler（handler 上有 __sse 标记）
+      const originalHandler = route.handler as unknown as { __sse?: { readonly __brand: 'SSE' } };
+      const isSSE = originalHandler?.__sse?.__brand === 'SSE';
+      
       // 基础属性
       const processed: ProcessedRoute = {
         method: route.method,
@@ -492,10 +496,19 @@ function flattenRoutes(
         name: route.name,
         description: route.description,
         schema: route.schema,
-        handler: wrapHandler(route.schema, route.handler as (ctx: HandlerContext<RouteSchema>) => unknown),
+        // SSE handler 不需要包装，它自己处理请求和响应
+        handler: isSSE 
+          ? (route.handler as (req: Request) => Promise<Response>)
+          : wrapHandler(route.schema, route.handler as (ctx: HandlerContext<RouteSchema>) => unknown),
         middleware: mergedMiddleware.length > 0 ? mergedMiddleware : undefined,
         docs: route.docs,
       };
+      
+      // 保留 SSE 标记到 handler 上，供契约生成使用
+      if (isSSE) {
+        (processed.handler as unknown as { __sse: { readonly __brand: 'SSE' } }).__sse = { __brand: 'SSE' };
+      }
+      
       // 添加父级路由信息
       if (parent) {
         processed.parent = parent;

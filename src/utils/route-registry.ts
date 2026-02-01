@@ -70,6 +70,12 @@ export class RouteRegistry<T extends Record<string, unknown> = Record<string, un
         schema: route.schema,  // 保留 schema 用于契约生成
       }
 
+      // 检测 SSE handler 并添加标记
+      const handler = route.handler as unknown as { __sse?: { readonly __brand: 'SSE' } }
+      if (handler?.__sse?.__brand === 'SSE') {
+        meta.sse = true
+      }
+
       // 复制扩展字段
       for (const key of Object.keys(route)) {
         if (!['method', 'path', 'name', 'description', 'handler', 'middleware', 'schema', 'docs'].includes(key)) {

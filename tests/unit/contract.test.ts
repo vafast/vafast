@@ -6,6 +6,7 @@ import { describe, it, expect, expectTypeOf, beforeEach, afterEach } from 'vites
 import { getApiSpec, generateAITools } from '../../src/utils/contract'
 import { defineRoutes, defineRoute, defineMiddleware } from '../../src/defineRoute'
 import { createRouteRegistry, setGlobalRegistry } from '../../src/utils/route-registry'
+import { createSSEHandler } from '../../src/utils/sse'
 import { Type } from '@sinclair/typebox'
 
 describe('API Spec 生成器', () => {
@@ -123,6 +124,44 @@ describe('API Spec 生成器', () => {
       // 应该只有 4 个路由，不包含 /api-spec
       expect(contract.routes).toHaveLength(4)
       expect(contract.routes.find(r => r.path === '/api-spec')).toBeUndefined()
+    })
+
+    it('应该识别 SSE 端点并设置 sse 标记', () => {
+      const sseHandler = createSSEHandler(
+        { query: Type.Object({ prompt: Type.String() }) },
+        async function* ({ query }) {
+          yield { data: { text: query.prompt } }
+        }
+      )
+
+      const sseRoutes = defineRoutes([
+        defineRoute({
+          method: 'GET',
+          path: '/chat/stream',
+          description: 'AI 聊天流式响应',
+          schema: {
+            query: Type.Object({ prompt: Type.String() }),
+            response: Type.Object({ text: Type.String() }),
+          },
+          handler: sseHandler,
+        }),
+        defineRoute({
+          method: 'GET',
+          path: '/normal',
+          handler: async () => ({ data: 'normal' }),
+        }),
+      ])
+
+      const contract = getApiSpec(sseRoutes)
+
+      // SSE 路由应该有 sse: true
+      const sseRoute = contract.routes.find(r => r.path === '/chat/stream')
+      expect(sseRoute?.sse).toBe(true)
+      expect(sseRoute?.description).toBe('AI 聊天流式响应')
+
+      // 普通路由不应该有 sse 标记
+      const normalRoute = contract.routes.find(r => r.path === '/normal')
+      expect(normalRoute?.sse).toBeUndefined()
     })
 
     it('无参调用应该从全局 Registry 获取路由', () => {
