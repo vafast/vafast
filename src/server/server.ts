@@ -7,7 +7,7 @@
 
 import type { Method, Middleware } from "../types";
 import type { ProcessedRoute } from "../defineRoute";
-import { composeMiddleware } from "../middleware";
+import { composeMiddleware, errorHandler } from "../middleware";
 import { json } from "../utils/response";
 import { BaseServer } from "./base-server";
 import { RadixRouter } from "../router/radix-tree";
@@ -101,7 +101,13 @@ export class Server extends BaseServer {
       (req as unknown as Record<string, unknown>).params = match.params;
 
       // 运行时组合中间件
-      const allMiddleware = [...this.globalMiddleware, ...match.middleware];
+      // 洋葱模型：globalMiddleware → errorHandler → routeMiddleware → handler
+      // 这样 errorHandler 返回的错误响应也会经过 globalMiddleware（如 CORS）的后处理
+      const allMiddleware = [
+        ...this.globalMiddleware,
+        errorHandler,
+        ...match.middleware,
+      ];
       const handler = composeMiddleware(allMiddleware, match.handler);
 
       return handler(req);
@@ -118,7 +124,11 @@ export class Server extends BaseServer {
           pathname,
         );
         const routeMiddleware = anyMatch?.middleware || [];
-        const allMiddleware = [...this.globalMiddleware, ...routeMiddleware];
+        const allMiddleware = [
+          ...this.globalMiddleware,
+          errorHandler,
+          ...routeMiddleware,
+        ];
 
         // OPTIONS 请求默认返回 204（中间件如 CORS 可能会提前响应）
         const optionsHandler = () =>
@@ -134,7 +144,8 @@ export class Server extends BaseServer {
 
     // 未匹配路由时，仍执行全局中间件（如 CORS 处理 OPTIONS 预检）
     if (this.globalMiddleware.length > 0) {
-      const handler = composeMiddleware(this.globalMiddleware, () =>
+      const allMiddleware = [...this.globalMiddleware, errorHandler];
+      const handler = composeMiddleware(allMiddleware, () =>
         this.createErrorResponse(method, pathname),
       );
       return handler(req);

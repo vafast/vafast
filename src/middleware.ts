@@ -3,10 +3,20 @@
 import { json, mapResponse } from "./utils/response";
 
 import type { Handler, Middleware } from "./types";
-/** 中间件类型：使用 next() 传递给下一个处理 */
+
+/**
+ * 全局 Symbol 标识 VafastError
+ *
+ * 使用 Symbol.for() 确保跨包共享同一个 Symbol 引用，
+ * 彻底解决多包实例 instanceof 失效的问题。
+ */
+export const VAFAST_ERROR_SYMBOL = Symbol.for("vafast.error");
 
 /** Vafast 自定义错误类型 */
 export class VafastError extends Error {
+  /** 全局标识，用于跨包识别 */
+  readonly [VAFAST_ERROR_SYMBOL] = true;
+
   status: number;
   code: number;
   expose: boolean;
@@ -29,16 +39,33 @@ export class VafastError extends Error {
   }
 }
 
+/** 检查是否是 VafastError（跨包安全） */
+export function isVafastError(err: unknown): err is VafastError {
+  return (
+    err instanceof VafastError ||
+    (typeof err === "object" &&
+      err !== null &&
+      (err as any)[VAFAST_ERROR_SYMBOL] === true)
+  );
+}
+
 /**
- * 组合类型: 自动注入错误处理器进行中间件组合
- * errorHandler 放在中间件之后，确保 CORS 等中间件能处理错误响应
+ * 组合中间件链
+ *
+ * 纯粹的中间件组合，不自动注入任何中间件。
+ * 错误处理器由 Server 在适当位置注入，确保洋葱模型正确：
+ *
+ * ```
+ * CORS.before → errorHandler.try → auth → handler
+ *                                    ↓ (error)
+ *                errorHandler.catch → return errorResponse
+ * CORS.after (添加 CORS 头) ← errorResponse
+ * ```
  */
 export function composeMiddleware(
   middleware: Middleware[],
   finalHandler: Handler,
 ): (req: Request) => Promise<Response> {
-  const all = [...middleware, errorHandler];
-
   return function composedHandler(req: Request): Promise<Response> {
     let i = -1;
 
@@ -48,8 +75,8 @@ export function composeMiddleware(
       i = index;
 
       // 中间件阶段
-      if (index < all.length) {
-        const mw = all[index];
+      if (index < middleware.length) {
+        const mw = middleware[index];
         return Promise.resolve(mw(req, () => dispatch(index + 1)));
       }
 
@@ -61,14 +88,20 @@ export function composeMiddleware(
   };
 }
 
-/** 默认包含的全局错误处理器 */
-const errorHandler: Middleware = async (req, next) => {
+/**
+ * 全局错误处理中间件
+ *
+ * 捕获后续中间件和 handler 抛出的所有错误，转换为标准 JSON 响应。
+ * 由 Server 自动注入到全局中间件之后、路由中间件之前。
+ */
+export const errorHandler: Middleware = async (req, next) => {
   try {
     return await next();
   } catch (err) {
     console.error("未处理的错误:", err);
 
-    if (err instanceof VafastError) {
+    // 使用 Symbol.for() 跨包安全识别 VafastError
+    if (isVafastError(err)) {
       return json(
         {
           code: err.code,
