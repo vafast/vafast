@@ -6,7 +6,6 @@ import { describe, it, expect, expectTypeOf, beforeEach, afterEach } from 'vites
 import { getApiSpec, generateAITools } from '../../src/utils/contract'
 import { defineRoutes, defineRoute, defineMiddleware } from '../../src/defineRoute'
 import { createRouteRegistry, setGlobalRegistry } from '../../src/utils/route-registry'
-import { createSSEHandler } from '../../src/utils/sse'
 import { Type } from '@sinclair/typebox'
 
 describe('API Spec 生成器', () => {
@@ -127,23 +126,19 @@ describe('API Spec 生成器', () => {
     })
 
     it('应该识别 SSE 端点并设置 sse 标记', () => {
-      const sseHandler = createSSEHandler(
-        { query: Type.Object({ prompt: Type.String() }) },
-        async function* ({ query }) {
-          yield { data: { text: query.prompt } }
-        }
-      )
-
       const sseRoutes = defineRoutes([
         defineRoute({
           method: 'GET',
           path: '/chat/stream',
+          sse: true,
           description: 'AI 聊天流式响应',
           schema: {
             query: Type.Object({ prompt: Type.String() }),
             response: Type.Object({ text: Type.String() }),
           },
-          handler: sseHandler,
+          handler: async function* ({ query }) {
+            yield { data: { text: query.prompt } }
+          },
         }),
         defineRoute({
           method: 'GET',

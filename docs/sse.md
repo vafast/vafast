@@ -4,83 +4,93 @@ Vafast 提供了内置的 SSE 支持，用于实现流式响应，如 AI 聊天�
 
 ## 快速开始
 
+通过 `sse: true` 显式声明 SSE 端点，handler 使用 `async function*` 语法：
+
 ```typescript
-import { createSSEHandler, defineRoute, defineRoutes, Type } from 'vafast'
+import { defineRoute, defineRoutes, Type } from 'vafast'
 
-// 创建 SSE handler
-const progressHandler = createSSEHandler(async function* () {
-  yield { data: { status: 'started' } }
-  
-  for (let i = 0; i <= 100; i += 10) {
-    yield { data: { progress: i } }
-    await sleep(100)
-  }
-  
-  yield { event: 'complete', data: { message: 'Done!' } }
-})
-
-// 在 defineRoute 中使用
 const routes = defineRoutes([
   defineRoute({
     method: 'GET',
     path: '/progress',
-    handler: progressHandler,
+    sse: true,  // 显式声明 SSE 端点
+    handler: async function* () {
+      yield { data: { status: 'started' } }
+      
+      for (let i = 0; i <= 100; i += 10) {
+        yield { data: { progress: i } }
+        await new Promise(r => setTimeout(r, 100))
+      }
+      
+      yield { event: 'complete', data: { message: 'Done!' } }
+    },
   }),
 ])
 ```
 
-## 两种使用方式
+## 基础用法
 
-`createSSEHandler` 支持两种路由定义方式：
+### GET + Query 参数
 
-### 方式 1: 高层 API（推荐）
-
-与 `defineRoute` 配合使用，支持完整的 schema 验证和类型推断：
+适用于简单的订阅场景：
 
 ```typescript
-const sseHandler = createSSEHandler(
-  { params: Type.Object({ id: Type.String() }) },
-  async function* ({ params }) {
-    yield { data: { taskId: params.id } }
-    // ... 业务逻辑
-  }
-)
-
 defineRoute({
   method: 'GET',
   path: '/tasks/:id/stream',
+  sse: true,
   schema: {
     params: Type.Object({ id: Type.String() }),
   },
-  handler: sseHandler,
+  handler: async function* ({ params }) {
+    yield { data: { taskId: params.id } }
+    // ... 业务逻辑
+  },
 })
 ```
 
-### 方式 2: 低层 API
+### POST + Body（AI 场景）
 
-直接与 `route()` 函数配合：
+适用于需要发送复杂数据的场景（如 AI 聊天）：
 
 ```typescript
-const handler = createSSEHandler(async function* ({ req }) {
-  const url = new URL(req.url)
-  yield { data: { path: url.pathname } }
+defineRoute({
+  method: 'POST',
+  path: '/chat/stream',
+  sse: true,
+  schema: {
+    body: Type.Object({
+      messages: Type.Array(Type.Object({
+        role: Type.String(),
+        content: Type.String(),
+      })),
+      model: Type.Optional(Type.String()),
+    }),
+  },
+  handler: async function* ({ body }) {
+    const { messages, model = 'gpt-4' } = body
+    
+    yield { event: 'start', data: { model } }
+    
+    for await (const chunk of aiStream(messages)) {
+      yield { data: { token: chunk.text } }
+    }
+    
+    yield { event: 'end', data: { usage: { tokens: 100 } } }
+  },
 })
-
-route('GET', '/stream', handler)
 ```
 
 ## SSE 事件格式
 
 每个 `yield` 返回的对象可以包含以下字段：
 
-```typescript
-interface SSEEvent {
-  event?: string    // 事件名称（可选，默认为 "message"）
-  data: unknown     // 事件数据（必需，会自动 JSON 序列化）
-  id?: string       // 事件 ID（可选，用于断线重连）
-  retry?: number    // 重试间隔（可选，毫秒）
-}
-```
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `data` | `unknown` | 事件数据（必需，会自动 JSON 序列化） |
+| `event` | `string` | 事件名称（可选，默认为 "message"） |
+| `id` | `string` | 事件 ID（可选，用于断线重连） |
+| `retry` | `number` | 重试间隔（可选，毫秒） |
 
 ### 示例
 
@@ -105,33 +115,6 @@ yield { retry: 5000, data: 'reconnect in 5s' }
 //       data: "reconnect in 5s"
 ```
 
-## Schema 验证
-
-可以定义 `params`、`query` 等 schema 进行验证：
-
-```typescript
-const chatHandler = createSSEHandler(
-  {
-    query: Type.Object({
-      prompt: Type.String(),
-      model: Type.Optional(Type.String()),
-    }),
-  },
-  async function* ({ query }) {
-    const { prompt, model = 'gpt-4' } = query
-    
-    yield { event: 'start', data: { model } }
-    
-    // 模拟 AI 流式响应
-    for (const token of generateTokens(prompt)) {
-      yield { data: { token } }
-    }
-    
-    yield { event: 'end', data: { usage: { tokens: 100 } } }
-  }
-)
-```
-
 ## 错误处理
 
 ### Generator 内部错误
@@ -139,11 +122,16 @@ const chatHandler = createSSEHandler(
 如果 generator 函数抛出错误，会自动发送一个 `error` 事件：
 
 ```typescript
-const handler = createSSEHandler(async function* () {
-  yield { data: 'processing...' }
-  throw new Error('Something went wrong')
-  // 客户端会收到: event: error
-  //              data: {"message":"Something went wrong"}
+defineRoute({
+  method: 'GET',
+  path: '/stream',
+  sse: true,
+  handler: async function* () {
+    yield { data: 'processing...' }
+    throw new Error('Something went wrong')
+    // 客户端会收到: event: error
+    //              data: {"error":"Something went wrong"}
+  },
 })
 ```
 
@@ -152,10 +140,13 @@ const handler = createSSEHandler(async function* () {
 如果 schema 验证失败，会返回 400 错误（JSON 格式）：
 
 ```typescript
-const handler = createSSEHandler(
-  { query: Type.Object({ required: Type.String() }) },
-  async function* () { /* ... */ }
-)
+defineRoute({
+  method: 'GET',
+  path: '/stream',
+  sse: true,
+  schema: { query: Type.Object({ required: Type.String() }) },
+  handler: async function* () { /* ... */ },
+})
 
 // 请求 /stream（缺少 required 参数）
 // 响应: { "code": 400, "message": "验证失败: ..." }
@@ -166,9 +157,14 @@ const handler = createSSEHandler(
 ### 1. 视频/文件处理进度
 
 ```typescript
-const progressHandler = createSSEHandler(
-  { params: Type.Object({ taskId: Type.String() }) },
-  async function* ({ params }) {
+defineRoute({
+  method: 'GET',
+  path: '/tasks/:taskId/progress',
+  sse: true,
+  schema: {
+    params: Type.Object({ taskId: Type.String() }),
+  },
+  handler: async function* ({ params }) {
     const { taskId } = params
     
     while (true) {
@@ -183,72 +179,70 @@ const progressHandler = createSSEHandler(
         return
       }
       
-      await sleep(2000)
+      await new Promise(r => setTimeout(r, 2000))
     }
-  }
-)
+  },
+})
 ```
 
 ### 2. AI 聊天流式响应
 
 ```typescript
-const chatStreamHandler = createSSEHandler(
-  { 
-    query: Type.Object({ 
-      message: Type.String(),
-      conversationId: Type.Optional(Type.String()),
-    }) 
+defineRoute({
+  method: 'POST',
+  path: '/chat/stream',
+  sse: true,
+  schema: {
+    body: Type.Object({
+      messages: Type.Array(Type.Object({
+        role: Type.Union([Type.Literal('user'), Type.Literal('assistant')]),
+        content: Type.String(),
+      })),
+    }),
   },
-  async function* ({ query }) {
-    const { message, conversationId } = query
+  handler: async function* ({ body }) {
+    const { messages } = body
     
-    yield { event: 'start', data: { conversationId } }
+    yield { event: 'start', data: { timestamp: Date.now() } }
     
-    const stream = await ai.chat(message)
-    
-    for await (const chunk of stream) {
+    for await (const chunk of aiStream(messages)) {
       yield { data: { token: chunk.text } }
     }
     
     yield { event: 'end', data: { 
-      usage: stream.usage,
-      finishReason: stream.finishReason,
+      usage: { promptTokens: 100, completionTokens: 50 },
     }}
-  }
-)
+  },
+})
 ```
 
 ### 3. 实时通知推送
 
 ```typescript
-const notificationHandler = createSSEHandler(
-  { query: Type.Object({ userId: Type.String() }) },
-  async function* ({ query }) {
+defineRoute({
+  method: 'GET',
+  path: '/notifications/stream',
+  sse: true,
+  schema: {
+    query: Type.Object({ userId: Type.String() }),
+  },
+  handler: async function* ({ query }) {
     const { userId } = query
     
-    // 发送心跳保持连接
-    const heartbeat = setInterval(() => {
-      // 注意：这里需要特殊处理，因为 setInterval 无法直接 yield
-    }, 30000)
-    
-    try {
-      for await (const notification of subscribeNotifications(userId)) {
-        yield { 
-          event: notification.type,
-          data: notification.payload,
-          id: notification.id,
-        }
+    for await (const notification of subscribeNotifications(userId)) {
+      yield { 
+        event: notification.type,
+        data: notification.payload,
+        id: notification.id,
       }
-    } finally {
-      clearInterval(heartbeat)
     }
-  }
-)
+  },
+})
 ```
 
 ## 响应头
 
-`createSSEHandler` 会自动设置以下响应头：
+SSE 端点会自动设置以下响应头：
 
 | Header | Value | 说明 |
 |--------|-------|------|
@@ -259,7 +253,7 @@ const notificationHandler = createSSEHandler(
 
 ## 客户端使用
 
-### 浏览器原生 EventSource
+### 浏览器原生 EventSource（GET 请求）
 
 ```javascript
 const eventSource = new EventSource('/api/progress/123')
@@ -279,21 +273,17 @@ eventSource.onerror = (error) => {
 }
 ```
 
-### 注意事项
-
-- `EventSource` **不支持自定义请求头**（如 Authorization）
-- 如果需要认证，可以：
-  1. 通过 URL 查询参数传递 token：`/stream?token=xxx`
-  2. 使用 Cookie 认证
-  3. 移除认证要求（适用于只读、需知道 ID 的场景）
-  4. 使用 `fetch + ReadableStream` 自己实现
-
-### fetch + ReadableStream（支持认证）
+### fetch + ReadableStream（支持 POST 和认证）
 
 ```javascript
-async function subscribeSSE(url, token) {
+async function subscribeSSE(url, body, token) {
   const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` }
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
   })
   
   const reader = response.body.getReader()
@@ -304,7 +294,6 @@ async function subscribeSSE(url, token) {
     if (done) break
     
     const text = decoder.decode(value)
-    // 解析 SSE 格式: "data: {...}\n\n"
     const lines = text.split('\n')
     for (const line of lines) {
       if (line.startsWith('data: ')) {
@@ -316,33 +305,11 @@ async function subscribeSSE(url, token) {
 }
 ```
 
-## 类型说明
-
-`createSSEHandler` 使用泛型擦除技术，在保证内部完整类型检查的同时，避免复杂类型传播：
-
-```typescript
-// ✅ 内部有完整类型检查
-createSSEHandler(
-  { params: Type.Object({ id: Type.String() }) },
-  async function* ({ params }) {
-    params.id   // TypeScript 知道这是 string
-    params.foo  // ❌ 编译错误：不存在 foo
-  }
-)
-
-// ✅ 使用 SSE handler 的路由数组不需要类型注解
-export const routes = defineRoutes([
-  defineRoute({
-    path: '/stream/:id',
-    handler: createSSEHandler(...),
-  }),
-])
-```
-
 ## 最佳实践
 
-1. **定期发送心跳**：防止连接被中间代理断开
-2. **使用事件 ID**：支持断线重连时从上次位置继续
-3. **设置合理的重试间隔**：避免客户端频繁重连
-4. **优雅处理错误**：发送 error 事件后关闭连接
-5. **资源清理**：在 generator 结束时清理定时器、数据库连接等
+1. **使用 `sse: true` 显式声明** — 不依赖运行时检测，更可靠
+2. **定期发送心跳** — 防止连接被中间代理断开
+3. **使用事件 ID** — 支持断线重连时从上次位置继续
+4. **设置合理的重试间隔** — 避免客户端频繁重连
+5. **优雅处理错误** — 发送 error 事件后关闭连接
+6. **资源清理** — 在 generator 结束时清理定时器、数据库连接等

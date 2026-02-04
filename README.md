@@ -528,33 +528,27 @@ defineRoute({
 
 ### SSE 流式响应
 
-内置 `createSSEHandler` 支持 Server-Sent Events，适用于 AI 聊天、进度更新等场景：
+通过 `sse: true` 显式声明 SSE 端点，适用于 AI 聊天、进度更新等场景：
 
 ```typescript
-import { createSSEHandler, defineRoute, defineRoutes, Type } from 'vafast'
+import { defineRoute, defineRoutes, Type } from 'vafast'
 
-// 创建 SSE handler
-const progressHandler = createSSEHandler(
-  { params: Type.Object({ taskId: Type.String() }) },
-  async function* ({ params }) {
-    yield { event: 'start', data: { taskId: params.taskId } }
-    
-    for (let i = 0; i <= 100; i += 10) {
-      yield { data: { progress: i } }
-      await new Promise(r => setTimeout(r, 100))
-    }
-    
-    yield { event: 'complete', data: { message: 'Done!' } }
-  }
-)
-
-// 在 defineRoute 中使用
 const routes = defineRoutes([
   defineRoute({
     method: 'GET',
     path: '/tasks/:taskId/progress',
+    sse: true,  // 显式声明 SSE 端点
     schema: { params: Type.Object({ taskId: Type.String() }) },
-    handler: progressHandler,
+    handler: async function* ({ params }) {
+      yield { event: 'start', data: { taskId: params.taskId } }
+      
+      for (let i = 0; i <= 100; i += 10) {
+        yield { data: { progress: i } }
+        await new Promise(r => setTimeout(r, 100))
+      }
+      
+      yield { event: 'complete', data: { message: 'Done!' } }
+    },
   }),
 ])
 ```
