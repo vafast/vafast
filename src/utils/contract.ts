@@ -70,8 +70,7 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
       name?: string
       description?: string
       schema?: RouteSchema
-      handler?: { __sse?: { readonly __brand: 'SSE' } }
-      sse?: boolean  // 从 Registry 获取时已经是布尔值
+      sse?: boolean
     }
 
     if (!r.method || !r.path) continue
@@ -88,8 +87,8 @@ function generateSpec(routes: readonly unknown[]): ApiSpec {
     if (r.name) spec.name = r.name
     if (r.description) spec.description = r.description
 
-    // 检测 SSE 标记（两种来源：handler.__sse 或直接的 sse 字段）
-    if (r.sse === true || r.handler?.__sse?.__brand === 'SSE') {
+    // SSE 标记
+    if (r.sse === true) {
       spec.sse = true
     }
 

@@ -32,6 +32,21 @@ import { validateAllSchemas, precompileSchemas } from "./utils/validators/valida
 import { json } from "./utils/response";
 import { VafastError } from "./middleware";
 
+// ============= SSE 事件类型（内联定义，避免循环依赖） =============
+
+/** SSE 事件 */
+export interface SSEEventType<T = unknown> {
+  event?: string;
+  data: T;
+  id?: string;
+  retry?: number;
+}
+
+/** SSE Generator 类型 */
+export type SSEGeneratorType<TSchema extends RouteSchema = RouteSchema> = (
+  ctx: HandlerContext<TSchema>
+) => AsyncGenerator<SSEEventType<unknown>, void, unknown>;
+
 // ============= Schema 类型 =============
 
 /** 路由 Schema 配置 */
@@ -99,6 +114,20 @@ type HandlerContextWithExtra<TSchema extends RouteSchema, TExtra> =
 /** HTTP 方法 */
 type HTTPMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
+/** Handler 上下文类型（带中间件扩展） */
+type HandlerCtx<TSchema extends RouteSchema, TMiddleware extends readonly AnyMiddleware[]> =
+  HandlerContextWithExtra<TSchema, MergeMiddlewareContexts<TMiddleware>>;
+
+/** 普通 Handler 类型 */
+type NormalHandler<TSchema extends RouteSchema, TReturn, TMiddleware extends readonly AnyMiddleware[]> = (
+  ctx: HandlerCtx<TSchema, TMiddleware>
+) => TReturn | Promise<TReturn>;
+
+/** SSE Generator Handler 类型（直接写 async function*，无需 createSSEHandler 包装） */
+type SSEHandler<TSchema extends RouteSchema, TMiddleware extends readonly AnyMiddleware[]> = (
+  ctx: HandlerCtx<TSchema, TMiddleware>
+) => AsyncGenerator<SSEEventType<unknown>, void, unknown>;
+
 /** 叶子路由配置（有 method 和 handler） */
 export interface LeafRouteConfig<
   TMethod extends HTTPMethod = HTTPMethod,
@@ -112,9 +141,22 @@ export interface LeafRouteConfig<
   readonly name?: string;
   readonly description?: string;
   readonly schema?: TSchema;
-  readonly handler: (
-    ctx: HandlerContextWithExtra<TSchema, MergeMiddlewareContexts<TMiddleware>>
-  ) => TReturn | Promise<TReturn>;
+  /** 
+   * 是否为 SSE 端点（显式声明，推荐）
+   * 
+   * 设置为 true 时，handler 应返回 AsyncGenerator：
+   * ```typescript
+   * sse: true,
+   * handler: async function* (ctx) { yield { data: ... } }
+   * ```
+   */
+  readonly sse?: boolean;
+  /** 
+   * Handler 支持两种写法：
+   * 1. 普通函数: `async (ctx) => { return result }`
+   * 2. SSE Generator（需配合 sse: true）: `async function* (ctx) { yield { data: ... } }`
+   */
+  readonly handler: NormalHandler<TSchema, TReturn, TMiddleware> | SSEHandler<TSchema, TMiddleware>;
   readonly middleware?: TMiddleware;
   readonly docs?: {
     tags?: string[];
@@ -147,6 +189,8 @@ export interface ProcessedRoute {
   name?: string;
   description?: string;
   schema?: RouteSchema;
+  /** 是否为 SSE 端点 */
+  sse?: boolean;
   handler: (req: Request) => Promise<Response>;
   middleware?: readonly AnyMiddleware[];
   docs?: {
@@ -226,7 +270,47 @@ function autoResponse(result: unknown): Response {
   return new Response(null, { status: 204 });
 }
 
-/** 创建包装后的 handler */
+/**
+ * 构建 HandlerContext（公共逻辑，供普通 handler 和 SSE handler 复用）
+ */
+async function buildHandlerContext<TSchema extends RouteSchema>(
+  req: Request,
+  schema: TSchema | undefined
+): Promise<HandlerContext<TSchema>> {
+  const query = parseQuery(req);
+  const headers = parseHeaders(req);
+  const cookies = parseCookies(req);
+  const params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+
+  let body: unknown = undefined;
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    try {
+      body = await parseBody(req);
+    } catch {
+      // 忽略解析错误
+    }
+  }
+
+  const data = { body, query, params, headers, cookies };
+  if (schema && (schema.body || schema.query || schema.params || schema.headers || schema.cookies)) {
+    validateAllSchemas(schema, data);
+  }
+
+  // 获取中间件注入的上下文
+  const extraCtx = (req as unknown as { __locals?: unknown }).__locals || {};
+
+  return {
+    req,
+    body: body as HandlerContext<TSchema>["body"],
+    query: query as HandlerContext<TSchema>["query"],
+    params: params as HandlerContext<TSchema>["params"],
+    headers: headers as HandlerContext<TSchema>["headers"],
+    cookies: cookies as HandlerContext<TSchema>["cookies"],
+    ...extraCtx,
+  } as HandlerContext<TSchema>;
+}
+
+/** 创建包装后的 handler（普通路由） */
 function wrapHandler<TSchema extends RouteSchema>(
   schema: TSchema | undefined,
   userHandler: (ctx: HandlerContext<TSchema>) => unknown | Promise<unknown>
@@ -237,39 +321,113 @@ function wrapHandler<TSchema extends RouteSchema>(
 
   return async (req: Request): Promise<Response> => {
     try {
-      const query = parseQuery(req);
-      const headers = parseHeaders(req);
-      const cookies = parseCookies(req);
-      const params = ((req as unknown as Record<string, unknown>).params as Record<string, string>) || {};
+      const ctx = await buildHandlerContext(req, schema);
+      const result = await userHandler(ctx);
+      return autoResponse(result);
+    } catch (error) {
+      // 如果是 VafastError，重新抛出让错误处理中间件处理
+      if (error instanceof VafastError) {
+        throw error;
+      }
+      if (error instanceof Error && error.message.includes("验证失败")) {
+        return json({ code: 400, message: error.message }, 400);
+      }
+      return json({ code: 500, message: error instanceof Error ? error.message : "未知错误" }, 500);
+    }
+  };
+}
 
-      let body: unknown = undefined;
-      if (req.method !== "GET" && req.method !== "HEAD") {
+/**
+ * SSE Handler 函数类型
+ * 
+ * SSE handler 与普通 handler 使用统一的上下文模型，接收完整的 HandlerContext。
+ * 框架自动完成：body 解析、schema 验证、中间件上下文注入。
+ * SSE handler 只需关注流式响应逻辑，返回 SSE Stream Response。
+ */
+type SSEHandlerFn<TSchema extends RouteSchema = RouteSchema> = 
+  (ctx: HandlerContext<TSchema>) => Promise<Response>;
+
+/**
+ * 格式化 SSE 事件为字符串（内联，避免循环依赖）
+ */
+function formatSSEEvent(event: SSEEventType): string {
+  const lines: string[] = [];
+  if (event.id !== undefined) lines.push(`id: ${event.id}`);
+  if (event.event !== undefined) lines.push(`event: ${event.event}`);
+  if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
+  
+  const dataStr = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+  for (const line of dataStr.split('\n')) {
+    lines.push(`data: ${line}`);
+  }
+  return lines.join('\n') + '\n\n';
+}
+
+/**
+ * 将 AsyncGenerator 包装为 SSE Handler
+ * 
+ * 支持用户直接写 `async function* (ctx) { yield ... }` 而无需 createSSEHandler
+ */
+function wrapGeneratorToSSEHandler<TSchema extends RouteSchema>(
+  generator: (ctx: HandlerContext<TSchema>) => AsyncGenerator<SSEEventType<unknown>, void, unknown>
+): SSEHandlerFn<TSchema> {
+  return async (ctx: HandlerContext<TSchema>): Promise<Response> => {
+    const stream = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
         try {
-          body = await parseBody(req);
-        } catch {
-          // 忽略解析错误
+          for await (const event of generator(ctx)) {
+            controller.enqueue(encoder.encode(formatSSEEvent(event)));
+          }
+        } catch (error) {
+          const errorEvent = formatSSEEvent({
+            event: 'error',
+            data: { error: error instanceof Error ? error.message : '未知错误' }
+          });
+          controller.enqueue(encoder.encode(errorEvent));
+        } finally {
+          controller.close();
         }
       }
+    });
 
-      const data = { body, query, params, headers, cookies };
-      if (schema && (schema.body || schema.query || schema.params || schema.headers || schema.cookies)) {
-        validateAllSchemas(schema, data);
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
       }
+    });
+  };
+}
 
-      // 获取中间件注入的上下文
-      const extraCtx = (req as unknown as { __locals?: unknown }).__locals || {};
+/**
+ * 创建 SSE handler 的请求包装器
+ * 
+ * SSE handler 与普通 handler 使用相同的上下文构建流程（buildHandlerContext），
+ * 确保：
+ * - body/query/params 解析一致
+ * - schema 验证统一
+ * - 中间件注入的上下文（如 userInfo）自动可用
+ * - 错误处理统一
+ * 
+ * 唯一区别：SSE handler 返回的是 SSE Stream Response，而非普通 JSON Response
+ */
+function wrapSSEHandler<TSchema extends RouteSchema>(
+  schema: TSchema | undefined,
+  sseHandler: SSEHandlerFn<TSchema>
+): (req: Request) => Promise<Response> {
+  if (schema && (schema.body || schema.query || schema.params || schema.headers || schema.cookies)) {
+    precompileSchemas(schema);
+  }
 
-      const result = await userHandler({
-        req,
-        body: body as HandlerContext<TSchema>["body"],
-        query: query as HandlerContext<TSchema>["query"],
-        params: params as HandlerContext<TSchema>["params"],
-        headers: headers as HandlerContext<TSchema>["headers"],
-        cookies: cookies as HandlerContext<TSchema>["cookies"],
-        ...extraCtx,
-      } as HandlerContext<TSchema>);
-
-      return autoResponse(result);
+  return async (req: Request): Promise<Response> => {
+    try {
+      // 与普通 handler 使用相同的上下文构建逻辑
+      const ctx = await buildHandlerContext(req, schema);
+      // SSE handler 返回 SSE Stream Response
+      return await sseHandler(ctx);
     } catch (error) {
       // 如果是 VafastError，重新抛出让错误处理中间件处理
       if (error instanceof VafastError) {
@@ -332,11 +490,13 @@ export function defineRoute<
   readonly name?: string;
   readonly description?: string;
   readonly schema?: TSchema;
+  /** 是否为 SSE 端点，设置为 true 时 handler 应返回 AsyncGenerator */
+  readonly sse?: boolean;
   /** 显式声明上下文类型（用于父级中间件注入的场景） */
   readonly context?: TContext;
   readonly handler: (
     ctx: HandlerContextWithExtra<TSchema, TContext & MergeMiddlewareContexts<TMiddleware>>
-  ) => TReturn | Promise<TReturn>;
+  ) => TReturn | Promise<TReturn> | AsyncGenerator<SSEEventType<unknown>, void, unknown>;
   readonly middleware?: TMiddleware;
   readonly docs?: {
     tags?: string[];
@@ -368,8 +528,9 @@ export function defineRoute(config: {
   readonly name?: string;
   readonly description?: string;
   readonly schema?: RouteSchema;
+  readonly sse?: boolean;
   readonly context?: object;
-  readonly handler?: (ctx: HandlerContext<RouteSchema>) => unknown | Promise<unknown>;
+  readonly handler?: (ctx: HandlerContext<RouteSchema>) => unknown | Promise<unknown> | AsyncGenerator<unknown, void, unknown>;
   readonly middleware?: readonly AnyMiddleware[];
   readonly children?: ReadonlyArray<RouteConfigResult>;
   readonly docs?: {
@@ -427,6 +588,15 @@ export function defineRoute(config: {
  * })
  * ```
  */
+/** withContext Handler 上下文类型 */
+type WithContextHandlerCtx<TSchema extends RouteSchema, TContext extends object, TMiddleware extends readonly AnyMiddleware[]> =
+  HandlerContextWithExtra<TSchema, TContext & MergeMiddlewareContexts<TMiddleware>>;
+
+/** withContext 支持的 Handler 类型（普通函数 + SSE Generator） */
+type WithContextHandler<TSchema extends RouteSchema, TContext extends object, TMiddleware extends readonly AnyMiddleware[], TReturn> =
+  | ((ctx: WithContextHandlerCtx<TSchema, TContext, TMiddleware>) => TReturn | Promise<TReturn>)
+  | ((ctx: WithContextHandlerCtx<TSchema, TContext, TMiddleware>) => AsyncGenerator<SSEEventType<unknown>, void, unknown>);
+
 export function withContext<
   TContext extends object,
   TExtensions extends object = object
@@ -443,9 +613,13 @@ export function withContext<
     readonly name?: string;
     readonly description?: string;
     readonly schema?: TSchema;
-    readonly handler: (
-      ctx: HandlerContextWithExtra<TSchema, TContext & MergeMiddlewareContexts<TMiddleware>>
-    ) => TReturn | Promise<TReturn>;
+    /** 
+     * 是否为 SSE 端点
+     * 设置为 true 时，handler 应返回 AsyncGenerator
+     */
+    readonly sse?: boolean;
+    /** Handler 支持两种写法：普通函数 或 SSE Generator（需配合 sse: true） */
+    readonly handler: WithContextHandler<TSchema, TContext, TMiddleware, TReturn>;
     readonly middleware?: TMiddleware;
     readonly docs?: {
       tags?: string[];
@@ -485,9 +659,9 @@ function flattenRoutes(
     const mergedMiddleware = [...parentMiddleware, ...(route.middleware || [])];
 
     if (isLeafRoute(route)) {
-      // 检测 SSE handler（handler 上有 __sse 标记）
-      const originalHandler = route.handler as unknown as { __sse?: { readonly __brand: 'SSE' } };
-      const isSSE = originalHandler?.__sse?.__brand === 'SSE';
+      // SSE 检测：只通过显式 sse: true 声明
+      const routeWithSSE = route as typeof route & { sse?: boolean };
+      const isSSE = routeWithSSE.sse === true;
       
       // 基础属性
       const processed: ProcessedRoute = {
@@ -496,18 +670,13 @@ function flattenRoutes(
         name: route.name,
         description: route.description,
         schema: route.schema,
-        // SSE handler 不需要包装，它自己处理请求和响应
+        sse: isSSE || undefined,  // SSE 标记
         handler: isSSE 
-          ? (route.handler as unknown as (req: Request) => Promise<Response>)
+          ? wrapSSEHandler(route.schema, wrapGeneratorToSSEHandler(route.handler as (ctx: HandlerContext<RouteSchema>) => AsyncGenerator<SSEEventType<unknown>, void, unknown>))
           : wrapHandler(route.schema, route.handler as (ctx: HandlerContext<RouteSchema>) => unknown),
         middleware: mergedMiddleware.length > 0 ? mergedMiddleware : undefined,
         docs: route.docs,
       };
-      
-      // 保留 SSE 标记到 handler 上，供契约生成使用
-      if (isSSE) {
-        (processed.handler as unknown as { __sse: { readonly __brand: 'SSE' } }).__sse = { __brand: 'SSE' };
-      }
       
       // 添加父级路由信息
       if (parent) {

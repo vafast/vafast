@@ -52,13 +52,8 @@ export {
   Patterns,
 } from "./formats";
 
-// SSE (Server-Sent Events) 支持
-export {
-  createSSEHandler,
-  type SSEEvent,
-  type SSEHandler,
-  type SSEMarker,
-} from "./sse";
+// SSE (Server-Sent Events) 类型
+export { type SSEEvent } from "./sse";
 
 // 路由注册表
 export {
