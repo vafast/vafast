@@ -7,6 +7,10 @@
  * - 静态路径: /users, /api/v1/health
  * - 动态参数: /users/:id, /posts/:postId/comments/:commentId
  * - 通配符: /files/*, /static/*filepath
+ * 
+ * 特性:
+ * - 同一位置支持不同参数名（如 /sessions/:id 和 /sessions/:sessionId/messages）
+ * - 参数名冲突时会发出警告，但不影响功能
  */
 
 import type { Handler, Middleware, Method } from "../types";
@@ -20,6 +24,8 @@ interface RouteHandler {
   middleware: Middleware[];
   /** 预编译后的完整处理链（包含中间件） */
   compiled?: CompiledHandler;
+  /** 该路由的参数名列表（按顺序） */
+  paramNames: string[];
 }
 
 /** Radix Tree 节点 */
@@ -28,6 +34,7 @@ interface RadixNode {
   children: Record<string, RadixNode>;
   paramChild?: RadixNode;
   wildcardChild?: RadixNode;
+  /** 该位置的参数名（仅用于调试和警告） */
   paramName?: string;
   handlers: Record<Method, RouteHandler | undefined>;
 }
@@ -50,6 +57,12 @@ export interface MatchResult {
  * router.register("GET", "/users/:id", handler);
  * const result = router.match("GET", "/users/123");
  * // result.params = { id: "123" }
+ * 
+ * // 支持同一位置使用不同参数名
+ * router.register("PUT", "/sessions/:id", updateHandler);
+ * router.register("GET", "/sessions/:sessionId/messages", messagesHandler);
+ * // PUT /sessions/123 → params = { id: "123" }
+ * // GET /sessions/123/messages → params = { sessionId: "123" }
  * ```
  */
 export class RadixRouter {
@@ -85,6 +98,25 @@ export class RadixRouter {
     this.compiler = compiler;
   }
 
+  /**
+   * 从路由模式中提取参数名列表
+   * @example "/users/:id/posts/:postId" → ["id", "postId"]
+   */
+  private extractParamNames(pattern: string): string[] {
+    const paramNames: string[] = [];
+    const segments = this.splitPath(pattern);
+    
+    for (const segment of segments) {
+      if (segment[0] === ":") {
+        paramNames.push(segment.substring(1));
+      } else if (segment[0] === "*") {
+        paramNames.push(segment.length > 1 ? segment.substring(1) : "*");
+      }
+    }
+    
+    return paramNames;
+  }
+
   /** 注册路由 */
   register(
     method: Method,
@@ -93,6 +125,7 @@ export class RadixRouter {
     middleware: Middleware[] = [],
   ): void {
     const segments = this.splitPath(pattern);
+    const paramNames = this.extractParamNames(pattern);
     let node = this.root;
 
     for (const segment of segments) {
@@ -100,9 +133,16 @@ export class RadixRouter {
 
       if (firstChar === ":") {
         // 动态参数节点
+        const paramName = segment.substring(1);
         if (!node.paramChild) {
           node.paramChild = this.createNode(segment);
-          node.paramChild.paramName = segment.substring(1);
+          node.paramChild.paramName = paramName;
+        } else if (node.paramChild.paramName !== paramName) {
+          // 参数名冲突警告（但不影响功能）
+          console.warn(
+            `⚠️  路由参数名冲突: 位置 "${node.path || '/'}" 下已有参数 ":${node.paramChild.paramName}"，` +
+            `新路由使用 ":${paramName}"。建议使用一致的参数名。`
+          );
         }
         node = node.paramChild;
       } else if (firstChar === "*") {
@@ -123,7 +163,7 @@ export class RadixRouter {
       }
     }
 
-    const routeHandler: RouteHandler = { handler, middleware };
+    const routeHandler: RouteHandler = { handler, middleware, paramNames };
 
     // 如果没有全局中间件且设置了编译器，预编译处理链
     if (this.compiler && middleware.length === 0) {
@@ -170,13 +210,20 @@ export class RadixRouter {
   /** 匹配路由 */
   match(method: Method, path: string): MatchResult | null {
     const segments = this.splitPath(path);
-    const params: Record<string, string> = Object.create(null);
+    // 使用数组按位置收集参数值
+    const paramValues: string[] = [];
 
-    const node = this.matchNode(this.root, segments, 0, params);
+    const node = this.matchNode(this.root, segments, 0, paramValues);
     if (!node) return null;
 
     const routeHandler = node.handlers[method];
     if (!routeHandler) return null;
+
+    // 根据路由自己的 paramNames 构建 params 对象
+    const params: Record<string, string> = Object.create(null);
+    for (let i = 0; i < routeHandler.paramNames.length; i++) {
+      params[routeHandler.paramNames[i]] = paramValues[i];
+    }
 
     return {
       handler: routeHandler.handler,
@@ -191,7 +238,7 @@ export class RadixRouter {
     node: RadixNode,
     segments: string[],
     index: number,
-    params: Record<string, string>,
+    paramValues: string[],
   ): RadixNode | null {
     if (index === segments.length) {
       for (const method in node.handlers) {
@@ -205,38 +252,31 @@ export class RadixRouter {
     // 1. 静态路径
     const staticChild = node.children[segment];
     if (staticChild) {
-      const result = this.matchNode(staticChild, segments, index + 1, params);
+      const result = this.matchNode(staticChild, segments, index + 1, paramValues);
       if (result) return result;
     }
 
     // 2. 动态参数
     if (node.paramChild) {
-      const paramName = node.paramChild.paramName!;
-      const oldValue = params[paramName];
-
-      params[paramName] = segment;
+      const valueIndex = paramValues.length;
+      paramValues.push(segment);
+      
       const result = this.matchNode(
         node.paramChild,
         segments,
         index + 1,
-        params,
+        paramValues,
       );
 
       if (result) return result;
 
-      // 回溯
-      if (oldValue === undefined) {
-        delete params[paramName];
-      } else {
-        params[paramName] = oldValue;
-      }
+      // 回溯：移除添加的参数值
+      paramValues.length = valueIndex;
     }
 
     // 3. 通配符
     if (node.wildcardChild) {
-      params[node.wildcardChild.paramName || "*"] = segments
-        .slice(index)
-        .join("/");
+      paramValues.push(segments.slice(index).join("/"));
       return node.wildcardChild;
     }
 
