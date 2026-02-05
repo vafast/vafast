@@ -474,12 +474,73 @@ export default { fetch: server.fetch };" > index.ts && bun index.ts
 ## 🎯 核心功能
 
 - ⚡ **JIT 编译验证器** - Schema 验证器编译缓存，避免重复编译
-- 🌲 **Radix Tree 路由** - O(k) 时间复杂度的高效路由匹配
+- 🌲 **Radix Tree 路由** - O(k) 时间复杂度的高效路由匹配（详见[路由规则](#路由匹配规则)）
 - 🎯 **快速请求解析** - 优化的 Query/Cookie 解析，比标准方法快 2x
 - 🔒 **端到端类型安全** - 完整的 TypeScript 类型推断
 - 🧩 **灵活中间件系统** - 可组合的中间件架构
 - 📡 **SSE 流式响应** - 内置 Server-Sent Events 支持，适用于 AI 聊天、进度更新等场景
 - 📦 **零配置** - 开箱即用，无需复杂配置
+
+### 路由匹配规则
+
+Vafast 使用 Radix Tree 实现高效路由匹配，支持以下特性：
+
+**1. 路由类型**
+
+```typescript
+// 静态路由
+'/users'
+'/api/v1/health'
+
+// 动态参数 (:param)
+'/users/:id'
+'/posts/:postId/comments/:commentId'
+
+// 通配符 (* 或 *name)
+'/files/*'           // 匿名通配符，params['*']
+'/static/*filepath'  // 命名通配符，params['filepath']
+```
+
+**2. 优先级规则（与 Hono/Fastify 一致）**
+
+```
+静态路由 > 动态参数 > 通配符
+```
+
+```typescript
+// 注册顺序不影响优先级
+router.register('GET', '/users/:id', dynamicHandler);
+router.register('GET', '/users/admin', staticHandler);  // 后注册
+
+// 匹配结果
+GET /users/admin   → staticHandler  ✅ 静态优先
+GET /users/123     → dynamicHandler
+```
+
+**3. 同一位置支持不同参数名**
+
+不同路由在同一位置可以使用不同的参数名，每个路由独立返回其定义的参数名：
+
+```typescript
+// 同一位置（/sessions/ 后）使用不同参数名
+router.register('PUT', '/sessions/:id', updateHandler);
+router.register('GET', '/sessions/:sessionId/messages', messagesHandler);
+
+// 每个路由返回各自定义的参数名
+PUT /sessions/123           → params = { id: '123' }
+GET /sessions/456/messages  → params = { sessionId: '456' }
+
+// CRUD 场景完全支持
+router.register('GET', '/users/:userId', getHandler);
+router.register('PUT', '/users/:id', updateHandler);
+router.register('DELETE', '/users/:uid', deleteHandler);
+
+GET /users/1    → { userId: '1' }
+PUT /users/2    → { id: '2' }
+DELETE /users/3 → { uid: '3' }
+```
+
+> 💡 参数名冲突时会输出警告（建议保持一致），但不影响功能。
 
 ### 返回值与错误处理
 
