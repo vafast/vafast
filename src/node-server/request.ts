@@ -254,19 +254,41 @@ proxyGetters.forEach((key) => {
 });
 
 // 代理需要调用真实 Request 的方法
-const proxyMethods = [
-  "arrayBuffer",
-  "blob",
-  "clone",
-  "formData",
-  "json",
-  "text",
-];
+// 注意：对于 body 相关方法（json/text/arrayBuffer/blob/formData），GET/HEAD 请求没有 body
+// 直接返回空值，避免用户误调用导致流读取异常
+// 这是框架级防御，参考业界标准：Fastify "for GET and HEAD requests, the payload is never parsed"
 
-proxyMethods.forEach((key) => {
+// 定义 clone 方法（所有请求都可以克隆）
+Object.defineProperty(requestPrototype, "clone", {
+  value: function () {
+    const self = this as ProxyRequestInternal;
+    const req = self._getRequest();
+    return req.clone();
+  },
+  enumerable: true,
+});
+
+// 定义 body 相关方法（GET/HEAD 返回空值）
+const bodyMethods = ["arrayBuffer", "blob", "formData", "json", "text"] as const;
+
+bodyMethods.forEach((key) => {
   Object.defineProperty(requestPrototype, key, {
     value: function () {
       const self = this as ProxyRequestInternal;
+      const method = self[incomingKey].method || "GET";
+      
+      // GET/HEAD 请求没有 body，直接返回空值
+      // 这样即使用户误调用 req.json() 也不会出错
+      if (method === "GET" || method === "HEAD") {
+        // json() 返回 null，text() 返回空字符串，其他返回对应的空值
+        if (key === "json") return Promise.resolve(null);
+        if (key === "text") return Promise.resolve("");
+        if (key === "arrayBuffer") return Promise.resolve(new ArrayBuffer(0));
+        if (key === "blob") return Promise.resolve(new Blob([]));
+        if (key === "formData") return Promise.resolve(new FormData());
+      }
+      
+      // 其他请求正常处理
       const req = self._getRequest();
       return (req[key as keyof Request] as () => Promise<unknown>).call(req);
     },

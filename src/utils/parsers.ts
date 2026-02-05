@@ -19,8 +19,23 @@ export interface FormData {
 /**
  * 简化的请求体解析函数
  * 优先简洁性，处理最常见的场景
+ * 
+ * 注意：此函数假设只用于有 body 的请求（POST/PUT/PATCH 等）
+ * 对于 GET/HEAD 请求，调用方应在调用前检查请求方法
+ * 参考：defineRoute.ts 中已有正确的检查逻辑
+ * 
+ * 如果传入 GET/HEAD 请求，会返回 null（防御性编程）
+ * 这样即使调用方忘记检查，也不会导致运行时错误
  */
 export async function parseBody(req: Request): Promise<unknown> {
+  // 防御性检查：GET/HEAD 请求没有 body
+  // HTTP 规范：GET/HEAD 请求通常不带 body，即使带了 Content-Type 也不应解析
+  // 参考 Fastify: "for GET and HEAD requests, the payload is never parsed"
+  const method = req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD") {
+    return null;
+  }
+
   const contentType = req.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
     return await req.json();

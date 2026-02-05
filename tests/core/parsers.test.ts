@@ -123,3 +123,91 @@ describe("解析器功能测试", () => {
     expect(cookies).toEqual({});
   });
 });
+
+/**
+ * GET/HEAD 请求 body 解析防御测试
+ * 
+ * 背景：HTTP 规范中，GET/HEAD 请求通常不带 body
+ * 但某些客户端（如 Electron）可能会为 GET 请求添加 Content-Type: application/json header
+ * 框架应该优雅地处理这种情况，而不是报错
+ * 
+ * 参考：Fastify 文档 "for GET and HEAD requests, the payload is never parsed"
+ */
+describe("GET/HEAD 请求 body 解析防御", () => {
+  it("GET 请求调用 parseBody 应返回 null（即使有 Content-Type header）", async () => {
+    // 模拟客户端发送带 Content-Type 的 GET 请求
+    const getRequest = new Request("http://localhost:3000/api/data", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const body = await parseBody(getRequest);
+    expect(body).toBeNull();
+  });
+
+  it("HEAD 请求调用 parseBody 应返回 null", async () => {
+    const headRequest = new Request("http://localhost:3000/api/data", {
+      method: "HEAD",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const body = await parseBody(headRequest);
+    expect(body).toBeNull();
+  });
+
+  it("POST 请求应正常解析 body", async () => {
+    const postRequest = new Request("http://localhost:3000/api/data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: "hello" }),
+    });
+
+    const body = await parseBody(postRequest);
+    expect(body).toEqual({ message: "hello" });
+  });
+
+  it("PUT 请求应正常解析 body", async () => {
+    const putRequest = new Request("http://localhost:3000/api/data", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ id: 1, name: "test" }),
+    });
+
+    const body = await parseBody(putRequest);
+    expect(body).toEqual({ id: 1, name: "test" });
+  });
+
+  it("PATCH 请求应正常解析 body", async () => {
+    const patchRequest = new Request("http://localhost:3000/api/data", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: "updated" }),
+    });
+
+    const body = await parseBody(patchRequest);
+    expect(body).toEqual({ name: "updated" });
+  });
+
+  it("DELETE 请求应正常解析 body（如果有的话）", async () => {
+    const deleteRequest = new Request("http://localhost:3000/api/data", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ reason: "不再需要" }),
+    });
+
+    const body = await parseBody(deleteRequest);
+    expect(body).toEqual({ reason: "不再需要" });
+  });
+});
