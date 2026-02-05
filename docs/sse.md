@@ -4,28 +4,80 @@ Vafast 提供了内置的 SSE 支持，用于实现流式响应，如 AI 聊天�
 
 ## 快速开始
 
-通过 `sse: true` 显式声明 SSE 端点，handler 使用 `async function*` 语法：
+通过 `sse: true` 显式声明 SSE 端点，handler 使用 `async function*` 语法。直接 `yield` 任意数据，框架自动包装为 SSE 格式：
 
 ```typescript
-import { defineRoute, defineRoutes, Type } from 'vafast'
+import { defineRoute, defineRoutes, Type, sse } from 'vafast'
 
 const routes = defineRoutes([
   defineRoute({
     method: 'GET',
     path: '/progress',
-    sse: true,  // 显式声明 SSE 端点
+    sse: true,
     handler: async function* () {
-      yield { data: { status: 'started' } }
+      // 直接 yield 数据，框架自动包装为 SSE data 字段
+      yield { status: 'started' }
       
       for (let i = 0; i <= 100; i += 10) {
-        yield { data: { progress: i } }
+        yield { progress: i }
         await new Promise(r => setTimeout(r, 100))
       }
       
-      yield { event: 'complete', data: { message: 'Done!' } }
+      // 需要自定义事件名时，使用 sse() 函数
+      yield sse({ event: 'complete' }, { message: 'Done!' })
     },
   }),
 ])
+```
+
+## 两种使用模式
+
+### 简单模式（推荐）
+
+直接 `yield` 任意数据，框架自动序列化为 SSE `data` 字段：
+
+```typescript
+// yield 对象
+yield { type: 'text_delta', content: 'Hello' }
+// 输出: data: {"type":"text_delta","content":"Hello"}
+
+// yield 字符串
+yield 'Hello World'
+// 输出: data: Hello World
+
+// yield 数字
+yield 42
+// 输出: data: 42
+```
+
+### 高级模式
+
+需要设置 SSE 的 `event`、`id`、`retry` 元数据时，使用 `sse()` 函数：
+
+```typescript
+import { sse } from 'vafast'
+
+// 自定义事件名称
+yield sse({ event: 'status' }, { online: true })
+// 输出: event: status
+//       data: {"online":true}
+
+// 带 ID（支持断线重连）
+yield sse({ id: '1001' }, { value: 1 })
+// 输出: id: 1001
+//       data: {"value":1}
+
+// 自定义重试间隔
+yield sse({ retry: 5000 }, 'reconnect')
+// 输出: retry: 5000
+//       data: reconnect
+
+// 完整配置
+yield sse({ event: 'update', id: '42', retry: 3000 }, { count: 1 })
+// 输出: id: 42
+//       event: update
+//       retry: 3000
+//       data: {"count":1}
 ```
 
 ## 基础用法
@@ -43,7 +95,7 @@ defineRoute({
     params: Type.Object({ id: Type.String() }),
   },
   handler: async function* ({ params }) {
-    yield { data: { taskId: params.id } }
+    yield { taskId: params.id, status: 'streaming' }
     // ... 业务逻辑
   },
 })
@@ -70,49 +122,16 @@ defineRoute({
   handler: async function* ({ body }) {
     const { messages, model = 'gpt-4' } = body
     
-    yield { event: 'start', data: { model } }
+    // 简单模式：直接 yield AI 事件
+    yield { type: 'start', model }
     
     for await (const chunk of aiStream(messages)) {
-      yield { data: { token: chunk.text } }
+      yield { type: 'text_delta', content: chunk.text }
     }
     
-    yield { event: 'end', data: { usage: { tokens: 100 } } }
+    yield { type: 'done', usage: { tokens: 100 } }
   },
 })
-```
-
-## SSE 事件格式
-
-每个 `yield` 返回的对象可以包含以下字段：
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `data` | `unknown` | 事件数据（必需，会自动 JSON 序列化） |
-| `event` | `string` | 事件名称（可选，默认为 "message"） |
-| `id` | `string` | 事件 ID（可选，用于断线重连） |
-| `retry` | `number` | 重试间隔（可选，毫秒） |
-
-### 示例
-
-```typescript
-// 基础数据事件
-yield { data: { message: 'Hello' } }
-// 输出: data: {"message":"Hello"}
-
-// 命名事件
-yield { event: 'status', data: { online: true } }
-// 输出: event: status
-//       data: {"online":true}
-
-// 带 ID 的事件（支持断线重连）
-yield { id: '1001', data: 'checkpoint' }
-// 输出: id: 1001
-//       data: "checkpoint"
-
-// 自定义重试间隔
-yield { retry: 5000, data: 'reconnect in 5s' }
-// 输出: retry: 5000
-//       data: "reconnect in 5s"
 ```
 
 ## 错误处理
@@ -127,7 +146,7 @@ defineRoute({
   path: '/stream',
   sse: true,
   handler: async function* () {
-    yield { data: 'processing...' }
+    yield { status: 'processing' }
     throw new Error('Something went wrong')
     // 客户端会收到: event: error
     //              data: {"error":"Something went wrong"}
@@ -170,10 +189,10 @@ defineRoute({
     while (true) {
       const task = await getTask(taskId)
       
-      yield { data: { 
+      yield { 
         status: task.status,
         progress: task.progress,
-      }}
+      }
       
       if (task.status === 'completed' || task.status === 'failed') {
         return
@@ -203,15 +222,17 @@ defineRoute({
   handler: async function* ({ body }) {
     const { messages } = body
     
-    yield { event: 'start', data: { timestamp: Date.now() } }
+    // 使用简单模式，直接 yield ChatEvent 格式
+    yield { type: 'start', timestamp: Date.now() }
     
     for await (const chunk of aiStream(messages)) {
-      yield { data: { token: chunk.text } }
+      yield { type: 'text_delta', content: chunk.text }
     }
     
-    yield { event: 'end', data: { 
+    yield { 
+      type: 'done', 
       usage: { promptTokens: 100, completionTokens: 50 },
-    }}
+    }
   },
 })
 ```
@@ -219,6 +240,8 @@ defineRoute({
 ### 3. 实时通知推送
 
 ```typescript
+import { sse } from 'vafast'
+
 defineRoute({
   method: 'GET',
   path: '/notifications/stream',
@@ -230,11 +253,11 @@ defineRoute({
     const { userId } = query
     
     for await (const notification of subscribeNotifications(userId)) {
-      yield { 
-        event: notification.type,
-        data: notification.payload,
-        id: notification.id,
-      }
+      // 使用 sse() 设置事件名和 ID
+      yield sse(
+        { event: notification.type, id: notification.id },
+        notification.payload
+      )
     }
   },
 })
@@ -307,9 +330,10 @@ async function subscribeSSE(url, body, token) {
 
 ## 最佳实践
 
-1. **使用 `sse: true` 显式声明** — 不依赖运行时检测，更可靠
-2. **定期发送心跳** — 防止连接被中间代理断开
-3. **使用事件 ID** — 支持断线重连时从上次位置继续
-4. **设置合理的重试间隔** — 避免客户端频繁重连
-5. **优雅处理错误** — 发送 error 事件后关闭连接
-6. **资源清理** — 在 generator 结束时清理定时器、数据库连接等
+1. **直接 yield 数据** — 简单模式覆盖 90% 场景，代码更简洁
+2. **需要 event/id/retry 时用 `sse()`** — 高级模式提供完整控制
+3. **定期发送心跳** — 防止连接被中间代理断开
+4. **使用事件 ID** — 支持断线重连时从上次位置继续
+5. **设置合理的重试间隔** — 避免客户端频繁重连
+6. **优雅处理错误** — 框架自动发送 error 事件
+7. **资源清理** — 在 generator 结束时清理定时器、数据库连接等

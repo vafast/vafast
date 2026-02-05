@@ -589,37 +589,60 @@ defineRoute({
 
 ### SSE 流式响应
 
-通过 `sse: true` 显式声明 SSE 端点，适用于 AI 聊天、进度更新等场景：
+通过 `sse: true` 显式声明 SSE 端点，适用于 AI 聊天、进度更新等场景。
+
+**简单模式（推荐）** - 直接 yield 任意数据：
 
 ```typescript
 import { defineRoute, defineRoutes, Type } from 'vafast'
 
 const routes = defineRoutes([
+  // AI 聊天场景
+  defineRoute({
+    method: 'POST',
+    path: '/chat/stream',
+    sse: true,
+    schema: { body: Type.Object({ message: Type.String() }) },
+    handler: async function* ({ body }) {
+      // 直接 yield 数据，框架自动包装为 SSE data 字段
+      yield { type: 'start', input: body.message }
+      
+      for await (const chunk of aiStream(body.message)) {
+        yield { type: 'text_delta', content: chunk }
+      }
+      
+      yield { type: 'done', usage: { tokens: 100 } }
+    },
+  }),
+  
+  // 进度更新场景
   defineRoute({
     method: 'GET',
     path: '/tasks/:taskId/progress',
-    sse: true,  // 显式声明 SSE 端点
+    sse: true,
     schema: { params: Type.Object({ taskId: Type.String() }) },
     handler: async function* ({ params }) {
-      yield { event: 'start', data: { taskId: params.taskId } }
-      
       for (let i = 0; i <= 100; i += 10) {
-        yield { data: { progress: i } }
+        yield { progress: i, taskId: params.taskId }
         await new Promise(r => setTimeout(r, 100))
       }
-      
-      yield { event: 'complete', data: { message: 'Done!' } }
     },
   }),
 ])
 ```
 
-客户端使用：
+**高级模式** - 需要设置 SSE event/id/retry 时使用 `sse()` 函数：
 
-```javascript
-const eventSource = new EventSource('/tasks/123/progress')
-eventSource.onmessage = (e) => console.log(JSON.parse(e.data))
-eventSource.addEventListener('complete', () => eventSource.close())
+```typescript
+import { sse } from 'vafast'
+
+handler: async function* () {
+  // 带事件名称
+  yield sse({ event: 'status' }, { ready: true })
+
+  // 带事件 ID 和重试间隔
+  yield sse({ event: 'update', id: '42', retry: 5000 }, { value: 1 })
+}
 ```
 
 > 📖 详细文档见 [docs/sse.md](./docs/sse.md)

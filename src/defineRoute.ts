@@ -348,15 +348,80 @@ type SSEHandlerFn<TSchema extends RouteSchema = RouteSchema> =
   (ctx: HandlerContext<TSchema>) => Promise<Response>;
 
 /**
- * 格式化 SSE 事件为字符串（内联，避免循环依赖）
+ * SSE 元数据接口（用于高级场景）
  */
-function formatSSEEvent(event: SSEEventType): string {
+export interface SSEMeta {
+  /** SSE 事件名称 */
+  event?: string;
+  /** SSE 事件 ID */
+  id?: string;
+  /** SSE 重试间隔（毫秒） */
+  retry?: number;
+}
+
+/**
+ * 带元数据的 SSE 事件（高级用法）
+ */
+export interface SSEEventWithMeta<T = unknown> {
+  /** SSE 元数据标记 */
+  __sse__: SSEMeta;
+  /** 事件数据 */
+  data: T;
+}
+
+/**
+ * 创建带元数据的 SSE 事件
+ * 
+ * @example
+ * // 设置事件名称
+ * yield sse({ event: 'status' }, { ready: true })
+ * 
+ * // 设置 ID（支持断线重连）
+ * yield sse({ event: 'update', id: '42' }, { value: 1 })
+ * 
+ * // 设置重试间隔
+ * yield sse({ retry: 5000 }, 'reconnect hint')
+ */
+export function sse<T>(meta: SSEMeta, data: T): SSEEventWithMeta<T> {
+  return { __sse__: meta, data };
+}
+
+/**
+ * 检查是否是带元数据的 SSE 事件
+ */
+function isSSEEventWithMeta(event: unknown): event is SSEEventWithMeta {
+  return (
+    event !== null &&
+    typeof event === 'object' &&
+    '__sse__' in event &&
+    'data' in event
+  );
+}
+
+/**
+ * 格式化 SSE 事件为字符串
+ * 
+ * 支持两种用法：
+ * 1. 简单模式（推荐）：yield anyData → 自动包装为 data
+ * 2. 高级模式：yield { __sse__: { event, id, retry }, data } → 完整 SSE 控制
+ */
+function formatSSEEvent(event: unknown): string {
   const lines: string[] = [];
-  if (event.id !== undefined) lines.push(`id: ${event.id}`);
-  if (event.event !== undefined) lines.push(`event: ${event.event}`);
-  if (event.retry !== undefined) lines.push(`retry: ${event.retry}`);
+  let data: unknown;
+
+  if (isSSEEventWithMeta(event)) {
+    // 高级模式：用户提供了 SSE 元数据
+    const meta = event.__sse__;
+    if (meta.id !== undefined) lines.push(`id: ${meta.id}`);
+    if (meta.event !== undefined) lines.push(`event: ${meta.event}`);
+    if (meta.retry !== undefined) lines.push(`retry: ${meta.retry}`);
+    data = event.data;
+  } else {
+    // 简单模式：直接把 event 作为 data
+    data = event;
+  }
   
-  const dataStr = typeof event.data === 'string' ? event.data : JSON.stringify(event.data);
+  const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
   for (const line of dataStr.split('\n')) {
     lines.push(`data: ${line}`);
   }
@@ -366,10 +431,11 @@ function formatSSEEvent(event: SSEEventType): string {
 /**
  * 将 AsyncGenerator 包装为 SSE Handler
  * 
- * 支持用户直接写 `async function* (ctx) { yield ... }` 而无需 createSSEHandler
+ * 支持用户直接写 `async function* (ctx) { yield anyData }` 
+ * 数据会自动包装为 SSE data 字段发送
  */
 function wrapGeneratorToSSEHandler<TSchema extends RouteSchema>(
-  generator: (ctx: HandlerContext<TSchema>) => AsyncGenerator<SSEEventType<unknown>, void, unknown>
+  generator: (ctx: HandlerContext<TSchema>) => AsyncGenerator<unknown, void, unknown>
 ): SSEHandlerFn<TSchema> {
   return async (ctx: HandlerContext<TSchema>): Promise<Response> => {
     const stream = new ReadableStream({
@@ -380,8 +446,9 @@ function wrapGeneratorToSSEHandler<TSchema extends RouteSchema>(
             controller.enqueue(encoder.encode(formatSSEEvent(event)));
           }
         } catch (error) {
+          // 使用高级模式发送错误事件
           const errorEvent = formatSSEEvent({
-            event: 'error',
+            __sse__: { event: 'error' },
             data: { error: error instanceof Error ? error.message : '未知错误' }
           });
           controller.enqueue(encoder.encode(errorEvent));
