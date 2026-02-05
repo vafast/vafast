@@ -96,8 +96,23 @@ export async function parseBodyAs<T>(req: Request): Promise<T> {
 /**
  * 解析请求体为表单数据
  * 专门用于处理 multipart/form-data
+ * 
+ * 支持的 HTTP 方法：
+ * - POST：创建新资源（最常用）
+ * - PUT：替换指定资源
+ * - PATCH：部分更新（较少用于文件上传）
+ * 
+ * 注意：GET/HEAD 请求没有 body，调用此函数会抛出错误
  */
 export async function parseFormData(req: Request): Promise<FormData> {
+  // 防御性检查：GET/HEAD 请求没有 body
+  // HTTP 规范：GET/HEAD 请求不应有 body
+  // 文件上传通常使用 POST（新建）或 PUT（替换）
+  const method = req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD") {
+    throw new Error("GET/HEAD 请求不能包含表单数据");
+  }
+
   const contentType = req.headers.get("content-type") || "";
 
   if (!contentType.includes("multipart/form-data")) {
@@ -110,8 +125,25 @@ export async function parseFormData(req: Request): Promise<FormData> {
 /**
  * 解析请求体为文件
  * 专门用于处理文件上传
+ * 
+ * 支持的 HTTP 方法：
+ * - POST：上传新文件，服务器决定存储位置（最常用）
+ * - PUT：上传到指定位置，或替换已有文件
+ * 
+ * 业界实践参考：
+ * - AWS S3、阿里云 OSS 等主流云存储都支持 POST 和 PUT
+ * - POST 用于表单上传（multipart），PUT 用于直接上传（binary）
+ * 
+ * 注意：GET/HEAD 请求没有 body，调用此函数会抛出错误
  */
 export async function parseFile(req: Request): Promise<FileInfo> {
+  // 防御性检查：GET/HEAD 请求没有 body
+  // HTTP 规范：GET/HEAD 请求不应有 body
+  const method = req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD") {
+    throw new Error("GET/HEAD 请求不能包含文件");
+  }
+
   const contentType = req.headers.get("content-type") || "";
 
   if (!contentType.includes("multipart/form-data")) {

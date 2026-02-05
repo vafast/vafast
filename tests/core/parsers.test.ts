@@ -11,6 +11,8 @@ import {
   parseHeaders,
   parseCookies,
   parseBody,
+  parseFormData,
+  parseFile,
 } from "../../src/utils/parsers";
 
 // 创建包含所有数据类型的测试请求
@@ -209,5 +211,160 @@ describe("GET/HEAD 请求 body 解析防御", () => {
 
     const body = await parseBody(deleteRequest);
     expect(body).toEqual({ reason: "不再需要" });
+  });
+});
+
+/**
+ * parseFormData 和 parseFile 的 GET/HEAD 防御测试
+ * 
+ * 背景：这些函数用于文件上传，通常只用于 POST 请求
+ * 但为了防御性编程，应该在 GET/HEAD 请求时抛出明确的错误
+ */
+describe("parseFormData GET/HEAD 请求防御", () => {
+  it("GET 请求调用 parseFormData 应抛出错误", async () => {
+    const getRequest = new Request("http://localhost:3000/api/upload", {
+      method: "GET",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    await expect(parseFormData(getRequest)).rejects.toThrow(
+      "GET/HEAD 请求不能包含表单数据"
+    );
+  });
+
+  it("HEAD 请求调用 parseFormData 应抛出错误", async () => {
+    const headRequest = new Request("http://localhost:3000/api/upload", {
+      method: "HEAD",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    await expect(parseFormData(headRequest)).rejects.toThrow(
+      "GET/HEAD 请求不能包含表单数据"
+    );
+  });
+
+  it("非 multipart/form-data 请求应抛出格式错误", async () => {
+    const postRequest = new Request("http://localhost:3000/api/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: "test" }),
+    });
+
+    await expect(parseFormData(postRequest)).rejects.toThrow(
+      "请求不是 multipart/form-data 格式"
+    );
+  });
+});
+
+describe("parseFile GET/HEAD 请求防御", () => {
+  it("GET 请求调用 parseFile 应抛出错误", async () => {
+    const getRequest = new Request("http://localhost:3000/api/upload", {
+      method: "GET",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    await expect(parseFile(getRequest)).rejects.toThrow(
+      "GET/HEAD 请求不能包含文件"
+    );
+  });
+
+  it("HEAD 请求调用 parseFile 应抛出错误", async () => {
+    const headRequest = new Request("http://localhost:3000/api/upload", {
+      method: "HEAD",
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    await expect(parseFile(headRequest)).rejects.toThrow(
+      "GET/HEAD 请求不能包含文件"
+    );
+  });
+
+  it("非 multipart/form-data 请求应抛出格式错误", async () => {
+    const postRequest = new Request("http://localhost:3000/api/upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: "test" }),
+    });
+
+    await expect(parseFile(postRequest)).rejects.toThrow(
+      "请求不是 multipart/form-data 格式"
+    );
+  });
+});
+
+/**
+ * 文件上传 HTTP 方法支持测试
+ * 
+ * 业界最佳实践：
+ * - POST：上传新文件，服务器决定存储位置（最常用）
+ * - PUT：上传到指定位置，或替换已有文件
+ * 
+ * 参考：AWS S3、阿里云 OSS 等主流云存储都支持 POST 和 PUT
+ */
+describe("文件上传 HTTP 方法支持", () => {
+  // 创建模拟的 multipart/form-data 请求
+  function createFormDataRequest(method: string): Request {
+    const formData = new FormData();
+    formData.append("name", "test");
+    
+    return new Request("http://localhost:3000/api/upload", {
+      method,
+      body: formData,
+    });
+  }
+
+  it("POST 请求应该能正常调用 parseFormData（不抛出方法错误）", async () => {
+    const postRequest = createFormDataRequest("POST");
+    
+    // POST 请求应该能通过方法检查，进入格式解析阶段
+    // 这里只验证不会因为 HTTP 方法而抛出错误
+    try {
+      await parseFormData(postRequest);
+    } catch (error) {
+      // 如果有错误，不应该是 GET/HEAD 相关的错误
+      expect((error as Error).message).not.toContain("GET/HEAD");
+    }
+  });
+
+  it("PUT 请求应该能正常调用 parseFormData（不抛出方法错误）", async () => {
+    const putRequest = createFormDataRequest("PUT");
+    
+    try {
+      await parseFormData(putRequest);
+    } catch (error) {
+      expect((error as Error).message).not.toContain("GET/HEAD");
+    }
+  });
+
+  it("PATCH 请求应该能正常调用 parseFormData（不抛出方法错误）", async () => {
+    const patchRequest = createFormDataRequest("PATCH");
+    
+    try {
+      await parseFormData(patchRequest);
+    } catch (error) {
+      expect((error as Error).message).not.toContain("GET/HEAD");
+    }
+  });
+
+  it("DELETE 请求应该能正常调用 parseFormData（不抛出方法错误）", async () => {
+    const deleteRequest = createFormDataRequest("DELETE");
+    
+    try {
+      await parseFormData(deleteRequest);
+    } catch (error) {
+      expect((error as Error).message).not.toContain("GET/HEAD");
+    }
   });
 });
