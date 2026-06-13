@@ -661,8 +661,8 @@ type WithContextHandlerCtx<TSchema extends RouteSchema, TContext extends object,
 
 /** withContext 支持的 Handler 类型（普通函数 + SSE Generator） */
 type WithContextHandler<TSchema extends RouteSchema, TContext extends object, TMiddleware extends readonly AnyMiddleware[], TReturn> =
-  | ((ctx: WithContextHandlerCtx<TSchema, TContext, TMiddleware>) => TReturn | Promise<TReturn>)
-  | ((ctx: WithContextHandlerCtx<TSchema, TContext, TMiddleware>) => AsyncGenerator<SSEEventType<unknown>, void, unknown>);
+  (ctx: WithContextHandlerCtx<TSchema, TContext, TMiddleware>) =>
+    TReturn | Promise<TReturn> | AsyncGenerator<SSEEventType<unknown>, void, unknown>;
 
 export function withContext<
   TContext extends object,

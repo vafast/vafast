@@ -44,6 +44,9 @@ export async function parseBody(req: Request): Promise<unknown> {
     const text = await req.text();
     return Object.fromEntries(new URLSearchParams(text));
   }
+  if (contentType.includes("multipart/form-data")) {
+    return await parseMultipartFormData(req);
+  }
   return await req.text(); // fallback
 }
 
