@@ -140,7 +140,7 @@ const userRoutes = defineRoutes([
 
 // 创建服务器
 const server = new Server(userRoutes)
-server.useGlobalMiddleware(cors())
+server.use(cors())
 ```
 
 ---
