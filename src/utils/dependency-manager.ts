@@ -38,8 +38,11 @@ export class DependencyManager {
       console.log(`✅ ${framework} 依赖加载完成`);
       return deps;
     } catch (error) {
-      console.error(`❌ ${framework} 依赖加载失败:`, error);
-      throw error;
+      const installHint = framework === 'vue'
+        ? 'npm install vue @vue/server-renderer'
+        : 'npm install react react-dom'
+      console.error(`❌ ${framework} 依赖加载失败，请先安装: ${installHint}`)
+      throw error
     }
   }
 

@@ -1,0 +1,76 @@
+---
+description: TypeScript 编码规范
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript 编码规范
+
+## 类型定义
+
+```typescript
+// ✅ 使用 TypeBox 定义 schema（运行时验证 + 类型推断）
+import { Type, Static } from 'vafast'
+const UserSchema = Type.Object({ id: Type.String(), name: Type.String() })
+type User = Static<typeof UserSchema>
+
+// ❌ 避免手写 interface（无运行时验证）
+interface User { id: string; name: string }
+```
+
+## 类型断言
+
+```typescript
+// ✅ 从源头解决类型问题
+const data = await response.json() as unknown
+const user = UserSchema.decode(data)  // 验证 + 类型推断
+
+// ❌ 不要使用 as 断言
+const user = data as User  // 危险：无运行时验证
+```
+
+## 函数定义
+
+```typescript
+// ✅ 函数式风格
+function createUser(input: CreateUserInput): User {
+  return { id: generateId(), ...input }
+}
+
+// ❌ 避免 class
+class UserService {
+  createUser(input: CreateUserInput): User { ... }
+}
+```
+
+## 错误处理
+
+```typescript
+// ✅ Go 风格：返回 { data, error }
+function getUser(id: string): { data: User | null; error: Error | null } {
+  const user = db.find(id)
+  if (!user) {
+    return { data: null, error: new Error('用户不存在') }
+  }
+  return { data: user, error: null }
+}
+
+// ❌ 避免异常驱动
+function getUser(id: string): User {
+  const user = db.find(id)
+  if (!user) throw new Error('用户不存在')
+  return user
+}
+```
+
+## 导入导出
+
+```typescript
+// ✅ 按需导出，类型定义在使用处
+export function createUser() { ... }
+export const UserSchema = Type.Object({ ... })
+
+// ❌ 不要创建统一的类型导出文件
+// types/index.ts <- 避免
+export type { User, Post, Comment, ... }
+```
