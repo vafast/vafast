@@ -2,6 +2,11 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 规范。
 
+## [Unreleased]
+
+### 变更
+- **SSE** — 移除 `createSSEHandler` 公开 API；使用 `sse: true` + `handler: async function*`（框架内部自动包装）
+
 ## [0.5.17] - 2026-01-22
 
 ### 改进

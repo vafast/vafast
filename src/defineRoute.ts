@@ -123,7 +123,7 @@ type NormalHandler<TSchema extends RouteSchema, TReturn, TMiddleware extends rea
   ctx: HandlerCtx<TSchema, TMiddleware>
 ) => TReturn | Promise<TReturn>;
 
-/** SSE Generator Handler 类型（直接写 async function*，无需 createSSEHandler 包装） */
+/** SSE Generator Handler 类型（sse: true 时直接写 async function*） */
 type SSEHandler<TSchema extends RouteSchema, TMiddleware extends readonly AnyMiddleware[]> = (
   ctx: HandlerCtx<TSchema, TMiddleware>
 ) => AsyncGenerator<SSEEventType<unknown>, void, unknown>;
