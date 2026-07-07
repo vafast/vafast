@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { Type } from "@sinclair/typebox";
 import { validateSchemaOrThrow } from "../../src/utils/validators/validators";
+import { isValidationFailedError } from "../../src/utils/validators/validation-errors";
 
 describe("Schema 验证器基础功能测试", () => {
   it("应该验证简单的用户Schema", () => {
@@ -20,7 +21,7 @@ describe("Schema 验证器基础功能测试", () => {
       isActive: true,
     };
 
-    const result = validateSchemaOrThrow(userSchema, validUser, "用户数据");
+    const result = validateSchemaOrThrow(userSchema, validUser, "body");
     expect(result).toEqual(validUser);
   });
 
@@ -35,7 +36,7 @@ describe("Schema 验证器基础功能测试", () => {
       limit: 20,
     };
 
-    const result = validateSchemaOrThrow(querySchema, validQuery, "查询参数");
+    const result = validateSchemaOrThrow(querySchema, validQuery, "query");
     expect(result).toEqual(validQuery);
   });
 
@@ -50,8 +51,11 @@ describe("Schema 验证器基础功能测试", () => {
       name: 123, // 应该是字符串
     };
 
-    expect(() => {
-      validateSchemaOrThrow(userSchema, invalidUser, "用户数据");
-    }).toThrow("用户数据验证失败");
+    try {
+      validateSchemaOrThrow(userSchema, invalidUser, "body");
+      expect.fail("应抛出 ValidationFailedError");
+    } catch (err) {
+      expect(isValidationFailedError(err)).toBe(true);
+    }
   });
 });

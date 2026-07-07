@@ -164,6 +164,14 @@ docs: update README with new API
 - 复杂逻辑添加行内注释
 - README 保持最新
 
+### 错误响应契约（v0.8.4+）
+
+- **成功**：裸 JSON
+- **Schema 校验失败**：HTTP 422，`{ code: 422, message, details[] }`，`details[].message` 为 TypeBox 原文
+- **业务错误**：`throw err.*()` → `{ code: number, message: string }`，`code` 始终为 number
+
+相关测试：`tests/unit/schema-validation-response.test.ts`、`tests/unit/validation-errors.test.ts`
+
 ## 问题反馈
 
 - [Bug Report](https://github.com/vafast/vafast/issues/new?template=bug-report.yml)

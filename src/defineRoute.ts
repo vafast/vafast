@@ -31,6 +31,7 @@ import { parseBody, parseQuery, parseHeaders, parseCookies } from "./utils/parse
 import { validateAllSchemas, precompileSchemas } from "./utils/validators/validators";
 import { json } from "./utils/response";
 import { VafastError } from "./middleware";
+import { isValidationFailedError } from "./utils/validators/validation-errors";
 
 // ============= SSE 事件类型（内联定义，避免循环依赖） =============
 
@@ -325,12 +326,8 @@ function wrapHandler<TSchema extends RouteSchema>(
       const result = await userHandler(ctx);
       return autoResponse(result);
     } catch (error) {
-      // 如果是 VafastError，重新抛出让错误处理中间件处理
-      if (error instanceof VafastError) {
+      if (error instanceof VafastError || isValidationFailedError(error)) {
         throw error;
-      }
-      if (error instanceof Error && error.message.includes("验证失败")) {
-        return json({ code: 400, message: error.message }, 400);
       }
       return json({ code: 500, message: error instanceof Error ? error.message : "未知错误" }, 500);
     }
@@ -496,12 +493,8 @@ function wrapSSEHandler<TSchema extends RouteSchema>(
       // SSE handler 返回 SSE Stream Response
       return await sseHandler(ctx);
     } catch (error) {
-      // 如果是 VafastError，重新抛出让错误处理中间件处理
-      if (error instanceof VafastError) {
+      if (error instanceof VafastError || isValidationFailedError(error)) {
         throw error;
-      }
-      if (error instanceof Error && error.message.includes("验证失败")) {
-        return json({ code: 400, message: error.message }, 400);
       }
       return json({ code: 500, message: error instanceof Error ? error.message : "未知错误" }, 500);
     }

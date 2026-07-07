@@ -179,7 +179,7 @@ const routes = defineRoutes([
 
 const server = new Server(routes);
 export default { fetch: server.fetch };
-// 错误响应: { error: 'BAD_REQUEST', message: 'Missing name' }
+// 业务错误: HTTP 4xx/5xx + { code: number, message: string }
 ```
 
 **对比：Vafast 的 `err()` 函数提供语义化的错误 API，统一的响应格式。**
@@ -568,10 +568,60 @@ defineRoute({
     throw err.forbidden('无权限')        // 403
     throw err.notFound('用户不存在')     // 404
     throw err.conflict('用户名已存在')   // 409
+    throw err.unprocessable('无法处理')  // 422
     throw err.internal('服务器错误')     // 500
-    throw err('自定义错误', 422, 'CUSTOM_TYPE')  // 自定义
+    throw err('业务错误', 404, 40401)    // HTTP 404, code 40401
   }
 })
+```
+
+**错误响应契约：**
+
+| 场景 | HTTP | 响应体 |
+|------|------|--------|
+| 成功 | 2xx | 裸 JSON 业务数据 |
+| Schema 校验失败 | **422** | `{ code: 422, message, details[] }` |
+| 业务/鉴权错误 | 4xx/5xx | `{ code: number, message: string }` |
+
+`code` 始终为 **number**（HTTP 状态码或业务码如 `40101`）。
+
+**Schema 校验失败（422）** — 路由定义 `schema` 后自动生效，`details` 透传 TypeBox 原文：
+
+```typescript
+// POST body 校验失败示例响应
+{
+  "code": 422,
+  "message": "请求参数校验失败",
+  "details": [
+    {
+      "location": "body",
+      "path": "/email",
+      "field": "email",
+      "message": "Expected string to match 'email' format",
+      "value": "2212"
+    },
+    {
+      "location": "body",
+      "path": "/receiver/name",
+      "field": "receiver.name",
+      "message": "Expected string length greater or equal to 1",
+      "value": ""
+    }
+  ]
+}
+```
+
+- `path`：TypeBox JSON Pointer（`/orderIds/0`）
+- `field`：表单字段路径（`orderIds.0`）
+- `message`：**TypeBox 英文原文**，框架不做翻译
+
+```typescript
+import { ValidationFailedError, isValidationFailedError } from 'vafast';
+
+// handler 内也可手动抛出（少见）
+throw new ValidationFailedError([
+  { location: 'body', path: '/email', field: 'email', message: '...' },
+]);
 ```
 
 **API 速查表：**
@@ -585,7 +635,9 @@ defineRoute({
 | 禁止访问 | `throw err.forbidden()` | 403 |
 | 未找到 | `throw err.notFound()` | 404 |
 | 资源冲突 | `throw err.conflict()` | 409 |
+| 无法处理 | `throw err.unprocessable()` | 422 |
 | 服务器错误 | `throw err.internal()` | 500 |
+| Schema 校验 | 自动（defineRoute.schema） | 422 + details |
 
 ### SSE 流式响应
 

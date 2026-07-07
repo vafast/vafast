@@ -9,7 +9,11 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { Type } from '@sinclair/typebox'
 import { FormatRegistry } from '@sinclair/typebox'
 import { TypeCompiler } from '@sinclair/typebox/compiler'
-import { validateSchemaOrThrow, validateSchema } from '../../src/utils/validators/validators'
+import {
+  validateSchemaOrThrow,
+  validateSchema,
+} from '../../src/utils/validators/validators'
+import { isValidationFailedError } from '../../src/utils/validators/validation-errors'
 
 // 邮箱正则
 const EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -48,7 +52,7 @@ describe('Format Validation', () => {
         email: 'test@example.com',
       }
 
-      expect(() => validateSchemaOrThrow(schema, data, '请求体')).not.toThrow()
+      expect(() => validateSchemaOrThrow(schema, data, 'body')).not.toThrow()
     })
 
     it('should reject invalid email in object', () => {
@@ -64,7 +68,15 @@ describe('Format Validation', () => {
         email: 'not-an-email',
       }
 
-      expect(() => validateSchemaOrThrow(schema, data, '请求体')).toThrow('请求体验证失败')
+      try {
+        validateSchemaOrThrow(schema, data, 'body')
+        expect.fail('应抛出 ValidationFailedError')
+      } catch (err) {
+        expect(isValidationFailedError(err)).toBe(true)
+        if (isValidationFailedError(err)) {
+          expect(err.details.some((d) => d.field === 'email')).toBe(true)
+        }
+      }
     })
   })
 

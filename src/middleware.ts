@@ -3,6 +3,9 @@
 import { json, mapResponse } from "./utils/response";
 
 import type { Handler, Middleware } from "./types";
+import {
+  isValidationFailedError,
+} from "./utils/validators/validation-errors";
 
 /**
  * 全局 Symbol 标识 VafastError
@@ -98,7 +101,20 @@ export const errorHandler: Middleware = async (req, next) => {
   try {
     return await next();
   } catch (err) {
-    console.error("未处理的错误:", err);
+    if (!isValidationFailedError(err)) {
+      console.error("未处理的错误:", err);
+    }
+
+    if (isValidationFailedError(err)) {
+      return json(
+        {
+          code: err.code,
+          message: err.message,
+          details: err.details,
+        },
+        err.status,
+      );
+    }
 
     // 使用 Symbol.for() 跨包安全识别 VafastError
     if (isVafastError(err)) {

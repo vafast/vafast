@@ -244,7 +244,7 @@ describe('SSE (Server-Sent Events)', () => {
       expect(text).toContain('data: {"echo":"Hello AI"}')
     })
 
-    it('query 验证失败应该返回 400', async () => {
+    it('query 验证失败应该返回 422', async () => {
       const routes = defineRoutes([
         defineRoute({
           method: 'GET',
@@ -263,10 +263,13 @@ describe('SSE (Server-Sent Events)', () => {
       const request = new Request('http://localhost/stream')
       const response = await server.fetch(request)
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
+      const data = await response.json()
+      expect(data.code).toBe(422)
+      expect(data.details?.length).toBeGreaterThan(0)
     })
 
-    it('POST body 验证失败应该返回 400', async () => {
+    it('POST body 验证失败应该返回 422', async () => {
       const routes = defineRoutes([
         defineRoute({
           method: 'POST',
@@ -291,7 +294,10 @@ describe('SSE (Server-Sent Events)', () => {
       })
       const response = await server.fetch(request)
 
-      expect(response.status).toBe(400)
+      expect(response.status).toBe(422)
+      const data = await response.json()
+      expect(data.code).toBe(422)
+      expect(data.details?.length).toBeGreaterThan(0)
     })
   })
 

@@ -44,6 +44,16 @@ export {
   type ValidationResult,
 } from "./validators/validators";
 
+export {
+  ValidationFailedError,
+  isValidationFailedError,
+  pathToField,
+  createErrorDetail,
+  VALIDATION_FAILED_SYMBOL,
+  type ErrorDetail,
+  type SchemaLocation,
+} from "./validators/validation-errors";
+
 // Format 验证器（内置常用 format）
 export {
   registerFormats,
