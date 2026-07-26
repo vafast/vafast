@@ -834,8 +834,7 @@ const routes = defineRoutes([
 Vafast 内置验证器 JIT 编译，自动缓存编译后的验证器：
 
 ```typescript
-import { createValidator, validateFast, precompileSchemas } from 'vafast';
-import { Type } from '@sinclair/typebox';
+import { createValidator, validateFast, precompileSchemas, Type } from 'vafast';
 
 const UserSchema = Type.Object({
   name: Type.String(),

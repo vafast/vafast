@@ -1,17 +1,19 @@
 /**
- * Schema验证器使用示例
+ * Schema 验证器使用示例
  *
- * 展示如何使用validateSchemaConfig函数验证SchemaConfig结构的数据
+ * 展示 validateSchema / validateAllSchemas / createValidator 的用法
  */
 
-import { Type } from "@sinclair/typebox";
 import {
-  validateSchemaConfig,
-  validateSchemaConfigAsync,
-  createSchemaValidator,
-} from "../src/utils/validators/schema-validator";
+  Type,
+  validateSchema,
+  validateAllSchemas,
+  createValidator,
+  isValidationFailedError,
+  type SchemaConfig,
+  type ValidationError,
+} from "../../src/index";
 
-// 定义各种Schema
 const userSchema = Type.Object({
   id: Type.Number(),
   name: Type.String({ minLength: 1, maxLength: 100 }),
@@ -39,8 +41,7 @@ const cookiesSchema = Type.Object({
   theme: Type.Optional(Type.Union([Type.Literal("light"), Type.Literal("dark")])),
 });
 
-// 创建Schema配置
-const schemaConfig = {
+const schemaConfig: SchemaConfig = {
   body: userSchema,
   query: querySchema,
   params: paramsSchema,
@@ -48,174 +49,120 @@ const schemaConfig = {
   cookies: cookiesSchema,
 };
 
-// 示例1: 同步验证
+function printValidationErrors(errors: ValidationError[]) {
+  for (const error of errors) {
+    console.log(`  ${error.field || "root"}: ${error.message}`);
+  }
+}
+
+/** 示例1: 单字段同步验证（返回结果，不抛错） */
 function exampleSyncValidation() {
   console.log("=== 同步验证示例 ===");
 
-  const requestData = {
-    body: {
-      id: 1,
-      name: "张三",
-      email: "zhangsan@example.com",
-      age: 25,
-    },
-    query: {
-      page: 1,
-      limit: 20,
-      search: "用户",
-    },
-    params: {
-      userId: "507f1f77bcf86cd799439011",
-    },
-    headers: {
-      authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "content-type": "application/json",
-    },
-    cookies: {
-      sessionId: "sess_123456789",
-      theme: "dark",
-    },
-  };
-
-  const result = validateSchemaConfig(schemaConfig, requestData);
+  const result = validateSchema(userSchema, {
+    id: 1,
+    name: "张三",
+    email: "zhangsan@example.com",
+    age: 25,
+  });
 
   if (result.success) {
     console.log("✅ 验证成功:", result.data);
   } else {
     console.log("❌ 验证失败:");
-    result.errors?.forEach(({ field, error }) => {
-      console.log(`  ${field}:`, error.errors);
-    });
+    printValidationErrors(result.errors);
   }
 }
 
-// 示例2: 异步验证
-async function exampleAsyncValidation() {
-  console.log("\n=== 异步验证示例 ===");
+/** 示例2: 批量验证请求各位置（失败抛 ValidationFailedError） */
+function exampleBatchValidation() {
+  console.log("\n=== 批量验证示例 ===");
 
-  const requestData = {
-    body: {
-      id: "invalid_id", // 应该是数字
-      name: "", // 空字符串，违反minLength
-      email: "invalid-email", // 无效邮箱格式
-    },
-    query: {
-      page: 0, // 违反minimum: 1
-      limit: 200, // 违反maximum: 100
-    },
-    params: {
-      userId: "invalid-user-id", // 违反pattern
-    },
-    headers: {
-      authorization: "Invalid Token", // 违反pattern
-    },
-    cookies: {
-      sessionId: "sess_123456789",
-      theme: "blue", // 不在允许的枚举值中
-    },
-  };
-
-  const result = await validateSchemaConfigAsync(schemaConfig, requestData);
-
-  if (result.success) {
-    console.log("✅ 验证成功:", result.data);
-  } else {
-    console.log("❌ 验证失败:");
-    result.errors?.forEach(({ field, error }) => {
-      console.log(`  ${field}:`);
-      error.errors?.forEach((err) => {
-        console.log(`    - ${err.path}: ${err.message}`);
-      });
+  try {
+    validateAllSchemas(schemaConfig, {
+      body: {
+        id: "invalid_id",
+        name: "",
+        email: "invalid-email",
+      },
+      query: {
+        page: 0,
+        limit: 200,
+      },
+      params: {
+        userId: "invalid-user-id",
+      },
+      headers: {
+        authorization: "Invalid Token",
+      },
+      cookies: {
+        sessionId: "sess_123456789",
+        theme: "blue",
+      },
     });
+    console.log("✅ 批量验证成功");
+  } catch (err) {
+    if (isValidationFailedError(err)) {
+      console.log("❌ 批量验证失败:");
+      for (const detail of err.details) {
+        console.log(`  [${detail.location}] ${detail.field}: ${detail.message}`);
+      }
+    } else {
+      throw err;
+    }
   }
 }
 
-// 示例3: 使用工厂函数创建验证器
+/** 示例3: 工厂函数创建单 schema 验证器 */
 function exampleFactoryFunction() {
   console.log("\n=== 工厂函数示例 ===");
 
-  // 只验证body和query
-  const partialConfig = {
-    body: userSchema,
-    query: querySchema,
-  };
+  const validateUser = createValidator(userSchema);
 
-  const validator = createSchemaValidator(partialConfig);
+  const ok = validateUser({
+    id: 2,
+    name: "李四",
+    email: "lisi@example.com",
+  });
+  const bad = validateUser({
+    id: "not_a_number",
+    name: "",
+    email: "invalid-email",
+    age: -5,
+  });
 
-  const requestData = {
-    body: {
-      id: 2,
-      name: "李四",
-      email: "lisi@example.com",
-    },
-    query: {
-      page: 2,
-      limit: 10,
-    },
-    // 这些字段不会被验证，但会被保留
-    params: { userId: "507f1f77bcf86cd799439012" },
-    headers: { "x-custom": "value" },
-  };
+  if (ok.success) {
+    console.log("✅ 部分验证成功:", ok.data);
+  }
 
-  const result = validator(requestData);
-
-  if (result.success) {
-    console.log("✅ 部分验证成功:", result.data);
-  } else {
-    console.log("❌ 部分验证失败:", result.errors);
+  if (!bad.success) {
+    console.log("❌ 部分验证失败:");
+    printValidationErrors(bad.errors);
   }
 }
 
-// 示例4: 错误处理
-function exampleErrorHandling() {
-  console.log("\n=== 错误处理示例 ===");
-
-  const invalidData = {
-    body: {
-      id: "not_a_number",
-      name: "", // 空字符串
-      email: "invalid-email",
-      age: -5, // 负数
-    },
-  };
-
-  const result = validateSchemaConfig({ body: userSchema }, invalidData);
-
-  if (!result.success) {
-    console.log("❌ 验证失败，详细错误信息:");
-    result.errors?.forEach(({ field, error }) => {
-      console.log(`\n${field} 字段错误:`);
-      error.errors?.forEach((err) => {
-        console.log(`  - 路径: ${err.path || "root"}`);
-        console.log(`  - 消息: ${err.message}`);
-        console.log(`  - 值: ${JSON.stringify(err.value)}`);
-        console.log(`  - 代码: ${err.code}`);
-      });
-    });
-  }
-}
-
-// 运行所有示例
 async function runExamples() {
   try {
     exampleSyncValidation();
-    await exampleAsyncValidation();
+    exampleBatchValidation();
     exampleFactoryFunction();
-    exampleErrorHandling();
   } catch (error) {
     console.error("示例运行出错:", error);
   }
 }
 
-// 如果直接运行此文件
-if (require.main === module) {
-  runExamples();
+const isDirectRun =
+  typeof process !== "undefined" &&
+  Boolean(process.argv[1]) &&
+  import.meta.url.includes("schema-validation-example");
+
+if (isDirectRun) {
+  void runExamples();
 }
 
 export {
   exampleSyncValidation,
-  exampleAsyncValidation,
+  exampleBatchValidation,
   exampleFactoryFunction,
-  exampleErrorHandling,
   runExamples,
 };

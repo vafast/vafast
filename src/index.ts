@@ -16,8 +16,15 @@ export type {
   TrustProxyOption,
 } from "./serve";
 
-// 重新导出 TypeBox 类型
-export { Type, FormatRegistry } from "@sinclair/typebox";
+// 重新导出 TypeBox（与脚手架一致：用户/插件从 vafast 取，勿另装冲突版本）
+export {
+	Type,
+	FormatRegistry,
+	Kind,
+	type Static,
+	type TSchema,
+} from "@sinclair/typebox";
+export { Value } from "@sinclair/typebox/value";
 
 // 自动注册内置 format 验证器
 import { registerFormats } from "./utils/formats";

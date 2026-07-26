@@ -26,8 +26,7 @@ examples/
 ### 基础示例
 
 ```typescript
-import { Server, createHandler } from "vafast";
-import { Type } from "@sinclair/typebox";
+import { Server, createHandler, Type } from "vafast";
 
 // 创建路由
 const routes = [
@@ -66,8 +65,7 @@ export default { fetch: server.fetch };
 ### 1. createHandler - 类型安全处理器
 
 ```typescript
-import { createHandler } from "vafast";
-import { Type } from "@sinclair/typebox";
+import { createHandler, Type } from "vafast";
 
 // 定义 Schema
 const CreateUserSchema = Type.Object({
@@ -89,8 +87,7 @@ const handler = createHandler(
 ### 2. 动态路由参数
 
 ```typescript
-import { Server, createHandler } from "vafast";
-import { Type } from "@sinclair/typebox";
+import { Server, createHandler, Type } from "vafast";
 
 const routes = [
   {
@@ -138,8 +135,7 @@ const routes = [
 ### 4. 中间件注入类型化数据
 
 ```typescript
-import { createHandlerWithExtra, setLocals, json } from "vafast";
-import { Type } from "@sinclair/typebox";
+import { createHandlerWithExtra, setLocals, json, Type } from "vafast";
 
 // 定义中间件注入的类型
 type AuthContext = {

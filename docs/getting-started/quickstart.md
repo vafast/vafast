@@ -20,8 +20,7 @@ npm install vafast
 创建一个新文件 `app.ts`：
 
 ```typescript
-import { Server, defineRoute, defineRoutes, serve } from 'vafast';
-import { Type } from '@sinclair/typebox';
+import { Server, defineRoute, defineRoutes, serve, Type } from 'vafast';
 
 // 定义用户Schema
 const userSchema = Type.Object({
