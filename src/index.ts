@@ -16,7 +16,7 @@ export type {
   TrustProxyOption,
 } from "./serve";
 
-// 重新导出 TypeBox（与脚手架一致：用户/插件从 vafast 取，勿另装冲突版本）
+// 重新导出 TypeBox，便于 `import { Type } from 'vafast'`
 export {
 	Type,
 	FormatRegistry,
